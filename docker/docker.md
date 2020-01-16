@@ -185,65 +185,86 @@
 
 # 3.开启认证的远程端口2376
 
-```bash
-cd ~
-mkdir ./ca
+```shell
+#!/bin/bash
 
-#生成ca私钥(使用aes256加密),输入两次密码
-openssl genrsa -aes256 -out ca-key.pem 4096
-#生成ca证书，填写配置信息,然后依次输入国家是 CN，省例如是Shanghai、市Shanghai、组织名称、组织单位、姓名或服务器名、邮件地址
-openssl req -new -x509 -days 365 -key ca-key.pem -sha256 -out ca.pem
+#相关配置信息
+SERVER="192.168.121.100"
+PASSWORD="zhy1234"
+COUNTRY="cn"
+STATE="zhejiang"
+CITY="hangzhou"
+ORGANIZATION="kykj"
+ORGANIZATIONAL_UNIT="dev"
+EMAIL="18895672556@163.com"
+
+###开始生成文件###
+echo "开始生成文件"
+
+#切换到生产密钥的目录
+cd /etc/docker
+#生成ca私钥(使用aes256加密)
+openssl genrsa -aes256 -passout pass:$PASSWORD -out ca-key.pem 4096
+#生成ca证书，填写配置信息
+openssl req -new -x509 -passin "pass:$PASSWORD" -days 365 -key ca-key.pem -sha256 -out ca.pem -subj "/C=$COUNTRY/ST=$STATE/L=$CITY/O=$ORGANIZATION/OU=$ORGANIZATIONAL_UNIT/CN=$SERVER/emailAddress=$EMAIL"
 
 #生成server证书私钥文件
 openssl genrsa -out server-key.pem 4096
 #生成server证书请求文件
-openssl req -subj "/CN=192.168.121.100" -sha256 -new -key server-key.pem -out server.csr
+openssl req -subj "/CN=$SERVER" -sha256 -new -key server-key.pem -out server.csr
 
-# 配置白名单，多个用逗号隔开，例如： IP:192.168.1.111,IP:0.0.0.0，这里需要注意，虽然0.0.0.0可以匹配任意，但是仍然需要配置你的服务器外网ip
-echo subjectAltName = IP:192.168.121.100,IP:0.0.0.0 >> extfile.cnf
-#把 extendedKeyUsage = serverAuth 键值设置到extfile.cnf文件里，限制扩展只能用在服务器认证
+#配置白名单
+echo subjectAltName = IP:$SERVER,IP:0.0.0.0 >> extfile.cnf
+#将Docker守护程序密钥的扩展使用属性设置为仅用于服务器身份验证
 echo extendedKeyUsage = serverAuth >> extfile.cnf
 
 #使用CA证书及CA密钥以及上面的server证书请求文件进行签发，生成server自签证书
-openssl x509 -req -days 365 -sha256 -in server.csr -CA ca.pem -CAkey ca-key.pem \-CAcreateserial -out server-cert.pem -extfile extfile.cnf
+openssl x509 -req -days 365 -in server.csr -CA ca.pem -CAkey ca-key.pem -passin "pass:$PASSWORD" -CAcreateserial -out server-cert.pem -extfile extfile.cnf
 
 #生成client证书RSA私钥文件
 openssl genrsa -out key.pem 4096
 #生成client证书请求文件
 openssl req -subj '/CN=client' -new -key key.pem -out client.csr
 
-#继续设置证书扩展属性
+#要使密钥适合客户端身份验证，请创建扩展配置文件
 echo extendedKeyUsage = clientAuth >> extfile.cnf
+#sh -c 'echo "extendedKeyUsage=clientAuth" > extfile.cnf'
 
 #生成client自签证书（根据上面的client私钥文件、client证书请求文件生成）
-openssl x509 -req -days 365 -sha256 -in client.csr -CA ca.pem -CAkey ca-key.pem \-CAcreateserial -out cert.pem -extfile extfile.cnf
+openssl x509 -req -days 365 -sha256 -in client.csr -CA ca.pem -CAkey ca-key.pem -passin "pass:$PASSWORD" -CAcreateserial -out cert.pem -extfile extfile.cnf
 
-#删除生成的临时文件
-rm -rf client.csr server.csr
-
-#修改证书为只读权限保证证书安全
+#修改权限，要保护您的密钥免受意外损坏，请删除其写入权限。要使它们只能被您读取，更改文件模式
 chmod -v 0400 ca-key.pem key.pem server-key.pem
+#证书可以是对外可读的，删除写入权限以防止意外损坏
 chmod -v 0444 ca.pem server-cert.pem cert.pem
 
-#复制服务端需要用到的证书到docker配置目录下便于识别使用
-cp server-cert.pem ca.pem server-key.pem /etc/docker/
+#删除不需要的文件，两个证书签名请求
+rm -v client.csr server.csr
 
+echo "生成文件完成"
+###生成结束###
+```
+
+```bash
 #修改docker配置
 vim /lib/systemd/system/docker.service
-ExecStart=/usr/bin/dockerd-current \
-	--tlsverify \
-	--tlscacert=/etc/docker/ca.pem \
-	--tlscert=/etc/docker/server-cert.pem \
-	--tlskey=/etc/docker/server-key.pem \
-	-H tcp://0.0.0.0:2376 \
-	-H unix:///var/run/docker.sock \
+ExecStart=/usr/bin/dockerd \
+        --tlsverify \
+        --tlscacert=/etc/docker/ca.pem \
+        --tlscert=/etc/docker/server-cert.pem \
+        --tlskey=/etc/docker/server-key.pem \
+        -H tcp://0.0.0.0:2376 \
+        -H unix:///var/run/docker.sock \
+        -H fd:// --containerd=/run/containerd/containerd.sock
 
 # 开放防火墙的2376的端口
 firewall-cmd --zone=public --add-port=2376/tcp --permanent
 firewall-cmd --reload
 
 #重载服务并重启docker
-systemctl daemon-reload && systemctl restart docker
+systemctl daemon-reload
+systemctl restart docker
+service docker restart
 
 #查看是否存在2376端口
 yum install net-tools
@@ -257,54 +278,38 @@ sz ca.pem cert.pem key.pem
 docker --tlsverify --tlscacert=ca.pem --tlscert=cert.pem --tlskey=key.pem -H=192.168.121.100:2376 version
 ```
 
-```bash
-#创建 Docker TLS 证书
-#!/bin/bash
+![1579184726619](assets/1579184726619.png)
 
-#相关配置信息
-SERVER="192.168.33.76"
-PASSWORD="pass123456"
-COUNTRY="CN"
-STATE="广州省"
-CITY="广州市"
-ORGANIZATION="公司名称"
-ORGANIZATIONAL_UNIT="Dev"
-EMAIL="492376344@qq.com"
+![1579184947958](assets/1579184947958.png)
 
-###开始生成文件###
-echo "开始生成文件"
+```xml
+<build>
+    <finalName>docker-alpha</finalName>
+    <plugins>
+        <!--      docker maven插件      -->
+            <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>dockerfile-maven-plugin</artifactId>
+                <version>1.3.6</version>
+                <configuration>
+                    <repository>${docker.image.prefix}/${project.artifactId}</repository>
+                    <buildArgs>
+                        <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
+                    </buildArgs>
+                </configuration>
+            </plugin>
+    </plugins>
+    </build>
+```
 
-#切换到生产密钥的目录
-cd /etc/docker   
-#生成ca私钥(使用aes256加密)
-openssl genrsa -aes256 -passout pass:$PASSWORD  -out ca-key.pem 2048
-#生成ca证书，填写配置信息
-openssl req -new -x509 -passin "pass:$PASSWORD" -days 3650 -key ca-key.pem -sha256 -out ca.pem -subj "/C=$COUNTRY/ST=$STATE/L=$CITY/O=$ORGANIZATION/OU=$ORGANIZATIONAL_UNIT/CN=$SERVER/emailAddress=$EMAIL"
-
-#生成server证书私钥文件
-openssl genrsa -out server-key.pem 2048
-#生成server证书请求文件
-openssl req -subj "/CN=$SERVER" -new -key server-key.pem -out server.csr
-#使用CA证书及CA密钥以及上面的server证书请求文件进行签发，生成server自签证书
-openssl x509 -req -days 3650 -in server.csr -CA ca.pem -CAkey ca-key.pem -passin "pass:$PASSWORD" -CAcreateserial  -out server-cert.pem
-
-#生成client证书RSA私钥文件
-openssl genrsa -out key.pem 2048
-#生成client证书请求文件
-openssl req -subj '/CN=client' -new -key key.pem -out client.csr
-
-sh -c 'echo "extendedKeyUsage=clientAuth" > extfile.cnf'
-#生成client自签证书（根据上面的client私钥文件、client证书请求文件生成）
-openssl x509 -req -days 3650 -in client.csr -CA ca.pem -CAkey ca-key.pem  -passin "pass:$PASSWORD" -CAcreateserial -out cert.pem  -extfile extfile.cnf
-
-#更改密钥权限
-chmod 0400 ca-key.pem key.pem server-key.pem
-#更改密钥权限
-chmod 0444 ca.pem server-cert.pem cert.pem
-#删除无用文件
-rm client.csr server.csr
-
-echo "生成文件完成"
-###生成结束###
+```dockerfile
+# 指定基础镜像，在其上进行定制
+FROM java:8
+# 这里的 /tmp 目录就会在运行时自动挂载为匿名卷，任何向 /tmp 中写入的信息都不会记录进容器存储层
+VOLUME /tmp
+# 复制上下文目录下的 target/docker-alpha.jar 到容器里，这里写自己的工程名称
+COPY target/docker-alpha.jar alpha.jar
+# 指定容器启动程序及参数
+ENTRYPOINT ["java", "-jar", "/alpha.jar"]
 ```
 
