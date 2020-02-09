@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #相关配置信息
-SERVER="192.168.121.100"
+SERVER="47.99.192.119"
 PASSWORD="zhy1234"
 COUNTRY="cn"
 STATE="zhejiang"
