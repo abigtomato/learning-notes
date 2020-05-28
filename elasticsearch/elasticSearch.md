@@ -1,6 +1,6 @@
 [TOC]
 
-# 1.ES简介
+# 1.ES理论知识
 
 ## 1.1 相关概念
 * **Cluster**
@@ -20,27 +20,8 @@
 * **Transport**
 > 代表es内部节点或集群与客户端的交互方式，默认内部是使用tcp协议进行交互，同时它支持http协议（json格式），Thrift，Servlet，Memcached，ZeroMQ等的传输协议（通过插件方式集成）。
 
-## 1.2 ES功能
+## 1.1 倒排索引
 
-### 1.2.1 全文检索，结构化检索，数据分析
-> * 全文检索 - 搜索商品名包含某关键字的信息，如：```SQL：select * from products where name like '%...%';```
-> * 结构化检索 - 搜索某种类型商品的信息，如：```select * from products where category='...';```
-> * 数据分析 - 分析每个商品种类中有多少商品，如：```select category_name, count(*) from category group by category_name;```
-
-### 1.2.2 ES常见使用场景
-> 1. 维基百科 - 全文检索，高亮显示，搜索推荐；
-> 2. The Guardian（国外的一个新闻网站），此平台可以对用户的行为（点击、浏览、收藏、评论），社区网络数据（对新闻的评论等）进行数据分析，为新闻的发布者提供相关的公众反馈；
-> 3. Stack Overflow（国外的程序异常讨论论坛）；
-> 4. Github（开源代码管理）在千亿级别的代码行中搜索信息；
-> 5. 日志数据分析 - ELK技术栈；
-> 6. 商品价格监控网站 - 在网站中设置商品价格监控，达到监控值的时候，会自动提示用户；
-> 7. BI系统，商业智能（Business Intelligence） - 如电信企业对不同地点的消费情况进行分析，得到地方性套餐设定的建议（ES实现数据的分析和挖掘，Kibana进行数据可视化）；
-> 8. 站内搜索 - 如电商、招聘、门户、企业内部系统等；
-> 9. 大数据分析，机器学习等。
-
-# 2.ES核心概念
-
-## 2.1 倒排索引
 > 对数据进行分析，分词抽取出数据中的各个词条，以词条作为key，对应数据的存储位置作为value，实现索引的存储，这种索引称为倒排索引。
 
 * 数据：
@@ -62,7 +43,7 @@
 |荣耀|1, 2|
 |iphone|3|
 
-## 2.2 名词解释
+## 1.3 名词解释
 * Cluster & Node
 > * Cluster - 集群，包含多个节点，每个节点通过配置来决定属于哪一个集群（默认集群命名为“elasticsearch”），对于中小型应用来说，最初只有一个节点也是很正常的；
 > * Node - 节点，集群中的一个节点，节点的名字默认是随机分配的，节点名字在运维管理时很重要，节点默认会自动加入一个命名为“elasticsearch”的集群，如果直接启动多个节点，则自动组成一个命名为“elasticsearch”的集群，当然单节点启动也是一个集群。
@@ -91,7 +72,7 @@ product document
 > * Replica Shard 分片副本；
 > * **注**：一个index默认10个shard，5个primary shard，5个replica shard，最小的高可用配置需要2台服务器，因为ES要求primary shard和replica shard不能处于同一个节点中。
 
-## 2.3 ES和关系型数据库的对比
+## 1.4 ES和关系型数据库的对比
 
 |    ES    |  数据库系统   |
 | :------: | :-----------: |
@@ -100,10 +81,10 @@ product document
 |  Index   | 库 - database |
 |  Field   |  列 - column  |
 
-# 3.基础 ES RESTful API 操作
+# 2.基本 RESTful API 操作
 
-## 3.1 查看集群健康状态
-```json
+## 2.1 查看集群健康状态
+```http
 GET _cat/health?v
 
 epoch      timestamp cluster status node.total node.data shards pri relo init unassign pending_tasks max_task_wait_time active_shards_percent
@@ -115,9 +96,10 @@ epoch      timestamp cluster status node.total node.data shards pri relo init un
     * yellow：每个索引的primary shard都是active的，但部分的replica shard不是active的；
     * red：不是所有的索引都是primary shard都是active状态的。
 
-## 3.2 检查分片信息
-> * 查看索引的shard信息：
-```json
+## 2.2 检查分片信息
+* 查看索引的shard信息
+
+```http
 GET _cat/shards?v
 
 index          shard prirep state   docs  store ip        node
@@ -126,10 +108,12 @@ test-index     1     p      STARTED    0   261b 127.0.0.1 node_02
 test-index     2     p      STARTED    0   261b 127.0.0.1 node_01
 ```
 
-## 3.3 设置磁盘限制
-> * ES默认当磁盘空间不足15%时，会禁止分配replica shard，可以动态调整ES对磁盘空间的要求限制：
-```json
+## 2.3 设置磁盘限制
+* ES默认当磁盘空间不足15%时，会禁止分配replica shard，可以动态调整ES对磁盘空间的要求限制
+
+```http
 PUT _cluster/settings
+
 {
   "transient": {
     "cluster.routing.allocation.disk.watermark.low": "95%",
@@ -137,27 +121,30 @@ PUT _cluster/settings
   }
 }
 ```
-> **注**：配置磁盘空间限制的时候，要求low必须比high大，可以使用百分比或GB的方式设置，且ES要求low至少满足磁盘95%的容量；
-> 此处配置的百分比都是磁盘的使用百分比，如85%，代表磁盘使用了85%后如何限制，配置的GB绝对值都是剩余空间多少。
+**注**：配置磁盘空间限制的时候，要求low必须比high大，可以使用百分比或GB的方式设置，且ES要求low至少满足磁盘95%的容量；
 
-> * low：对磁盘空闲容量的最低限制，默认85%
-> * high：对磁盘空闲容量的最高限制，默认90%
+此处配置的百分比都是磁盘的使用百分比，如85%，代表磁盘使用了85%后如何限制，配置的GB绝对值都是剩余空间多少：
 
-> **如**：low为50GB，high为10GB，则当磁盘空闲容量不足50GB时停止分配replica shard，当磁盘空闲容量不足10GB时，停止分配shard，并将应该在当前结点中分配的shard分配到其他结点中。
-强调red问题：因为ES中primary shard是主分片，要求必须全部活动才能正常使用。
+* low：对磁盘空闲容量的最低限制，默认85%
 
-## 3.4 查看索引信息
-```json
+* high：对磁盘空闲容量的最高限制，默认90%
+
+**如**：low为50GB，high为10GB，则当磁盘空闲容量不足50GB时停止分配replica shard，当磁盘空闲容量不足10GB时，停止分配shard，并将应该在当前结点中分配的shard分配到其他结点中。强调red问题：因为ES中primary shard是主分片，要求必须全部活动才能正常使用。
+
+## 2.4 查看索引信息
+```http
 GET _cat/indices?v
 
 health status index          uuid                   pri rep docs.count docs.deleted store.size pri.store.size
 green  open   .kibana        OAAFJkDuQUqMwYcqbPhsrQ   1   1          1            0        8kb            4kb
 ```
 
-## 3.5 新增索引
-> * 在ES中默认创建索引的时候，会分配5个primary shard，并为每个primary shard分配一个 replica shard。ES中默认的限制是：如果磁盘空间不足15%的时候，不分配replica shard，如果磁盘空间不足5%的时候，不再分配任何的primary shard：
-```JSON
+## 2.5 新增索引
+* 在ES中默认创建索引的时候，会分配5个primary shard，并为每个primary shard分配一个 replica shard。ES中默认的限制是：如果磁盘空间不足15%的时候，不分配replica shard，如果磁盘空间不足5%的时候，不再分配任何的primary shard：
+
+```http
 PUT /test_index
+
 {
   "settings":{
     "number_of_shards" : 2,   # 指定该索引分片数量
@@ -165,45 +152,37 @@ PUT /test_index
   }
 }
 ```
-## 3.6 修改索引
-```json
+## 2.6 修改索引
+
+* es中对shard的分布是有要求的，有其内置的特殊算法。es尽可能保证primary shard平均分布在多个节点上，replica shard会保证不和他备份的那个primary shard分配在同一个节点上。
+* **注**：索引一旦创建，primary shard数量不可变化，但可以改变replica shard数量。 
+
+```http
 PUT /test_index/_settings
+
 {
   "number_of_replicas" : 2
 }
 ```
-> * ES中对shard的分布是有要求的，有其内置的特殊算法。ES尽可能保证primary shard平均分布在多个节点上，replica shard会保证不和他备份的那个primary shard分配在同一个节点上。
-> **注**：索引一旦创建，primary shard数量不可变化，但可以改变replica shard数量。 
-
-## 3.7 删除索引
-```json
+## 2.7 删除索引
+```http
 DELETE /test_index [other_index, ...]
 ```
 
-## 3.8 新增 Document
-> * 在索引中增加文档，在index中增加document；
-> * ES有自动识别机制，如果增加的document对应的index不存在，则自动创建。如果index存在，type不存在，也会自动创建。如果index和type都存在，则使用现有的。
+## 2.8 新增 Document
+* 在索引中增加文档，在index中增加document；
+* es有自动识别机制，如果增加的document对应的index不存在，则自动创建。如果index存在，type不存在，也会自动创建。如果index和type都存在，则使用现有的。
 
-### 3.8.1 PUT语法
-> * 此操作为手工指定id的Document新增方式。
-```JSON 
+### 2.8.1 PUT语法
+* 此操作为手工指定id的Document新增方式。
+
+```http
 PUT /test_index/my_type/1
+
 {
    "name": "test_doc_01",
    "remark": "first test elastic search",
    "order_no": 1
-}
-PUT /test_index/my_type/2
-{
-   "name": "test_doc_02",
-   "remark": "second test elastic search",
-   "order_no": 2
-}
-PUT /test_index/my_type/3
-{
-   "name": "test_doc_03",
-   "remark": "third test elastic search",
-   "order_no": 3
 }
 ```
 ```JSON
@@ -223,10 +202,13 @@ PUT /test_index/my_type/3
 }
 ```
 
-### 3.8.2 POST语法
-> * 此操作为ES自动生成id的新增Document方式。
-```JSON
+### 2.8.2 POST语法
+* 此操作为ES自动生成id的新增Document方式。
+* **注**：在ES中，一个index中的所有type类型的Document是存储在一起的，如果index中的不同的type之间的field差别太大，也会影响到磁盘的存储结构和存储空间的占用。
+
+```http
 POST /test_index/my_type
+
 {
    "name": "test_doc_04",
    "remark": "forth test elastic search",
@@ -234,39 +216,39 @@ POST /test_index/my_type
 }
 ```
 
-> **注**：在ES中，一个index中的所有type类型的Document是存储在一起的，如果index中的不同的type之间的field差别太大，也会影响到磁盘的存储结构和存储空间的占用。
-
 * 如：test_index中有test_type1和test_type2两个不同的类型：
-    * type1中的document结构为：{"\_id":"1","f1":"v1","f2":"v2"}；
-    * type2中的document结构为：{"\_id":"2","f3":"v3","f4":"v4"}；
+    * type1中的document结构为：{"\_id": "1", "f1": "v1", "f2": "v2"}；
+    * type2中的document结构为：{"\_id": "2",  "f3":  "v3",  "f4":  "v4"}；
     * 那么ES在存储的时候，统一的存储方式是{"\_id":"1","f1":"v1","f2":"v2","f3":"","f4":""}, {"\_id":"2","f1":"","f2":"","f3":"v3","f4","v4"}；
     * 建议每个index中存储的document结构不要有太大的差别，尽量控制在总计字段数据的10%以内（ES6.x中每个index中只允许存在一个type）。
 
-## 3.9 查询 Document
+## 2.9 查询 Document
 
-### 3.9.1 GET 查询
-```json
+### 2.9.1 GET 查询
+```http
 GET /index_name/type_name/{id}
 ```
-```JSON
+```json
 {
-  "_index": "test_index",
-  "_type": "my_type",
-  "_id": "1",
-  "_version": 1,
-  "found": true,
-  "_source": {          # 找到的document数据内容
-    "name": "test_doc_01",
-    "remark": "first test elastic search",
-    "order_no":1
-  }
+    "_index": "test_index",
+    "_type": "my_type",
+    "_id": "1",
+    "_version": 1,
+    "found": true,
+    "_source": {          # 找到的document数据内容
+		"name": "test_doc_01",
+		"remark": "first test elastic search",
+		"order_no":1
+	}
 }
 ```
 
-### 3.9.2 GET_mget 批量查询
-> * 批量查询可以提高查询效率，推荐使用 (相对于单数据查询来说)
-```JSON
+### 2.9.2 GET_mget 批量查询
+* 批量查询可以提高查询效率，推荐使用 (相对于单数据查询来说)
+
+```http
 GET /_mget
+
 {
   "docs": [
     {
@@ -282,8 +264,9 @@ GET /_mget
   ]
 }
 ```
-```JSON
+```http
 GET /test_index/_mget
+
 {
   "docs": [
     {
@@ -298,8 +281,9 @@ GET /test_index/_mget
 }
 
 ```
-```JSON
+```http
 GET /test_index/my_type/_mget
+
 {
   "docs": [
     {
@@ -312,12 +296,14 @@ GET /test_index/my_type/_mget
 }
 ```
 
-## 3.10 修改 Document
+## 2.10 修改 Document
 
-### 3.10.1 全量替换
-> * 要求新数据的字段信息和原数据的字段信息一致，也就是必须包括Document中的所有field才行，本操作相当于覆盖操作。全量替换的过程中，ES不会真的修改Document中的数据，而是标记ES中原有的Document为deleted状态，再创建一个新的Document来存储数据，当ES中的数据量过大时，ES后台回收deleted状态的Document。
-```JSON
+### 2.10.1 全量替换
+* 要求新数据的字段信息和原数据的字段信息一致，也就是必须包括Document中的所有field才行，本操作相当于覆盖操作。全量替换的过程中，ES不会真的修改Document中的数据，而是标记ES中原有的Document为deleted状态，再创建一个新的Document来存储数据，当ES中的数据量过大时，ES后台回收deleted状态的Document。
+
+```http
 PUT /test_index/my_type/1
+
 {
    "name": "new_test_doc_01",
    "remark": "first test elastic search",
@@ -341,18 +327,21 @@ PUT /test_index/my_type/1
 }
 ```
 
-### 3.10.2 PUT 语法强制新增
-> * 如果使用PUT语法对同一个Document执行多次操作，是一种全量替换操作。如果需要ES辅助检查PUT的Document是否已存在，可以使用强制新增语法。使用强制新增语法时，如果Document的id在ES中已存在，则会报错。
-```JSON
+### 2.10.2 PUT 语法强制新增
+* 如果使用PUT语法对同一个Document执行多次操作，是一种全量替换操作。如果需要ES辅助检查PUT的Document是否已存在，可以使用强制新增语法。使用强制新增语法时，如果Document的id在ES中已存在，则会报错。
+
+```http
 PUT /test_index/my_type/1/_create
+
 {
    "name": "new_test_doc_01",
    "remark": "first test elastic search",
    "order_no": 1
 }
 ```
-```JSON
+```http
 PUT /test_index/my_type/1?op_type=create
+
 {
    "name": "new_test_doc_01",
    "remark": "first test elastic search",
@@ -360,10 +349,12 @@ PUT /test_index/my_type/1?op_type=create
 }
 ```
 
-### 3.10.3 partial update 更新 document
-> * 只更新某Document中的部分字段。这种更新方式也是标记原有数据为deleted状态，创建一个新的Document数据，将新的字段和未更新的原有字段组成这个新的Document并创建。对比全量替换而言，只是操作上的方便，在底层执行上几乎没有区别。
-```JSON
+### 2.10.3 partial update 更新 document
+* 只更新某Document中的部分字段。这种更新方式也是标记原有数据为deleted状态，创建一个新的Document数据，将新的字段和未更新的原有字段组成这个新的Document并创建。对比全量替换而言，只是操作上的方便，在底层执行上几乎没有区别。
+
+```http
 POST /test_index/my_type/1/_update
+
 {
    "doc": {
       "name": "test_doc_01_for_update"
@@ -387,7 +378,7 @@ POST /test_index/my_type/1/_update
 }
 ```
 
-## 3.11 删除 document
+## 2.11 删除 document
 > * ES中执行删除操作时，会先标记Document为deleted状态，而不是直接物理删除。当ES存储空间不足或工作空闲时，才会执行物理删除操作。标记为deleted状态的数据不会被查询搜索到。
 ES中删除index，也是标记，后续才会执行物理删除，所有的标记动作都是为了NRT的实现（近实时）
 ```json

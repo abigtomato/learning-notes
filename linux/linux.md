@@ -606,7 +606,7 @@ $> systemctl is-enabled firewalld.service
     method=manual
     addressesl=IP地址;24;默认网关;
     ```
-        
+    
 ### 3.5.7 ping 测试远程主机连通性
 * `ping` 通过 ICMP 协议向远程主机发送 ECHO\_REQUEST 请求，期望主机回复 ECHO\_REPLY 消息；
 * 通过 `ping` 命令可以检查是否与远程主机建立了 TCP/IP 连接；
