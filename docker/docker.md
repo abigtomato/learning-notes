@@ -24,9 +24,6 @@ $ sudo yum remove docker \
 * 更新yum源
 
 ```bash
-# docker源
-$ sudo yum-config-manager \
-	--add-repo https://download.docker.com/linux/centos/docker-ce.repo
 # 阿里云源
 $ sudo yum-config-manager \
 	--add-repo http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
@@ -153,22 +150,26 @@ appendonly yes
 $ docker restart redis
 ```
 
-## 2.3 安装 ElasticSearch，Logstash，Kibana
+## 2.3.安装 ElasticSearch，Logstash，Kibana
 
 * 安装elasticsearch
 
 ```bash
-$ docker pull elasticsearch:6.8.9
-$ docker network create somenetwork
-$ docker run \
-	--name elasticsearch \
-	--net somenetwork \
-	-e ES_JAVA_OPTS="-Xms300m -Xmx300m" \	# 设置初始内存和最大内存
-	-e "discovery.type=single-node" \
-	-v /mydata/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml \
+$ mkdir -p /mydata/elasticsearch/config
+$ mkdir -p /mydata/elasticsearch/data
+$ mkdir -p /mydata/elasticsearch/plugins
+$ echo "http.host: 0.0.0.0" >> /mydata/elasticsearch/config/elasticsearch.yml
+$ chmod -R 777 /mydata/elasticsearch/
+
+$ docker run --name elasticsearch \
 	-p 9200:9200 -p 9300:9300 \
-	-idt elasticsearch:6.8.9
-$ curl http://192.168.121.100:9200
+	-e "discovery.type=single-node" \
+	-e ES_JAVA_OPTS="-Xms64m -Xmx128m" \
+	-v /mydata/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml \
+	-v /mydata/elasticsearch/data:/usr/share/elasticsearch/data \
+	-v /mydata/elasticsearch/plugins:/usr/share/elasticsearch/plugins \
+	--privileged=true \
+	-d elasticsearch:7.4.2
 ```
 
 * 解决跨域问题

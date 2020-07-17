@@ -2,37 +2,37 @@
 
 # 1.ES理论知识
 
-## 1.1 相关概念
-* **Cluster**
-> 代表整个集群，集群中有多个节点，其中有一个为主节点，这个主节点是可以通过选举产生的，主从节点是对于集群内部来说。es的一个概念就是去中心化，字面上理解就是无中心节点，这是对于集群外部来说的，因为从外部来看es集群，在逻辑上是个整体，与任何一个节点的通信和与整个es集群通信是等价的。
-* **Shards**
-> 代表索引分片，es可以把一个完整的索引分成多个分片，这样的好处是可以把一个大的索引拆分成多个小的，然后分布到不同的节点上，构成分布式存储。分片的数量只能在索引创建前指定，并且索引创建后不能更改。当进行水平扩容时，需要重新设置分片数量，重新导入数据。
-* **Replicas**
-> 代表索引副本，es可以设置多个索引的副本，副本的作用一是提高系统的容错性，当某个节点某个分片损坏或丢失时可以从副本中恢复。二是提高es的查询效率，es会自动对搜索请求进行负载均衡。 
-* **Recovery**
-> 代表数据恢复或数据重新分布，es集群在有节点加入或退出时会根据机器的负载对索引分片进行重新分配，挂掉的节点重新启动时也会进行数据恢复。 
-* **River**
-> 代表es的一个数据源，也是其它存储方式（如：数据库）同步数据到es的一个方法。它是以插件方式存在的服务，通过读取river中的数据并把它在es中建立索引，官方的river有couchDB，RabbitMQ，Twitter，Wikipedia。
-* **Gateway**
-> 代表es索引快照的存储方式，es默认是先把索引存放到内存中，当内存满了再持久化到本地硬盘。gateway对索引快照进行存储，当这个es集群关闭再重新启动时就会从gateway中读取索引备份数据。es支持多种类型的gateway，有本地文件系统（默认），分布式文件系统，Hadoop的HDFS和Amazon的S3云存储服务。
-* **Discovery.zen**
-> 代表es的自动发现节点机制，es是一个基于p2p的系统，它先通过广播寻找存在的节点，再通过广播协议来进行节点之间的通信，同时也支持点对点的交互。 
-* **Transport**
-> 代表es内部节点或集群与客户端的交互方式，默认内部是使用tcp协议进行交互，同时它支持http协议（json格式），Thrift，Servlet，Memcached，ZeroMQ等的传输协议（通过插件方式集成）。
+## 1.1.集群概念
 
-## 1.1 倒排索引
+* Cluster：集群，有多个节点，其中有一个为主节点，这个主节点是可以通过选举产生的，主从节点是相对于集群内部来说。es的一个概念就是去中心化，字面上理解就是无中心节点，这是对于集群外部来说的，因为从外部来看es集群，在逻辑上是个整体，与任意节点的通信和与整个es集群通信是等价的。
 
-> 对数据进行分析，分词抽取出数据中的各个词条，以词条作为key，对应数据的存储位置作为value，实现索引的存储，这种索引称为倒排索引。
+* Shards：索引分片，es可以把一个完整的索引分成多个分片，好处是可以把一个大的索引拆分成多个小的，然后分布到不同的节点上，构成分布式存储。分片的数量只能在索引创建前指定，并且索引创建后不能更改。当进行水平扩容时，需要重新设置分片数量，重新导入数据。
 
-* 数据：
+* Replicas：索引副本，es可以设置多个索引的副本，副本的作用一是提高系统的容错性，当某个节点某个分片损坏或丢失时可以从副本中恢复；二是提高es的查询效率，es会自动对搜索请求进行负载均衡。 
+
+* Recovery：数据恢复或数据重分布，es集群在有节点加入或退出时会根据机器的负载对索引分片进行重新分配，挂掉的节点重新启动时也会进行数据恢复。 
+
+* River：es的数据源，也是其它存储方式（如：数据库）同步数据到es的一个方法。它是以插件方式存在的服务，通过读取river中的数据并把它在es中建立索引。
+
+* Gateway：es索引快照的存储方式，es默认是先把索引存放到内存中，当内存满了再持久化到本地硬盘。当es集群关闭再重新启动时就会从gateway中读取索引备份数据。es支持多种类型的gateway，有本地文件系统（默认），分布式文件系统，Hadoop的HDFS和Amazon的S3云存储服务。
+
+* Discovery.zen：代表es的自动发现节点机制，es是一个基于p2p的系统，它先通过广播寻找存在的节点，再通过广播协议来进行节点之间的通信，同时也支持点对点的交互。 
+
+* Transport：代表es内部节点或集群与客户端的交互方式，默认内部是使用tcp协议进行交互，同时它支持http协议（json格式），Thrift，Servlet，Memcached，ZeroMQ等的传输协议（通过插件方式集成）。
+
+## 1.2.倒排索引
+
+对存储的数据分词抽取出其中的各个词条，以词条为key，对应数据的出现位置为value。搜索时，对关键字分词，通过词条匹配倒排索引，获取词条在原始数据中出现的位置，以位置作为条件搜索。
+
+* 数据表：
 
 |商品主键|商品名|商品描述|
 |:-:|:-:|:-:|
 |1|荣耀10|更贵的手机|
 |2|荣耀8|相对便宜的手机|
-|3|IphoneX|要卖肾买的手机|
+|3|iphone11|要卖肾买的手机|
 
-* 倒排索引：
+* 倒排索引表：
 
 |词条（key）|数据（value）|
 |:-:|:-:|
@@ -43,82 +43,51 @@
 |荣耀|1, 2|
 |iphone|3|
 
-## 1.3 名词解释
-* Cluster & Node
-> * Cluster - 集群，包含多个节点，每个节点通过配置来决定属于哪一个集群（默认集群命名为“elasticsearch”），对于中小型应用来说，最初只有一个节点也是很正常的；
-> * Node - 节点，集群中的一个节点，节点的名字默认是随机分配的，节点名字在运维管理时很重要，节点默认会自动加入一个命名为“elasticsearch”的集群，如果直接启动多个节点，则自动组成一个命名为“elasticsearch”的集群，当然单节点启动也是一个集群。
-* Document
-> * 文档是ES中的最小数据单元，一个Document就是一条数据，一般使用JSON数据结构表示，每个Index下的Type中都可以存储多个Document，一个Document中有多个field，field就是数据字段。
+## 1.3.存储概念
+* Index：索引，包含若干相似结构的document数据，如：客户索引，订单索引，商品索引等，一个index包含多个document，代表一类相似的或相同的document，如：订单索引中存放了所有的订单数据。
+* Type：类型，每个索引中都可以有一个Type，Type是Index中的一个逻辑分类，同一个Type中的Document都有相同的field。示例：订单索引，不同状态的订单包含不同的内容，如：未支付订单（自动取消时间）和已支付订单（支付时间）、已发货订单（发货时间、物流信息）等都有不同的内容。
 
-```json
-product document
-{
-  "product_id": 1,
-  "product_name": "albert",
-  "product_age": 20,
-  "product_school": "MIT",
-  .....
-}
-```
-> **注**：不要在doc中描述java对象的双向关联关系，在转换为JSON字符串的时候会出现无限递归问题。
-* Index
-> * 索引，包含若干相似结构的document数据，如：客户索引，订单索引，商品索引等，一个index包含多个document，代表一类相似的或相同的document，如：订单索引中存放了所有的订单数据。
-* Type
-> * 类型，每个索引中都可以有一个Type，Type是Index中的一个逻辑分类，同一个Type中的Document都有相同的field。
-> * 示例: 订单索引，不同状态的订单包含不同的内容，如：未支付订单（自动取消时间）和已支付订单（支付时间）、已发货订单（发货时间、物流信息）等都有不同的内容。
-* Shards
-> * Primary Shard 主分片
-* Replicas
-> * Replica Shard 分片副本；
-> * **注**：一个index默认10个shard，5个primary shard，5个replica shard，最小的高可用配置需要2台服务器，因为ES要求primary shard和replica shard不能处于同一个节点中。
+* Document：文档是ES中的最小数据单元，一个Document就是一条数据，一般使用json数据结构表示，每个Index下的Type中都可以存储多个Document，一个Document中有多个field，field就是数据字段。
 
-## 1.4 ES和关系型数据库的对比
+## 1.4.ES和关系型数据库的对比
 
-|    ES    |  数据库系统   |
-| :------: | :-----------: |
-| Document |   行 - row    |
-|   Type   |  表 - table   |
-|  Index   | 库 - database |
-|  Field   |  列 - column  |
+|      ES       | 数据库系统  |
+| :-----------: | :---------: |
+|  Index 索引   | Database 库 |
+|   Type 类型   |  Table 表   |
+| Document 文档 |   Row 行    |
+|  Field 字段   |  Column 列  |
+
+
 
 # 2.基本 RESTful API 操作
 
-## 2.1 查看集群健康状态
+## 2.1.查看集群健康状态
 ```http
 GET _cat/health?v
-
-epoch      timestamp cluster status node.total node.data shards pri relo init unassign pending_tasks max_task_wait_time active_shards_percent
-1537249038 13:37:18  albert  green           2         2     28  15    0    0        0             0                  -                100.0%
 ```
 
-* status 状态：
-    * green：每个索引的primary shard和replica shard都是active的；
-    * yellow：每个索引的primary shard都是active的，但部分的replica shard不是active的；
-    * red：不是所有的索引都是primary shard都是active状态的。
+status 状态：
+* **green**：每个索引的primary shard和replica shard都是active的；
+* **yellow**：每个索引的primary shard都是active的，但部分的replica shard不是active的；
+* **red**：不是所有的索引都是primary shard都是active状态的。
 
-## 2.2 检查分片信息
-* 查看索引的shard信息
+## 2.2.查看索引的shard信息
 
 ```http
 GET _cat/shards?v
-
-index          shard prirep state   docs  store ip        node
-test-index     1     r      STARTED    0   261b 127.0.0.1 node_01
-test-index     1     p      STARTED    0   261b 127.0.0.1 node_02
-test-index     2     p      STARTED    0   261b 127.0.0.1 node_01
 ```
 
-## 2.3 设置磁盘限制
-* ES默认当磁盘空间不足15%时，会禁止分配replica shard，可以动态调整ES对磁盘空间的要求限制
+## 2.3.设置磁盘限制
+ES默认当磁盘空间不足15%时，会禁止分配replica shard，可以动态调整ES对磁盘空间的要求限制
 
 ```http
 PUT _cluster/settings
-
 {
-  "transient": {
-    "cluster.routing.allocation.disk.watermark.low": "95%",
-    "cluster.routing.allocation.disk.watermark.high": "5gb"
-  }
+	"transient": {
+    	"cluster.routing.allocation.disk.watermark.low": "95%",
+    	"cluster.routing.allocation.disk.watermark.high": "5GB"
+	}
 }
 ```
 **注**：配置磁盘空间限制的时候，要求low必须比high大，可以使用百分比或GB的方式设置，且ES要求low至少满足磁盘95%的容量；
@@ -129,298 +98,286 @@ PUT _cluster/settings
 
 * high：对磁盘空闲容量的最高限制，默认90%
 
-**如**：low为50GB，high为10GB，则当磁盘空闲容量不足50GB时停止分配replica shard，当磁盘空闲容量不足10GB时，停止分配shard，并将应该在当前结点中分配的shard分配到其他结点中。强调red问题：因为ES中primary shard是主分片，要求必须全部活动才能正常使用。
+**如**：low为50GB，high为10GB，则当磁盘空闲容量不足50GB时停止分配replica shard，当磁盘空闲容量不足10GB时，停止分配shard，并将应该在当前结点中分配的shard分配到其他结点中；ES中默认的限制是：如果磁盘空间不足15%的时候，不分配replica shard，如果磁盘空间不足5%的时候，不再分配任何的primary shard。
 
-## 2.4 查看索引信息
+## 2.4.查看索引信息
 ```http
 GET _cat/indices?v
-
-health status index          uuid                   pri rep docs.count docs.deleted store.size pri.store.size
-green  open   .kibana        OAAFJkDuQUqMwYcqbPhsrQ   1   1          1            0        8kb            4kb
 ```
 
-## 2.5 新增索引
-* 在ES中默认创建索引的时候，会分配5个primary shard，并为每个primary shard分配一个 replica shard。ES中默认的限制是：如果磁盘空间不足15%的时候，不分配replica shard，如果磁盘空间不足5%的时候，不再分配任何的primary shard：
+## 2.5.新增 index
+在ES中默认创建索引的时候，会分配5个primary shard，并为每个primary shard分配一个 replica shard。
 
 ```http
 PUT /test_index
-
 {
-  "settings":{
-    "number_of_shards" : 2,   # 指定该索引分片数量
-    "number_of_replicas" : 1  # 指定每个分片的副本数量
-  }
+  	"settings":{
+    	"number_of_shards" : 2,		// 指定该索引分片数量
+    	"number_of_replicas" : 1	// 指定每个分片的副本数量
+  	}
 }
 ```
-## 2.6 修改索引
+## 2.6.修改 index
 
-* es中对shard的分布是有要求的，有其内置的特殊算法。es尽可能保证primary shard平均分布在多个节点上，replica shard会保证不和他备份的那个primary shard分配在同一个节点上。
-* **注**：索引一旦创建，primary shard数量不可变化，但可以改变replica shard数量。 
+es中对shard的分布是有要求的，有其内置的特殊算法。es尽可能保证primary shard平均分布在多个节点上，replica shard会保证不和他备份的那个primary shard分配在同一个节点上。
+
+**注**：索引一旦创建，primary shard数量不可变化，但可以改变replica shard数量。 
 
 ```http
 PUT /test_index/_settings
-
 {
-  "number_of_replicas" : 2
+	"number_of_replicas" : 2
 }
 ```
-## 2.7 删除索引
+## 2.7.删除 index
 ```http
 DELETE /test_index [other_index, ...]
 ```
 
-## 2.8 新增 Document
-* 在索引中增加文档，在index中增加document；
-* es有自动识别机制，如果增加的document对应的index不存在，则自动创建。如果index存在，type不存在，也会自动创建。如果index和type都存在，则使用现有的。
+## 2.8.新增 document
+es有自动识别机制，如果增加的document对应的index不存在，则自动创建；如果index存在，type不存在，也会自动创建；如果index和type都存在，则使用现有的。
 
-### 2.8.1 PUT语法
-* 此操作为手工指定id的Document新增方式。
+### 2.8.1.PUT 语法
+此操作为手工指定id的Document新增方式。
 
 ```http
-PUT /test_index/my_type/1
-
+PUT /test_index/test_type/1
 {
-   "name": "test_doc_01",
+	"name": "test_doc_01",
+   	"remark": "first test elastic search",
+   	"order_no": 1
+}
+```
+```json
+{
+    "_index": "test_index",	// document所属index
+    "_type": "test_type",	// document所属type
+    "_id": "1",				// 指定的id
+    "_version": 1,			// document版本，版本从1开始递增，每次写操作都会+1
+    "result": "created",	// 本次操作的类型（created创建，updated修改，deleted删除）
+    "_shards": {			// 分片信息
+        "total": 2,			// 分片数量只提示primary shard
+        "successful": 1,	// 数据document一定只存放在index中的某一个primary shard中
+        "failed": 0
+	},
+    "_seq_no": 0,           // 执行的序列号
+    "_primary_term": 1      // 词条比对
+}
+```
+
+### 2.8.2 POST 语法
+此操作为ES自动生成id的新增Document方式。
+
+**注**：在ES中，一个index中的所有type类型的Document是存储在一起的，如果index中的不同的type之间的field差别太大，也会影响到磁盘的存储结构和存储空间的占用。
+
+```http
+POST /test_index/test_type
+{
+   	"name": "test_doc_02",
+   	"remark": "first test elastic search",
+   	"order_no": 2
+}
+```
+
+如：index中有type1和type2两个不同的类型：
+* type1中的document结构为：`{"_id": "1", "f1": "v1", "f2": "v2"}`；
+* type2中的document结构为：`{"_id": "2", "f3": "v3", "f4": "v4"}`；
+* 那么ES存储时的统一存储方式是：`{"_id": "1", "f1": "v1", "f2": "v2", "f3": "", "f4": ""}, {"_id": "2", "f1": "", "f2": "", "f3": "v3", "f4": "v4"}`；
+* 建议每个index中存储的document结构不要有太大的差别，尽量控制在总计字段数据的10%以内。
+
+## 2.9 查询 document
+
+### 2.9.1.GET 查询
+```http
+GET /test_index/test_type/1
+```
+```json
+{
+    "_index": "test_index",
+    "_type": "test_type",
+    "_id": "1",
+    "_version": 1,
+    "found": true,
+    // 查询结果
+    "_source": {
+		"name": "test_doc_01",
+		"remark": "first test elastic search",
+		"order_no": 1
+	}
+}
+```
+
+### 2.9.2.GET_mget 批量查询
+批量查询可以提高查询效率，推荐使用（相对于单数据查询来说） 
+
+```http
+GET /_mget
+{
+    "docs": [
+        {
+            "_index": "test_index",
+            "_type": "test_type",
+            "_id": "1"
+        },
+        {
+            "_index": "test_index",
+            "_type": "test_type",
+            "_id": "2"
+        }
+    ]
+}
+```
+```http
+GET /test_index/_mget
+{
+    "docs": [
+        {
+            "_type": "test_type",
+            "_id": "1"
+        },
+        {
+            "_type": "test_type",
+            "_id": "2"
+        }
+    ]
+}
+
+```
+```http
+GET /test_index/test_type/_mget
+{
+    "docs": [
+        {
+        	"_id": "1"
+        },
+        {
+        	"_id": "2"
+        }
+    ]
+}
+```
+
+## 2.10.修改 document
+
+### 2.10.1.全量替换
+要求新数据的字段信息和原数据的字段信息一致，也就是必须包括Document中的所有field才行，本操作相当于覆盖操作。全量替换的过程中，ES不会真的修改Document中的数据，而是标记ES中原有的Document为deleted状态，再创建一个新的Document来存储数据，当ES中的数据量过大时，ES后台回收deleted状态的Document。
+
+```http
+PUT /test_index/test_type/1
+{
+   "name": "new_test_doc_01",
    "remark": "first test elastic search",
    "order_no": 1
 }
 ```
 ```JSON
 {
-  "_index": "test_index", # 新增的document在什么index中
-  "_type": "my_type",     # 新增的document在index中的哪一个type中
-  "_id": "1",             # 指定的id是多少
-  "_version": 1,          # document的版本是多少，版本从1开始递增，每次写操作都会 +1
-  "result": "created",    # 本次操作的结果，created创建，updated修改，deleted删除
-  "_shards": {            # 分片信息
-    "total": 2,           # 分片数量只提示primary shard
-    "successful": 1,      # 数据document一定只存放在index中的某一个primary shard中
-    "failed": 0
-  },
-  "_seq_no": 0,           # 执行的序列号
-  "_primary_term": 1      # 词条比对
+    "_index": "test_index",
+    "_type": "test_type",
+    "_id": "1",
+    "_version": 2,
+    "result": "updated",
+    "_shards": {
+        "total": 2,
+        "successful": 1,
+        "failed": 0
+    },
+    "_seq_no": 1,
+    "_primary_term": 1
 }
 ```
 
-### 2.8.2 POST语法
-* 此操作为ES自动生成id的新增Document方式。
-* **注**：在ES中，一个index中的所有type类型的Document是存储在一起的，如果index中的不同的type之间的field差别太大，也会影响到磁盘的存储结构和存储空间的占用。
+### 2.10.2.PUT 语法强制新增
+如果使用PUT语法对同一个Document执行多次操作，是一种全量替换操作。如果需要ES辅助检查PUT的Document是否已存在，可以使用强制新增语法。使用强制新增语法时，如果Document的id在ES中已存在，则会报错。
 
 ```http
-POST /test_index/my_type
-
+PUT /test_index/test_type/1/_create
 {
-   "name": "test_doc_04",
-   "remark": "forth test elastic search",
-   "order_no": 4
+   "name": "new_test_doc_01",
+   "remark": "first test elastic search",
+   "order_no": 1
+}
+```
+```http
+PUT /test_index/test_type/1?op_type=create
+{
+   "name": "new_test_doc_01",
+   "remark": "first test elastic search",
+   "order_no": 1
 }
 ```
 
-* 如：test_index中有test_type1和test_type2两个不同的类型：
-    * type1中的document结构为：{"\_id": "1", "f1": "v1", "f2": "v2"}；
-    * type2中的document结构为：{"\_id": "2",  "f3":  "v3",  "f4":  "v4"}；
-    * 那么ES在存储的时候，统一的存储方式是{"\_id":"1","f1":"v1","f2":"v2","f3":"","f4":""}, {"\_id":"2","f1":"","f2":"","f3":"v3","f4","v4"}；
-    * 建议每个index中存储的document结构不要有太大的差别，尽量控制在总计字段数据的10%以内（ES6.x中每个index中只允许存在一个type）。
+### 2.10.3.partial update 更新 document
+只更新某Document中的部分字段。这种更新方式也是标记原有数据为deleted状态，创建一个新的Document数据，将新的字段和未更新的原有字段组成这个新的Document并创建。对比全量替换而言，只是操作上的方便，在底层执行上几乎没有区别。
 
-## 2.9 查询 Document
-
-### 2.9.1 GET 查询
 ```http
-GET /index_name/type_name/{id}
+POST /test_index/test_type/1/_update
+{
+    "doc": {
+    	"name": "test_doc_01_for_update"
+    }
+}
+```
+```JSON
+{
+    "_index": "test_index",
+    "_type": "test_type",
+    "_id": "1",
+    "_version": 5,
+    "result": "updated",
+    "_shards": {
+        "total": 2,
+        "successful": 1,
+        "failed": 0
+    },
+    "_seq_no": 2,
+    "_primary_term": 1
+}
+```
+
+## 2.11.删除 document
+ES中执行删除操作时，会先标记Document为deleted状态，而不是直接物理删除。当ES存储空间不足或工作空闲时，才会执行物理删除操作。标记为deleted状态的数据不会被查询搜索到。ES中删除index，也是标记，后续才会执行物理删除，所有的标记动作都是为了NRT的实现（近实时）。
+
+```http
+DELETE /test_index/test_type/1
 ```
 ```json
 {
     "_index": "test_index",
     "_type": "my_type",
     "_id": "1",
-    "_version": 1,
-    "found": true,
-    "_source": {          # 找到的document数据内容
-		"name": "test_doc_01",
-		"remark": "first test elastic search",
-		"order_no":1
-	}
-}
-```
-
-### 2.9.2 GET_mget 批量查询
-* 批量查询可以提高查询效率，推荐使用 (相对于单数据查询来说)
-
-```http
-GET /_mget
-
-{
-  "docs": [
-    {
-      "_index": "test_index",
-      "_type": "my_type",
-      "_id": "1"
+    "_version": 6,
+    "result": "deleted",
+    "_shards": {
+        "total": 2,
+        "successful": 1,
+        "failed": 0
     },
-    {
-      "_index": "test_index",
-      "_type": "my_type",
-      "_id": "2"
-    }
-  ]
-}
-```
-```http
-GET /test_index/_mget
-
-{
-  "docs": [
-    {
-      "_type": "my_type",
-      "_id": "1"
-    },
-    {
-      "_type": "my_type",
-      "_id": "2"
-    }
-  ]
-}
-
-```
-```http
-GET /test_index/my_type/_mget
-
-{
-  "docs": [
-    {
-      "_id": "1"
-    },
-    {
-      "_id": "2"
-    }
-  ]
+    "_seq_no": 5,
+    "_primary_term": 1
 }
 ```
 
-## 2.10 修改 Document
+## 3.12.\_bulk 语法批量增删改
+create：强制创建，相当于 PUT /index_name/type_name/id/_create
 
-### 2.10.1 全量替换
-* 要求新数据的字段信息和原数据的字段信息一致，也就是必须包括Document中的所有field才行，本操作相当于覆盖操作。全量替换的过程中，ES不会真的修改Document中的数据，而是标记ES中原有的Document为deleted状态，再创建一个新的Document来存储数据，当ES中的数据量过大时，ES后台回收deleted状态的Document。
+index：普通的PUT操作，相当于创建Document或全量替换
 
-```http
-PUT /test_index/my_type/1
+update ：更新操作（partial update），相当于 POST /index_name/type_name/id/\_update
 
-{
-   "name": "new_test_doc_01",
-   "remark": "first test elastic search",
-   "order_no": 1
-}
-```
-```JSON
-{
-  "_index": "test_index",
-  "_type": "my_type",
-  "_id": "1",
-  "_version": 2,
-  "result": "updated",
-  "_shards": {
-    "total": 2,
-    "successful": 1,
-    "failed": 0
-  },
-  "_seq_no": 1,
-  "_primary_term": 1
-}
-```
+delete：删除操作
 
-### 2.10.2 PUT 语法强制新增
-* 如果使用PUT语法对同一个Document执行多次操作，是一种全量替换操作。如果需要ES辅助检查PUT的Document是否已存在，可以使用强制新增语法。使用强制新增语法时，如果Document的id在ES中已存在，则会报错。
+**案例**：
 
-```http
-PUT /test_index/my_type/1/_create
-
-{
-   "name": "new_test_doc_01",
-   "remark": "first test elastic search",
-   "order_no": 1
-}
-```
-```http
-PUT /test_index/my_type/1?op_type=create
-
-{
-   "name": "new_test_doc_01",
-   "remark": "first test elastic search",
-   "order_no": 1
-}
-```
-
-### 2.10.3 partial update 更新 document
-* 只更新某Document中的部分字段。这种更新方式也是标记原有数据为deleted状态，创建一个新的Document数据，将新的字段和未更新的原有字段组成这个新的Document并创建。对比全量替换而言，只是操作上的方便，在底层执行上几乎没有区别。
-
-```http
-POST /test_index/my_type/1/_update
-
-{
-   "doc": {
-      "name": "test_doc_01_for_update"
-   }
-}
-```
-```JSON
-{
-  "_index": "test_index",
-  "_type": "my_type",
-  "_id": "1",
-  "_version": 5,
-  "result": "updated",
-  "_shards": {
-    "total": 2,
-    "successful": 1,
-    "failed": 0
-  },
-  "_seq_no": 2,
-  "_primary_term": 1
-}
-```
-
-## 2.11 删除 document
-> * ES中执行删除操作时，会先标记Document为deleted状态，而不是直接物理删除。当ES存储空间不足或工作空闲时，才会执行物理删除操作。标记为deleted状态的数据不会被查询搜索到。
-ES中删除index，也是标记，后续才会执行物理删除，所有的标记动作都是为了NRT的实现（近实时）
-```json
-DELETE /test_index/my_type/1
-```
-```JSON
-{
-  "_index": "test_index",
-  "_type": "my_type",
-  "_id": "1",
-  "_version": 6,
-  "result": "deleted",
-  "_shards": {
-    "total": 2,
-    "successful": 1,
-    "failed": 0
-  },
-  "_seq_no": 5,
-  "_primary_term": 1
-}
-```
-
-## 3.12 \_bulk 批量增删改
-> * 使用bulk语法执行批量增删改。
-
-* **语法格式**：
 ```JSON
 POST /_bulk
-{ "action_type" : { "metadata_name" : "metadata_value" } }
-{ document datas | action datas }
-```
-
-* **action_type可选值**：
-    * create：强制创建，相当于PUT /index_name/type_name/id/_create
-    * index：普通的PUT操作，相当于创建Document或全量替换
-    * update：更新操作（partial update），相当于 POST /index_name/type_name/id/\_update
-    * delete：删除操作
-
-* **案例**：（下述案例中将所有的操作语法分离了）
-```JSON
-POST /_bulk
-{"create": {"_index": "test_index", "_type": "my_type", "_id": "1" }}
+{
+    "create": {
+        "_index": "test_index",
+        "_type": "my_type",
+        "_id": "1"
+    }
+}
 {"field_name": "field value"}
 ```
 ```JSON
@@ -484,27 +441,27 @@ PUT /test_index/my_type/300?routing=3
   "300_field_name_02": "value_02"
 }
 ```
-![0be7803fe06d51dc7f54d5b6918997fe.png](en-resource://database/1104:1)
+## 3.14 Document 查询原理
+客户端发起执行查询操作的请求，查询操作都由Primary Shard和Replica Shard共同处理，此操作请求到节点2（请求发送到的节点随机），这个节点称为协调节点（coordinate node）；
 
-## 3.14 Document 查询简图
-![7144805c1668b70521185ce875cd6990.png](en-resource://database/1106:1)
+协调节点通过路由算法，计算出本次查询的Document所在的Shard，假设本次查询的Document所在shard为 Shard 0，协调节点计算后，会将操作请求转发到节点1或节点3，至于分配请求到节点1还是节点3是通过随机算法或负载均衡算法计算的，ES会保证当请求量足够大的时候，Primary Shard和Replica Shard处理的查询请求数是均等的（不绝对一致）；
 
-* **解释**：
-    * 客户端发起执行查询操作的请求，查询操作都由Primary Shard和Replica Shard共同处理，此操作请求到节点2（请求发送到的节点随机），这个节点称为协调节点（coordinate node）；
-    * 协调节点通过路由算法，计算出本次查询的Document所在的Shard，假设本次查询的Document所在shard为 Shard 0，协调节点计算后，会将操作请求转发到节点1或节点3，至于分配请求到节点1还是节点3是通过随机算法或负载均衡算法计算的，ES会保证当请求量足够大的时候，Primary Shard和Replica Shard处理的查询请求数是均等的（不绝对一致）；
-    * 节点1或节点3中的Primary Shard 0或Replica Shard 0在处理请求后，会将查询结果返回给协调节点（节点2）；
-    * 协调节点得到查询结果后，再将查询结果返回给客户端。
+节点1或节点3中的Primary Shard 0或Replica Shard 0在处理请求后，会将查询结果返回给协调节点（节点2）；
 
-## 3.15 Document 增删改原理简图
-![6a84387b96010e59645e2ad219259489.png](en-resource://database/1108:1)
+协调节点得到查询结果后，再将查询结果返回给客户端。
 
-* **解释**：
-    * 客户端发起执行增删改操作的请求，所有的增删改操作都由Primary Shard直接处理，Replica Shard只被动的备份数据，此操作请求到节点2 (请求发送到的节点随机)，这个节点称为协调节点(coordinate node)；
-    * 协调节点通过路由算法，计算出本次操作的Document所在的shard，假设本次操作的Document所在的shard为 Primary Shard 0，协调节点计算后，会将操作请求转发到节点1；
-    * 节点1中的Primary Shard 0在处理请求后，会将数据的变化同步到对应的Replica Shard 0中，也就是发送一个同步数据的请求到节点3中；
-    * Replica Shard 0在同步数据后，会响应通知同步成功，也就是响应给Primary Shard 0（节点1）；
-    * Primary Shard 0（节点1）接收到Replica Shard 0的同步成功响应后，会响应请求者，本次操作完成，也就是响应给协调节点（节点2）；
-    * 协调节点返回响应给客户端，通知操作结果。
+## 3.15 Document 增删改原理
+客户端发起执行增删改操作的请求，所有的增删改操作都由Primary Shard直接处理，Replica Shard只被动的备份数据，此操作请求到节点2 (请求发送到的节点随机)，这个节点称为协调节点(coordinate node)；
+
+协调节点通过路由算法，计算出本次操作的Document所在的shard，假设本次操作的Document所在的shard为 Primary Shard 0，协调节点计算后，会将操作请求转发到节点1；
+
+节点1中的Primary Shard 0在处理请求后，会将数据的变化同步到对应的Replica Shard 0中，也就是发送一个同步数据的请求到节点3中；
+
+Replica Shard 0在同步数据后，会响应通知同步成功，也就是响应给Primary Shard 0（节点1）；
+
+Primary Shard 0（节点1）接收到Replica Shard 0的同步成功响应后，会响应请求者，本次操作完成，也就是响应给协调节点（节点2）；
+
+协调节点返回响应给客户端，通知操作结果。
 
 ## 3.16 Document 搜索
 
