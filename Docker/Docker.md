@@ -166,6 +166,8 @@ $ docker run --name elasticsearch \
 	-v /mydata/elasticsearch/plugins:/usr/share/elasticsearch/plugins \
 	--privileged=true \
 	-d elasticsearch:7.4.2
+
+$ curl http://192.168.56.10:9200
 ```
 
 * 解决跨域问题
@@ -193,13 +195,11 @@ $ docker restart elasticsearch
 * 安装kibana
 
 ```bash
-$ docker pull kibana:6.8.9
-$ docker run \
-	--name kibana \
-	--net somenetwork \
-	# --link=elasticsearch \
+$ docker pull kibana:7.4.2
+$ docker run --name kibana \
+	-e ELASTICSEARCH_HOSTS=http://192.168.56.10:9200 \
 	-p 5601:5601 \
-	-d kibana:6.8.9
+	-d kibana:7.4.2
 $ curl http://192.168.121.100:5601
 ```
 
