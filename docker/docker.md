@@ -5,7 +5,7 @@
 * 删除旧版本的 Docker
 
 ```bash
-$ sudo yum remove docker \
+$ yum remove docker \
                   docker-client \
                   docker-client-latest \
                   docker-common \
@@ -18,52 +18,50 @@ $ sudo yum remove docker \
 * 按照所需软件包
 
 ```bash
- $ sudo yum -y install gcc gcc-c++ yum-utils device-mapper-persistent-data lvm2
+ $ yum -y install gcc gcc-c++ yum-utils device-mapper-persistent-data lvm2 vim
 ```
 
 * 更新yum源
 
 ```bash
 # 阿里云源
-$ sudo yum-config-manager \
-	--add-repo http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
-$ sudo yum makecache fast
+$ yum-config-manager --add-repo http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+$ yum makecache fast
 ```
 
 * 安装docker
 
 ```bash
-$ sudo yum -y install docker-ce docker-ce-cli containerd.io  
-$ sudo systemctl start docker
+$ yum -y install docker
+$ systemctl start docker
 ```
 
 * 验证安装
 
 ```bash
-$ sudo docker version
-$ sudo docker info
-$ sudo docker run hello-world
+$ docker version
+$ docker info
+$ docker run hello-world
 ```
 
 * 阿里云镜像加速  
 
 ```bash
-$ sudo mkdir -p /etc/docker
-$ sudo tee /etc/docker/daemon.json <<-'EOF'
+$ mkdir -p /etc/docker
+$ tee /etc/docker/daemon.json <<-'EOF'
 {
-    # "registry-mirrors": ["https://vob2wv9t.mirror.aliyuncs.com"]
     "registry-mirrors": ["https://3h6bfq2b.mirror.aliyuncs.com"]
 }
 EOF
-$ sudo systemctl daemon-reload
-$ sudo systemctl restart docker
-$ sudo ps -ef | grep docker*
+$ systemctl daemon-reload
+$ systemctl restart docker
+$ ps -ef | grep docker*
 ```
 
 * 设置开机自启
 
 ```bash
-$ sudo systemctl enable docker
+$ systemctl enable docker
 ```
 
 
@@ -75,14 +73,13 @@ $ sudo systemctl enable docker
 
 ```bash
 $ docker pull mysql:5.7
-$ docker run \
-	--name mysql \
+$ docker run --name mysql \
 	-p 3306:3306 \
 	-e "MYSQL_ROOT_PASSWORD=123456" \
 	-v /mydata/mysql/log:/var/log/mysql \
 	-v /mydata/mysql/data:/var/lib/mysql \
 	-v /mydata/mysql/conf:/etc/mysql \
-	--privileged=true \	# Centos7安全Selinux禁止了一些安全权限，导致mysql和mariadb在进行挂载/var/lib/mysql的时候会报错，通过--privileged=true给容器加上特定权限
+	--privileged=true \
 	-idt mysql:5.7
 ```
 
@@ -132,8 +129,7 @@ $ touch /mydata/redis/conf/redis.conf
 
 ```bash
 $ docker pull redis
-$ docker run \
-	--name redis \
+$ docker run --name redis \
 	-p 6379:6379 \
 	-v /mydata/redis/data:/data \
 	-v /mydata/redis/conf/redis.conf:/etc/redis/redis.conf \
