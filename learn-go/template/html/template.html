@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>template</title>
+</head>
+<body>
+    <div>
+        <div align="middle">
+            <input type="text" maxlength="100" style="width: 500px;height: 100px;">
+            <button>Search</button>
+        </div>
+        <h2>共为你找到相关结果约{{.Hits}}个，显示从{{.Start}}共{{len .Items}}</h2>
+        <div>
+            <table>
+                <tbody>
+                    {{range .Items}}
+                    <tr>
+                        <td><a href="{{.Url}}">{{.Payload.Name}}</a></td>
+                        {{with .Payload}}
+                        <td>{{.Id}}</td>
+                        <td>{{.Age}}</td>
+                        <td>{{.Sex}}</td>
+                        <td>{{.Height}}</td>
+                        <td>{{.Weight}}</td>
+                        {{end}}
+                    </tr>
+                    {{else}}
+                    <div>没有找到相关用户</div>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
