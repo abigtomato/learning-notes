@@ -32,6 +32,7 @@ public class ThreadLocal_02 {
                 }
             */
             System.out.println(tl.get());
+            tl.remove();    // 防止内存泄漏
         }).start();
 
         new Thread(() -> {
