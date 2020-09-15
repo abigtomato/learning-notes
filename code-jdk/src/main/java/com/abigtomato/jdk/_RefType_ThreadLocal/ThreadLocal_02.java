@@ -6,7 +6,7 @@ public class ThreadLocal_02 {
 
     // ThreadLocal.ThreadLocalMap threadLocals = null;
     // ThreadLocal类中定义了ThreadLocalMap这个类型
-    // Thread类中维护一个ThreadLocalMap threadLocals对象，以ThreadLocal的引用为key
+    // Thread类中维护一个ThreadLocalMap threadLocals对象，以ThreadLocal的弱引用为key
     static ThreadLocal<Person> tl = new ThreadLocal<>();
 
     public static void main(String[] args) {
@@ -32,6 +32,17 @@ public class ThreadLocal_02 {
                 }
             */
             System.out.println(tl.get());
+
+            /*
+                static class Entry extends WeakReference<ThreadLocal<?>> {
+                    Object value;
+
+                    Entry(ThreadLocal<?> k, Object v) {
+                        super(k);
+                        value = v;
+                    }
+                }
+            */
             tl.remove();    // 防止内存泄漏
         }).start();
 
