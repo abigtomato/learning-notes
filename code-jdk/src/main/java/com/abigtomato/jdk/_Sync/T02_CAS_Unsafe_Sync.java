@@ -19,7 +19,7 @@ public class T02_CAS_Unsafe_Sync {
                 *   1.锁的管理交由操作系统去完成，管理锁的获取者，锁的状态，线程间状态；
                 *   2.等操作系统完成后，反馈给jvm后才能继续执行。
                 * 锁升级的过程（新版的synchronized）：
-                *   1.
+                *   1.TODO
                 * */
                 synchronized (o) {
                     for (int j = 0; j < 10000; j++) {
