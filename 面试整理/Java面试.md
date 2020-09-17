@@ -1,7 +1,17 @@
-# 1.JDK相关
+# 多线程高并发，各种锁
 
-# 2.Spring相关
+# jvm调优，gc算法
 
-# 3.JVM相关
+# tcp/ip，bio，nio，aio，poll，epoll，netty
 
-# 4.Netty相关
+# os原理，cpu内核，微机原理，计算机组成原理
+
+# 数据结构，算法
+
+# spring/springboot源码
+
+# bubbo
+
+# mysql调优，sql优化
+
+# redis

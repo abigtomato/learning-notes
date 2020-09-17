@@ -10,6 +10,7 @@ public class T03_Singleton {
 
     private T03_Singleton() {}
 
+    // 类加载的时候直接初始化，永远只会存在一个对象
     public static T03_Singleton getInstance() {
         return INSTANCE;
     }
