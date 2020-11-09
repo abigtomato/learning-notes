@@ -1596,6 +1596,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 * 概念：操作系统进行资源分配和调度的独立单位；
 * 进程剖析：操作系统管理进程的数据结构PCB+内存指令+内存数据+通用寄存器GR+程序状态字PSW；
 * **进程的状态**：
+  
   * **新建态（new）**：进程被创建且尚未进入就绪队列时的状态；
   * **就绪态（ready）**：当进程已经分配到除CPU以外的所有必要资源后就称为就绪状态，一个系统中处于就绪状态的进程可能有多个，通常会用就绪队列存储；
   * **运行态（running）**：进程已经获取CPU且正在运行中，在单核时代，只有一个进程在运行，多核时代则是多个进程并行；
@@ -1956,91 +1957,85 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 
 ### 2.9.1.进程在Linux中的实现
 
-* 进程：处于执行期的程序以及相关资源（打开的文件、挂起的信号、内核内部数据、处理器状态）的总称。 
-* 线程：是在进程中活动的对象，每个线程都拥有一个独立的程序计数器、栈空间和一组寄存器。内核调度的对象是线程，而不是进程。Linux不区分进程和线程，对它来说线程就是一种特殊的进程。
-
+* Linux进程：处于执行期的程序以及相关资源（打开的文件、挂起的信号、内核内部数据、处理器状态）的总称。 
+* Linux线程：是在进程中活动的对象，每个线程都拥有一个独立的程序计数器、栈空间和一组寄存器。内核调度的对象是线程，而不是进程。Linux不区分进程和线程，对它来说线程就是一种特殊的进程。
 * 现代操作系统的两种虚拟机制与进程的关系： 
   * 虚拟处理器：给进程一种假象，让其觉得自己在独享处理器；
   * 虚拟内存：让进程在分配和管理内存时觉得自己拥有整个系统的内存资源。
   * 线程间共享虚拟内存，都拥有自己的虚拟处理器。
-
-* 进程描述符：内核将进程的列表存放在叫做任务队列的双向循环链表中，链表中的每一项类型都为`task_struct`，称为进程描述符结构，描述了一个具体进程的所有信息。
-
-* 分配进程描述符：Linux通过slab分配器分配进程描述符结构，这样能够对象复用和缓存着色。每个任务的`thread_info`结构在其内核栈尾端分配，其中task域存放的是指向该任务实际的进程描述符的指针。
-
-* 进程状态：进程描述符中的state域描述了进程的当前状态。 
+* **进程描述符**：内核将其管理的所有进程存放在一个叫做任务队列的双向循环链表中，链表中的每一项类型都为`task_struct`，称为进程描述符结构，描述了一个具体进程的所有信息。
+* **分配进程描述符**：Linux通过slab分配器分配进程描述符结构，这样能够对象复用和缓存着色。每个任务的`thread_info`结构在其内核栈尾端分配，其中task域存放的是指向该任务实际的进程描述符的指针。
+* 进程状态：
+  * 进程描述符中的state域描述了进程的当前状态。 
   * TASK_RUNNING：运行或就绪状态，此时进程是可执行的；
   * TASK_INTERRUPTIBLE：可中断睡眠状态；
   * TASK_UNINTERRUPTIBLE：不可中断睡眠状态；
   * __TASK_TRACED：被其他进程更正的进程，如ptrace调试的程序；
-  * __TASK_STOPPED：被暂停执行的任务，通常在接收到SIGSTOP、SIGTSTP、SIGTTIN、SIGTTOU等信号时。
-
-* 进程家族树：所有的进程都是PID为1的init进程的后代，内核在系统启动的最后阶段启动init进程，该进程读取系统的初始化脚本并执行其他的相关程序，最终完成整个系统启动的过程。每个进程描述符结构都包含一个指向其父进程描述符结构的parent指针，还包含一个children列表。
-
-* 进程创建：Linux将进程的创建分解为两个单独的函数执行：fork()和exec()。fork()通过拷贝当前进程创建一个子进程，exec()负责读取可执行文件并将其载入地址空间开始运行。
-
-* 写时拷贝：Linux的fork()使用写时拷贝页实现，这时一种推迟甚至免除拷贝数据的技术，在创建子进程时，内核并不复制整个进程地址空间，而是让父子进程共享一个拷贝，只有在写入的时候，数据才会被复制。 
+* __TASK_STOPPED：被暂停执行的任务，通常在接收到SIGSTOP、SIGTSTP、SIGTTIN、SIGTTOU等信号时。
+* **进程家族树**：所有的进程都是PID为1的init进程的后代，内核在系统启动的最后阶段启动init进程，该进程读取系统的初始化脚本并执行其他的相关程序，最终完成整个系统启动的过程。每个进程描述符结构都包含一个指向其父进程描述符结构的parent指针，还包含一个children列表。
+* **进程创建**：Linux将进程的创建分解为两个单独的函数执行：``fork()和exec()``。fork()通过拷贝当前进程创建一个子进程，exec()负责读取可执行文件并将其载入地址空间开始运行。
+* **写时拷贝**：Linux的fork()使用写时拷贝页实现，这是一种推迟甚至免除拷贝数据的技术，在创建子进程时，内核并不复制整个进程地址空间，而是让父子进程共享一个拷贝，只有在写入的时候，数据才会被复制。 
 
 ### 2.9.2.线程在Linux中的实现
 
 * 从内核的角度来看，Linux将所有的线程当作进程来实现。线程仅仅被视为一个与其他进程共享某些资源的进程，拥有属于自己的`task_struct`描述符。 
-* 创建线程：和创建普通进程类似，在调用clone()时传递参数指明共享资源：`clone(CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND, 0)`。调用结果和fork()差不多，只是父子进程共享地址空间、文件系统资源、打开的文件描述符和信号处理程序。
-* 内核线程：用于内核在后台执行一些任务，是独立运行在内核空间的标准进程。和普通进程的区别是内核线程没有独立的地址空间，只在内核空间运行，不切换到用户空间。如软中断ksoftirqd和flush都是内核线程的例子。
+* **创建线程**：和创建普通进程类似，在调用clone()时传递参数指明共享资源：`clone(CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND, 0)`。调用结果和fork()差不多，只是父子进程共享地址空间、文件系统资源、打开的文件描述符和信号处理程序。
+* **内核线程**：用于内核在后台执行一些任务，是独立运行在内核空间的标准进程。和普通进程的区别是内核线程没有独立的地址空间，只在内核空间运行，不切换到用户空间。如软中断ksoftirqd和flush都是内核线程的例子。
 
 ## 2.16.Linux内核的进程调度
 
 * 进程调度：在可运行态进程之间分配有限处理器时间资源的内核子系统。
-* 多任务：多任务操作系统是同时并发的交互执行多个进程的操作系统。能使多个进程处于阻塞或睡眠状态，这些任务位于内存中，但是并不处于可运行状态，而是通过内核阻塞自己，直到某一事件（键盘输入、网络数据等）发生。
+* 多任务：多任务操作系统是同时并发的交互执行多个进程的操作系统。能使多个进程处于阻塞状态，这些任务位于内存中，但是并不处于可运行状态，而是通过内核阻塞自己，直到某一事件（键盘输入、网络数据等）发生而被唤醒。
 
 * 多任务系统的分类：
-  * 非抢占式：
-    * 除非进程自己主动停止运行，否则会一种运行下去。进程主动挂起自己的操作称为让步（yielding）。
+  * **非抢占式**：
+    * 除非进程自己主动停止运行，否则会一种运行下去（进程主动让出CPU的操作称为让步yielding）。
     * 缺点就是无法对每个进程该执行多长时间统一规定，进程独占的CPU时间可能超出预期。另外，一个绝不做出让步的悬挂进程就能使系统崩溃。
-  * 抢占式：
+  * **抢占式**：
     * 由调度程序决定什么时候停止一个进程的运行，以便其他进程得到运行机会，这个强制的挂起动作叫做抢占。
     * 时间片：可运行进程在被抢占之前预先设置好的处理器时间段。
 
-* 进程调度策略：CPU消耗型进程和I/O消耗型进程。前者把大量的时间用于执行代码上，不属于I/O驱动型，从系统响应速度考虑，调度策略往往是降低调度频率，延长其运行时间。后者是把大量时间消耗在了等待I/O事件响应上。
+* 进程调度策略：**CPU消耗型进程和I/O消耗型进程**。前者把大量的时间用于执行代码上，调度策略往往是降低调度频率，延长其运行时间。而后者是把大量时间消耗在了等待I/O事件响应上，往往在其等待事件的时候调度其他进程让出执行权。
 
 * 进程优先级：
-  * 调度程序总是选择时间片用尽且优先级最高的进程运行。
+  * **调度程序总是选择时间片用尽且优先级最高的进程运行**。
   * nice值：-20~+19，默认值0，越大的nice优先级越低，越低就越能获得更多时间片。
   * 实时优先级：0~99，数值越大优先级越高。
 
-* Linux调度算法：完全公平调度CFS，允许每个进程运行一段时间、循环轮转、选择运行最少的进程作为下一个运行进程，在所有进程总数基础上计算一个进程应该运行多久，不在依靠nice值计算绝对时间片，而是作为进程获得的处理器运行比的权重，越高的nice值越获得更低的处理器使用权重（总之，CFS中任何进程所获得的处理器时间是由自己和其他所有可运行进程nice值的相对差决定的）。
+* Linux调度算法：**完全公平调度CFS**，允许每个进程运行一段时间、循环轮转、选择运行最少的进程作为下一个运行进程，在所有进程总数基础上计算一个进程应该运行多久，不在依靠nice值计算绝对时间片，而是作为进程获得的处理器运行比的权重，越高的nice值越获得更低的处理器使用权重（总之，**CFS中任何进程所获得的处理器时间是由自己和其他所有可运行进程nice值的相对差决定的**）。
 
 * Linux调度实现主要关注以下四个部分：
-  * 时间记账：CFS不再有时间片的概念，但是会维护每个进程运行的时间记账，需要确保每个进程在分配给其的处理器时间内运行；
-  * 进程选择：CFS算法调度核心是当CFS需要选择下一个运行进程时，选择具有最小vruntime的进程。CFS使用红黑树组织可运行进程的队列，红黑树的键值为vruntime，检索对应节点的时间复杂度为对数级别（当进程被唤醒或通过fork()调用创建时，会加入rbtree；当进程阻塞或终止则从树上删除）；
-  * 调度器入口：进程调度的入口函数是`schedule()`，其定义在kernel/sched.c文件，是内核其他部分调用进程调度器的入口；
-  * 睡眠和唤醒：睡眠（阻塞）的进程处于一个特殊的不可运行状态。当进程将自己标记为休眠状态，则会从可执行进程对应的红黑树中移出，放入等待队列（是由等待事件发生的进程组成的链表），然后调用`schedule()`调度下一个进程。唤醒的过程则相反，进程被设置为可执行状态，然后从等待队列转移到可执行红黑树中。
+  * **时间记账**：CFS不再有时间片的概念，但是会维护每个进程运行的时间记账，需要确保每个进程在分配给它的处理器时间内运行；
+  * **进程选择**：CFS算法调度核心是当CFS需要选择下一个运行进程时，选择具有最小运行时间的进程。**CFS使用红黑树组织可运行进程的队列**，红黑树的键值为进程最小运行时间，检索对应节点的时间复杂度为log级别（当进程被唤醒或通过fork()调用创建时，会加入红黑树，当进程阻塞或终止则从树上删除）；
+  * **调度器入口**：进程调度的入口函数是`schedule()`，其定义在kernel/sched.c文件，是内核其他部分调用进程调度器的入口；
+  * **睡眠和唤醒**：睡眠（阻塞）的进程处于一个特殊的不可运行状态。当进程将自己标记为睡眠状态，则会从可执行进程对应的红黑树中移出，放入**等待队列（是由所有等待事件发生的进程组成的链表）**，然后调用`schedule()`调度下一个进程。唤醒的过程则相反，进程被设置为可执行状态，然后从等待队列转移到可执行红黑树中。
 
-* 抢占和上下文切换：
+* **抢占和上下文切换**：
   * 上下文切换由定义在kernel/sched.c中的`context_switch()`函数负责，每当一个新的进程被选出投入运行的时候，`schedule()`会调用`context_switch()`完成：
   * 将虚拟内存从上一个进程映射切换到新进程中；
-  * 从上一个进程的处理器状态切换到新进程的处理器状态，其中包括保存、恢复栈信息和寄存器信息。
+  * 从上一个进程的处理器状态切换到新进程的处理器状态，其中包括**保存、恢复栈信息和寄存器信息**。
 
-* 用户抢占： 内核在中断处理程序或者系统调用返回后，都会检测`need_resched`标志，从中断处理程序或者系统调用返回的返回路径都是跟体系结构相关的。即用户抢占会发生在系统调用返回用户空间时，和中断处理程序返回用户空间时。
-
-* 内核抢占：2.6版本中，Linux内核引入抢占能力，只要重新调度是安全的（即没有持有锁的情况），内核可以在任何时间抢占正在执行的任务。内核抢占发生在：
-  * 中断处理程序正在执行，且返回内核空间之前；
-  * 进程在内核空间释放锁的时候；
-  * 内核任务显式的调用`schedule()`；
-  * 内核中的任务阻塞。
+  * **用户抢占**： 内核在中断处理程序或者系统调用返回后，都会检测`need_resched`标志，从中断处理程序或者系统调用返回的返回路径都是跟体系结构相关的。**即用户抢占会发生在系统调用返回用户空间时，和中断处理程序返回用户空间时**。
+  
+  * 内核抢占：2.6版本中，Linux内核引入抢占能力，只要重新调度是安全的（即没有持有锁的情况），内核可以在任何时间抢占正在执行的任务。内核抢占发生在：
+    * 中断处理程序正在执行，且返回内核空间之前；
+    * 进程在内核空间释放锁的时候；
+    * 内核任务显式的调用`schedule()`；
+    * 内核中的任务阻塞。
 
 ## 2.17.Linux内核的系统调用
 
-* API、POSI、C库：应用程序通过在用户空间实现的应用编程接口API而不是直接通过系统调用来完成，一个API定义了一组应用程序使用的编程接口。
+* API、POSI、C库：当需要使用系统功能时，应用程序通过在用户空间实现的应用编程接口API而不是直接通过系统调用来完成，一个API定义了一组应用程序使用的编程接口。
 
   <img src="assets/20200531225025716.png" alt="在这里插入图片描述" style="zoom: 33%;" />
 
-* 在Linux系统中，每个系统调度都被赋予了一个系统调用号，有以下特点：
+* 在Linux系统中，每个系统调度都被赋予了一个**系统调用号**，有以下特点：
   * 系统调用号一旦分配就不能再有变更，否则编译好的程序有可能崩溃；
-  * 如果系统调用被删除，所占用的系统调用号不允许被回收利用，否则之前编译过的代码会调用这个系统调用，出现问题。Linux使用未实现系统调用``sys_ni_syscall()``来填补这种空缺，其除了返回`-ENOSYS`不做任何工作。
+  * 如果系统调用被删除，所占用的系统调用号不允许被回收利用，否则之前编译过的代码会调用这个系统调用，出现问题。Linux使用未实现系统调用``sys_ni_syscall()``来填补这种空缺，除了返回`-ENOSYS`不做任何工作。
 
-* 系统调用处理程序：通知内核的机制通过软中断实现。通过引发一个中断异常来促使系统切换到内核态去执行异常处理程序，在x86系统上预定义的软中断的中断号是128，通过int $0x80指令触发，这条指令触发一个异常导致系统切换到内核态并执行128号异常处理程序（这个异常处理程序就是系统调用处理程序），即``system_call()``。
+* **系统调用处理程序**：**通知内核的机制通过软中断实现**。通过引发一个中断异常来促使系统切换到内核态去执行异常处理程序，在x86系统上预定义的软中断的中断号是128，**通过int $0x80指令触发**，这条指令触发一个异常导致系统切换到内核态并执行128号异常处理程序（这个异常处理程序就是系统调用处理程序），即``system_call()``。
 
-* 参数传递：系统调用额外的参数是存放在寄存器传递给内核。在x86-32系统上，ebx、ecx、edx、esi和edi是按顺序存放的前5个参数，若超过5个，需要用单独的寄存器存放所有指向这些参数在用户空间地址的指针。给用户空间的返回值也是通过寄存器传递，在x86系统是存放在eax寄存器中的。
+* **参数传递**：**系统调用额外的参数是存放在寄存器传递给内核的**。在x86-32系统上，ebx、ecx、edx、esi和edi是按顺序存放的前5个参数，若超过5个，需要用单独的寄存器存放所有指向这些参数在用户空间地址的指针。给用户空间的返回值也是通过寄存器传递，在x86系统是存放在eax寄存器中的。
 
   <img src="assets/20200531224934703.png" alt="在这里插入图片描述" style="zoom: 33%;" />
 
@@ -2610,35 +2605,396 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
 
 # 4.从Java基础到集合框架
 
-## 4.1.List、Set、Map的区别
+## 4.1.Java集合概述
 
-## 4.2.ArrayList和LinkedList的区别
+![image-20201109175038610](assets/image-20201109175038610.png)
 
-## 4.3.ArrayList和Vector的区别
+### 4.1.1.List、Set、Map的区别
 
-## 4.4.ArrayList的扩容机制
+* List（顺序）：存储一组不唯一（可以有多个元素引用相同的对象），并且有序的对象；
+* Set（唯一）：不允许重复的集合，不会有多个元素引用相同的对象；
+* Map（键值）：使用键值对存储，会维护一个与Key有关联的值，两个key可以引用相同的对象，但key不能重复。
 
-## 4.5.HashMap和HashTable的区别
+### 4.1.2.集合底层数据结构
 
-## 4.6.HashMap和HashSet的区别
+* List：
+  * ArrayList：Object[]数组；
+  * Vector：线程安全的Object[]数组；
+  * LinkedList：双向链表（JDK1.6之前是双向循环链表，JDK1.7取消了循环）。
+* Set：
+  * HashSet：基于HashMap实现，底层结构和HashMap相同；
+  * LinkedHashSet：是HashSet的子类，基于LinkedHashMap实现的；
+  * TreeSet：红黑树，一种自平衡的排序二叉树。
+* Map：
+  * HashMap：JDK1.8之前是由数组+链表组成，数组是主体，链表是为了解决哈希冲突而存在的。JDK1.8后当链表的长度大于阈值8时，将链表转换为红黑树（若当前数组长度小于64，则优先扩容数组），减少搜索时间；
+  * LinkedHashMap：继承自HashMap，底层仍是基于拉链式散列结构组成。并以此为基础增加了一条双向链表，使得上面的结构可以保持键值对的插入顺序，同时通过对链表进行操作，实现了访问顺序相关逻辑；
+  * HashTable：数组+链表的组合，数组是主体，链表解决哈希冲突；
+  * TreeMap：红黑树，一种自平衡的排序二叉树。
 
-## 4.7.HashSet如何检查重复
+### 4.1.3.如何选择集合？
 
-## 4.8.HashMap的底层实现
++ 当需要根据键值对获取元素时，就选择Map接口下的集合。需要排序时选择TreeMap，不需要排序则使用HashMap，保证线程安全则使用ConcurrentHashMap；
++ 当只需要存放元素时，就选择Collection接口下的集合。需要保证元素唯一性就选择Set接口下的集合TreeSet和HashSet，不关心重复就选择List接口下的ArrayList和LinkedList。
 
-## 4.9.HashMap的长度为什么是2的幂次方
+### 4.1.4.为什么使用集合？
 
-## 4.10.HashMap多线程操作的死循环问题
+* 当需要保存一组类型相同的数据时，需要一个容器，但使用数组存储对象由很多弊端。在实际开发中，存储数据的类型是多种多样的，所以出现了集合；
+* 数组的缺点是一旦声明后，长度就无法改变，同时声明数组的同时也必须指定数据类型，一旦确定后就不法改变，另外，数组存储数据是不提供自定义排序和判重功能的。所以用数组存储数据功能单一不够灵活。
 
-## 4.11.ConcurrentHashMap和HashTable的区别
+### 4.1.5.Iterator迭代器
 
-## 4.12.ConcurrentHashMap的底层实现
+* 是什么？Java通过Iterator接口实现设计模式中的迭代器，可以对集合进行遍历，但不同集合中的数据结构可能是不相同的，所以存取方式会存在区别。迭代器就是定义了一个同一的接口，并声明了hasNext()和next()这两个用于获取数据的方法，具体的实现交由具体的集合去完成。
+* 有啥用？主要是用于遍历集合，特点是安全，因为其可以确保在遍历集合的时候元素不会被更改，一旦被修改，就会抛出异常。
 
-## 4.13.comparable和Comparator的区别
+### 4.1.6.线程不安全和安全的集合有哪些？
 
-## 4.14.Java集合框架的底层数据结构
+* 线程不安全的集合：ArrayList、LinkedList、HashMap、TreeMap、HashSet、TreeSet都不是线程安全的；
+* JUC（java.util.concurrent）包提供了各种并发容器：
+  * ConcurrentHashMap：线程安全的HashMap；
+  * CopyOnWriteArrayList：可以看成线程安全的ArrayList，在读多写少的场合性能非常好，远胜于Vector；
+  * ConcurrentLinkedQueue：使用链表实现的并发队列，可以看成是一个线程安全的LinkedList，是一个非阻塞队列；
+  * BlockingQueue：阻塞队列接口，JDK通过链表、数组等方式实现了这个接口，非常适合作为数据共享的通道；
+  * ConcurrentSkipListMap：跳表的实现。底层是一个Map结构，使用跳表的数据结构实现了快速查找。
 
-## 4.15.如何选用Java的集合？
+## 4.2.Collection子接口——List
+
+### 4.2.1.ArrayList和Vector的区别
+
+* ArrayList是List的主要实现类，底层使用Object[]存储，适用于频繁的查找工作，线程不安全；
+* Vector是List的古老实现类，底层使用Object[]存储，线程安全，效率低，已经不适合使用了。
+
+### 4.2.2.ArrayList和LinkedList的区别
+
+* **线程是否安全**：二者皆不同步，不保证线程安全；
+
+* **底层数据结构**：ArrayList使用Object类型数组，LinkedList使用双向链表（JDK1.6之前是双向循环链表，JDK1.7之后取消了循环）；
+
+* **插入和删除是否受元素位置的影响**：
+
+  * ArrayList采用数组存储，所以插入删除的时间复杂度受元素位置影响。如：执行add(E e)方法的时候，ArrayList会默认将指定元素插入到列表的末尾，时间复杂度是O(1)。但若是要通过add(int index, E element)在指定位置插入素的话，时间复杂度就是O(n-i)，因为在进行上述操作时集合中第i和第i个元素之后的(n-i)个元素都要执行向后移位的操作；
+  * LinkedList采用链表存储，所以对于add(E e)的插入不受元素位置的影响，近似O(1)。若是要通过add(int index, E element)在指定位置i插入元素的话，时间复杂度近似为O(n)，因为需要先从头移动到指定位置再插入。
+
+* **是否支持快速随机访问**：LinkedList不支持高效的随机元素访问，而ArrayList支持。快速随机访问就是通过元素的序号快速获取元素对象的过程，如get(int index)；
+
+* **内存空间占用**：ArrayList的空间浪费主要体现再列表的结尾会预留一定的容量空间，而LinkedList的空间花费则体现在它的每一个元素都需要消耗相对更多个空间（因为除了存放数据还需要存放前驱和后继指针）。
+
+* RandomAccess接口：只有定义没有具体内容的接口，用于标识实现这个接口的类具有随机访问功能。
+
+  查看binarySearch()的源码发现，若List实现了RandomAccess接口，说明具有随机访问功能，则调用indexedBinarySearch()方法。若没实现，则调用iteratorBinarySearc()，则只能通过迭代去访问。
+
+  ```JAVA
+  public static <T> int binarySearch(List<? extends Comparable<? super Tjk list, T key) {
+      if (list instanceof RandomAccess || list.size() < BINARYSEARCH_THRESHOLD)
+      	return Collections.indexedBinarySearch(list, key);
+      else
+      	return Collections.iteratorBinarySearch(list, key);
+  }
+  ```
+
+  ArrayList实现了RandomAccess接口，是因为底层是数组，具有通过下标进行随机访问的功能。而LinkedList没有实现，是因为底层是链表，只有通过迭代访问。
+
+* 双向链表：包含两个指针，一个prev指向前一个节点，一个next指向后一个节点。
+
+  ![image-20201109150211100](assets/image-20201109150211100.png)
+
+* 双向循环链表：最后一个节点的next指向head，而head的prev指向最后一个节点，构成一个环形。
+
+  ![image-20201109150227193](assets/image-20201109150227193.png)
+
+### 4.2.3.ArrayList的扩容机制源码分析
+
+* 构造方法源码分析：
+
+  ```JAVA
+  // 默认初始容量大小为10
+  private static final int DEFAULT_CAPACITY = 10;
+  
+  private static final Object[] DEFAULTCAPACITY_EMPTY_ELEMENTDATA = {};
+  
+  // 使用无参构造方法构造时，默认是一个空数组
+  public ArrayList() {
+      this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
+  }
+  
+  // 带指定容量参数的构造函数
+  public ArrayList(int initialCapacity) {
+      if (initialCapacity > 0) {	// 初始容量大于0
+          // 创建initialCapacity大小的数组
+          this.elementData = new Object[initialCapacity];
+      } else if (initialCapacity == 0) {	// 初始容量等于0
+          // 创建空数组
+          this.elementData = EMPTY_ELEMENTDATA;
+      } else {	// 初始容量小于0，抛出异常
+          throw new IllegalArgumentException("Illegal Capacity: " + initialCapacity);
+      }
+  }
+  
+  // 构造包含指定collection元素的列表，这些元素利用该集合的迭代器按顺序返回
+  public ArrayList(Collection<? extends E> c) {
+      elementData = c.toArray();
+      if ((size = elementData.length) != 0) {
+          // c.toArray might (incorrectly) not return Object[] (see 6260652)
+          if (elementData.getClass() != Object[].class)
+              elementData = Arrays.copyOf(elementData, size, Object[].class);
+      } else {
+          // replace with empty array.
+          this.elementData = EMPTY_ELEMENTDATA;
+      }
+  }
+  ```
+
+* `add()`方法源码分析：
+
+  ```JAVA
+  // 将指定的元素追加到此列表的末尾
+  public boolean add(E e) {
+      // 添加元素之前，先调用ensureCapacityInternal方法
+      ensureCapacityInternal(size + 1);
+      // ArrayList添加元素的实质就是为数组赋值
+      elementData[size++] = e;
+      return true;
+  }
+  
+  ......
+  
+  // 得到最小扩容量
+  private void ensureCapacityInternal(int minCapacity) {
+      if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {
+          // 获取默认容量和传入参数的较大值
+          minCapacity = Math.max(DEFAULT_CAPACITY, minCapacity);
+      }
+      ensureExplicitCapacity(minCapacity);
+  }
+  
+  ......
+      
+  // 判断是否需要扩容
+  private void ensureExplicitCapacity(int minCapacity) {
+      modCount++;
+      // overflow-conscious code
+      if (minCapacity - elementData.length > 0)
+          // 调用grow方法进行扩容，调用此方法代表已经开始扩容了
+          grow(minCapacity);
+  }
+  ```
+
+  * 当add第1个元素时，elementData.length为0，执行``ensureCapacityInternal()``方法后，因为是默认数组，所以minCapacity为10。接着``ensureExplicitCapacity()``方法中的`minCapacity - elementData.length > 0`条件成立，进入``grow(minCapacity)``扩容；
+  * 当add第2个元素时，elementData.length已经被扩容为10，执行``ensureCapacityInternal()``方法时， 因为是扩容后的新数组，所以minCapacity为2，接着``ensureExplicitCapacity()``方法中的`minCapacity - elementData.length > 0`条件不成立，所以不会扩容；
+  * 接下来添加的3~10个元素都不会触发扩容，直到第11个元素，minCapacity增加到了11（11个元素），大于elementData.length的10（数组容量10），满足条件后触发扩容。
+
+* `grow()`方法源码分析：
+
+  ```JAVA
+  // 要分配的最大数组大小
+  private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
+  
+  // ArrayList扩容的核心方法
+  private void grow(int minCapacity) {
+      // oldCapacity为旧容量，newCapacity为新容量
+      int oldCapacity = elementData.length;
+      // 将oldCapacity右移一位，其效果相当于oldCapacity /2
+      // 位运算的速度远远快于整除运算，该行代码就是将新容量更新为旧容量的1.5倍
+      int newCapacity = oldCapacity + (oldCapacity >> 1);
+      // 然后检查新容量是否大于最小需要容量，若还是小于最小需要容量，那么就把最小需要容量当作数组的新容量
+      if (newCapacity - minCapacity < 0)
+          newCapacity = minCapacity;
+      // 如果新容量大于MAX_ARRAY_SIZE，则执行hugeCapacity()方法来比较minCapacity和MAX_ARRAY_SIZE
+      // 若minCapacity大于最大容量，则新容量则为Integer.MAX_VALUE
+      if (newCapacity - MAX_ARRAY_SIZE > 0)
+          newCapacity = hugeCapacity(minCapacity);
+      // 创建了一个新容量的新数组，然后将就数组拷贝过去，返回新数组
+      elementData = Arrays.copyOf(elementData, newCapacity);
+  }
+  ```
+
+  * 当add第1个元素，进入grow()方法时，oldCapacity为0，`if (newCapacity - minCapacity < 0)`后newCapacity为10，并通过``Arrays.copyOf()``创建新容量的数组；
+  * 当add第11个元素，进入grow()方法时，oldCapacity为10，`newCapacity = oldCapacity + (oldCapacity >> 1)`后newCapacity为15，并通过``Arrays.copyOf()``创建新容量的数组。
+
+* `hugeCapacity()`方法源码分析：
+
+  ```JAVA
+  private static int hugeCapacity(int minCapacity) {
+      if (minCapacity < 0) // overflow
+          throw new OutOfMemoryError();
+      // 若当前数组的容量大于默认的最大容量，则使用int的最大值作为数组的容量，若不大于，则使用默认最大容量
+      return (minCapacity > MAX_ARRAY_SIZE) ? Integer.MAX_VALUE : MAX_ARRAY_SIZE;
+  }
+  ```
+
+## 4.3.Collection子接口——Set
+
+### 4.3.1.Comparable和Comparator的区别
+
+* Comparable接口存在于java.lang包下，有一个compareTo(Object obj)方法用来排序；
+* Comparator接口存在于java.util包下，有一个compare(Object obj1, Object obj2)方法用来排序。
+* 一般需要对集合进行自定义排序时，需要重写compareTo()或compare()方法，或将二者结合使用。
+
+* Comparator定制排序：
+
+  ```JAVA
+  public class SortTest {
+      
+      public static void main(String[] args) {
+          ArrayList<Integer> arr = new ArrayList<Integer>();
+   		arr.add(-1);
+          arr.add(3);
+          arr.add(0);
+          Collections.sort(arr, new Comparator<Integer>() {
+              @Override
+              public int compare(Integer o1, Integer o2) {
+                  return o2.compareTo(o1);
+              }
+          });
+      }
+  }
+  ```
+
+* Comparable定制对象比较规则：
+
+  ```JAVA
+  public class Person implements Comparable<Person> {
+      
+      private String name;
+      private int age;
+      
+      public Person(String name, int age) {
+          super();
+          this.name = name;
+          this.age = age;
+      }
+  
+      public String getName() {
+          return name;
+      }
+  
+      public void setName(String name) {
+          this.name = name;
+      }
+  
+      public int getAge() {
+          return age;
+      }
+  
+      public void setAge(int age) {
+          this.age = age;
+      }
+  	
+      @Override
+      public int compareTo(Person o) {
+          if (this.age > o.getAge()) {
+              return 1;
+          }
+          if (this.age < o.getAge()) {
+              return -1;
+          }
+      }
+  }
+  ```
+
+### 4.3.2.无序性和不可重复性
+
+* 什么是无序性？无序性不等于随机性，无序性是指存储的数据在底层数组中并非按照数组索引的顺序添加，而是根据数据的哈希值决定的。
+* 什么是不重复性？不可重复性是指添加的元素按照equals()判断时，需要返回false，Set集合的不重复性判断需要同时重写equals()方法hashCode()。
+
+### 4.3.3.HashSet、LinkedHashSet、TreeSet的区别
+
+* HashSet是Set接口的主要实现类，底层是基于HashMap实现的，线程不安全，可以存储null值；
+* LinkedHashSet是HashSet的子类，格外维护了链表结构，能够按照元素添加时的顺序遍历；
+* TreeSet底层使用红黑树，能够按照添加元素的顺序遍历，排序的方式有自然排序和定制排序。
+
+### 4.3.1.HashSet如何检查重复
+
+* 判重的过程：
+  * 当对象add进HashSet中时，HashSet会先计算对象的HashCode来判断对象加入的位置，同时也会与已存在对象的HashCode作比较，若没有相同的，则假设对象没有重复出现；
+  * 但如果发现存在相同HashCode的对象，这时会再调用equals()方法来检查HashCode相同的对象是否真的相同，若相同就不允许加入操作。
+* hashCode()和equals()的相关规定：
+  * 如果两个对象相等，则HashCode也一定相同；
+  * 两个对象相等，则equals()方法返回true；
+  * 即使两个对象有相同的HashCode，也不一定相等；
+  * equals()被重写的话，那hashCode()也必须被重写；
+  * hashCode()的默认行为是对堆上的对象产生独特值，如果没有重写hashCode()，则该Class的两个对象无论如何都不会相等，即使它们指向相同的数据。
+* ==和equeals()的区别：
+  * ==是判断两个变量或实例是不是指向同一块内存空间。equals()是判断两个变量或实例所指向内存空间的数据是不是相同的；
+  * 以字符串为例，==是对内存地址的比较，equals()是对字符串内容的比较；
+  * ==指引用是否相同，equals()指值是否相同。
+
+## 4.4.Map接口
+
+### 4.4.1.HashMap和HashTable的区别
+
+* **线程是否安全**：HashMap的非线程安全的，HashTable保证线程安全。HashTable的内部方法都经过了synchronized修饰；
+
+* **效率**：因为线程安全的问题，HashMap要比HashTable消息效率高，HashTable基本是被淘汰了；
+
+* **对null key和null value的支持**：HashMap中null可以作为键，只能有一个，但可以有多个键对应的值为null。HashTable中如果put的k-v只要有一个null，会抛空指针异常；
+
+* **初始容量大小和每次扩充容量大小的不同**：
+
+  * 创建时如果不指定容量初始值，HashTable默认的初始值大小为11，之后每次扩充，容量变为原来的2n+1。HashMap的默认初始容量是16，之后每次扩容，容量变为原来的2倍；
+  * 创建时如果给定了容量初始值，那么HashTable会直接使用给定的大小，而HashMap会将其扩充为2的幂次方大小，即HashMap总是使用2的幂作为哈希表的大小。
+
+* **底层数据结构**：JDK1.8后HashMap在解决哈希冲突时有了较大的变化，当链表长度大于阈值（默认8）时，会将链表转化为红黑树，已减少搜索时间。HashTable没有这样的机制。
+
+* HashMap允许指定容量的构造函数源码：
+
+  ```JAVA
+  public HashMap(int initialCapacity, float loadFactor) {
+      if (initialCapacity < 0)
+      	throw new IllegalArgumentException("Illegal initial capacity: " + initialCapacity);
+      if (initialCapacity > MAXIMUM_CAPACITY)
+      	initialCapacity = MAXIMUM_CAPACITY;
+      if (loadFactor <= 0 || Float.isNaN(loadFactor))
+      	throw new IllegalArgumentException("Illegal load factor: " + loadFactor);
+      	this.loadFactor = loadFactor;
+      	this.threshold = tableSizeFor(initialCapacity);
+      }
+  
+  public HashMap(int initialCapacity) {
+      this(initialCapacity, DEFAULT_LOAD_FACTOR);
+  }
+  
+  ......
+      
+  // 保证了HashMap总是使用2的幂作为哈希表的大小
+  static final int tableSizeFor(int cap) {
+      int n = cap - 1;
+      n |= n >>> 1;
+      n |= n >>> 2;
+      n |= n >>> 4;
+      n |= n >>> 8;
+      n |= n >>> 16;
+      return (n < 0) ? 1 : (n >= MAXIMUM_CAPACITY) ? MAXIMUM_CAPACITY : n + 1;
+  }
+  ```
+
+### 4.4.2.HashMap和HashSet的区别
+
+HashSet是基于HashMap实现的，除了``clone()、writeObject()、readObject()``外都是直接调用HashMap的方法。
+
+|            HashMap             |                           HashSet                            |
+| :----------------------------: | :----------------------------------------------------------: |
+|         实现了Map接⼝          |                         实现Set接⼝                          |
+|           存储键值对           |                          仅存储对象                          |
+|    调⽤put()向map中添加元素    |                 调⽤add()⽅法向Set中添加元素                 |
+| HashMap使⽤键 Key计算 HashCode | HashSet使⽤成员对象来计算HashCode值，对于两个对象来说HashCode可能相同，所以equals()⽅法⽤来判断对象的相等性 |
+
+### 4.4.3.HashMap的底层实现源码分析
+
+JDK1.8之前的HashMap：
+
+* 底层数据结构：是数组和链表的结合使用，即链表散列。HashMap通过key的hasCode()经过扰动函数处理后得到hash值，然后通过(n-1)&hash判断当前元素的存放位置（n为数组长度），如果当前位置存在元素的话，就判断该元素与新元素的key和hash是否相同，若相同则直接覆盖，若不相同则通过拉链法解决冲突；
+
+* 扰动函数：就是指HashMap的hash()方法，使用hash()方法是为了防止一些对象的hashCode()实现较差，即使用扰动函数减少哈希碰撞。
+
+* 拉链法：将链表和数组结合后，数组的每一个元素都是一个链表，若遇到哈希冲突的情况，比较是否是相同元素，若不是则将其挂到链表上即可。
+
+  <img src="assets/image-20201109172949967.png" alt="image-20201109172949967" style="zoom: 67%;" />
+
+JDk1.8之后的HashMap：
+
+<img src="assets/image-20201109173018257.png" alt="image-20201109173018257" style="zoom: 80%;" />
+
+## 4.5.Collections工具类
 
 
 
