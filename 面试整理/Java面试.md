@@ -1084,10 +1084,11 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
  3. 应用场景：用户空间的异步编程和回调函数。
 4. 什么是用户级别线程？什么是内核级别线程？
        1. 从Java的角度来看，JVM的用户线程和操作系统的内核线程是1:1的关系；
-           2. 从Golang的角度来看，用户线程和内核线程是M:N的关系，而且M远远大于N。
+   
+   2. 从Golang的角度来看，用户线程和内核线程是M:N的关系，而且M远远大于N。
 5. Golang的GPM：
 
-          1. 自动创建一个线程池，维护一批内核线程，go关键字会将指定的任务存入任务队列中，由预先创建好的内核线程执行；
+      1. 自动创建一个线程池，维护一批内核线程，go关键字会将指定的任务存入任务队列中，由预先创建好的内核线程执行；
 
        2. 比起Java，Golang可以用更小的上下文切换的开销换取更大量任务的并发执行，Golang的任务就相当于用户线程；
        3. 类似于Java的线程池的概念，ForkJoinPool线程池，区别在于java线程池中的任务无法同步通信，而Golang可以通过channel来进行任务间的同步和通信。
@@ -2545,7 +2546,7 @@ Java虚拟机规范规定类加载的过程要完成3件事：
 * 前四种IO模型都是同步模型，区别在于第一阶段，第二阶段都是一样的，都是在数据从内核复制到应用程序缓冲区期间（用户空间），进程阻塞于recvfrom调用；
 * 相反，异步IO模型在等待数据和接收数据这两个阶段都是非阻塞的，可以处理其他的逻辑，即用户进程将整个IO操作交给内核完成，内核完成后会发起通知，在此期间，用户进程不需要去检查IO状态，也不需要主动的去触发数据的拷贝。
 
-## 3.2.I/O多路复用
+## 3.2.Linux的I/O多路复用
 
 ### 3.2.1.select
 
@@ -2553,7 +2554,121 @@ Java虚拟机规范规定类加载的过程要完成3件事：
 
 ### 3.2.3.epoll
 
+## 3.3.Java的I/O模型
 
+### 3.3.1.BIO
+
+* Java角度：
+
+  ```JAVA
+  public class SocketBIO {
+      
+      public static void main(String[] args) {
+          ServerSocket server = new ServerSocket(9090);
+          
+          while (true) {
+              final Socket client = server.accept();
+          	
+              new Thread(() -> {
+                  InputStream in = null;
+                  try {
+                      in = client.getInputStream();
+              		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+                      while (true) {
+                          String dataline = reader.readLine();
+                          if (null != dataline) {
+                              System.out.println(dataline);
+                          } else {
+                              client.close();
+                              break;
+                          }
+                 		}
+                  } catch(Exception e) { }    
+              });
+          }
+      }
+  }
+  ```
+
+* Kernel角度：
+
+  ```shell
+  /usr/java/j2sdk1.4.2_19/bin/javac SocketBIO.java
+  ```
+
+  ```shell
+  strace -ff -o out /usr/java/j2sdk1.4.2_19/bin/java SocketBIO	# 最终应用程序的系统调用，并重定向到以out开头的文件中，每个线程一个文件
+  ```
+
+  * 首先通过`socket(PF_INET6, SOCKET_STREAM, IPPROTO_IP) = 3`创建TCP的流式套接字，返回套接字的文件描述符；
+  * 通过`bind(3, {sa_famliy=AF_INET6, sin6_port=htons(9090), inet_pton(AF_INET6, "::", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, 24) = 0`为套接字绑定端口；
+  * 通过`listen(3, 50)`将套接字置为监听状态；
+  * 通过`accept(3, )`阻塞线程等待连接建立；
+
+  ```shell
+  nc localhost 9090	# 开启一个本地客户端
+  ```
+
+  * 通过`accept(3, {sa_family=AF_INET6, sin6_port=htons(53311), inet_pton(AF_INET6. "::1", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, [28]) = 5`接收连接建立，新建和连接对应的套接字，返回套接字的文件描述符；
+  * 通过`clone(child_stack=0xea2bd494, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tidptr=0xea2bdbd8, tls=0xea2bdbd8, child_tidptr=0xffb2e44c) = 2386`创建子线程去处理，每个线程处理一个连接，返回进程描述符（PID）；
+  * 在子线程中，通过`recv(5, )`读取套接输入流（阻塞等待）。
+
+### 3.3.2.NIO
+
+* Java角度：
+
+  ```JAVA
+  public class SocketNIO {
+      
+      public static void main(String[] args) {
+          LinkedList<SocketChannel> clients = new LinkedList<>();
+          
+          ServerSocketChannel ss = ServerSocketChannel.open();
+          ss.bind(new InetSocketAddress(9090));
+          ss.configureBlocking(false);
+      	
+          while (true) {
+              Thread.sleep(1000);
+              SocketChannel client = ss.accept();
+              if (client != null) {
+                  client.configureBlocking(false);
+                  int port = client.socket().getPort();
+                 	clients.add(client);
+              }
+              
+              ByteBuffer buffer = ByteBuffer.allocateDirect(4096);
+              for (SocketChannel c : clients) {
+                  int num = c.read(buffer);
+                  if (num > 0) {
+                      buffer.filp();
+                      byte[] aaa = new byte[buffer.limit()];
+                      buffer.get(aaa);
+                      
+                      String b = new String(aa);
+                 		System.out.println(c.socket().getPort() + ":" + b);
+                      buffer.clear();
+                  }
+              }
+          }
+      }
+  }
+  ```
+
+* Kernel角度：
+
+  * 首先通过`socket(PF_INET6, SOCK_STREAM, IPPROTO_IP) = 4`创建TCP的流式套接字，并返回套接字的文件描述符；
+  * 通过`bind(4, {sa_famliy=AF_INET6, sin6_port=htons(9090), inet_pton(AF_INET6, "::", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, 28) = 0`为套接字绑定端口；
+  * 通过`listen(4, 50)`将套接字置为监听状态；
+  * 通过`fcntl(4, F_SETFL, 0_RDWR|0_NONBLOCK) = 0`将套接字设置为非阻塞状态；
+  * 通过`accept(4, 0x7f00580f0070, [28]) = -1`接收连接请求，但不会阻塞线程，若是当前没有连接建立，则返回-1；
+
+  ```shell
+  nc localhost 9090	# 开启一个本地客户端
+  ```
+
+  * 通过`accept(4, {sa_family=AF_INET6, sin6_port=htons(53311), inet_pton(AF_INET6. "::1", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, [28]) = 5`接收连接建立，新建和连接对应的套接字，返回套接字的文件描述符；
+  * 通过`fcntl(5, F_SETFL, 0_RDWR|0_NONBLOCK) = 0`将新的连接套接字设置为非阻塞；
+  * 通过`read(5, 0x7f0003efcc10, 4096) = -1`读取套接输入流中的数据到大小为4096的缓冲区中，但不会阻塞线程，若是当前没有数据可读，则返回-1。
 
 ## 3.1.OSI与TCP/IP各层结构、功能和协议
 
