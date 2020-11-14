@@ -2548,11 +2548,88 @@ Java虚拟机规范规定类加载的过程要完成3件事：
 
 ## 3.2.Linux的I/O多路复用
 
-### 3.2.1.select
+* 文件描述符（File Descriptor）：用于表述指向文件引用的抽象化概念。fd在形式上是一个非负整数，实际上是一个索引值，指向内核为每一个进程所维护的该进程打开文件的记录表。当程序打开一个现有文件或创建一个新文件时，内核向进程返回一个文件描述符。
+* 缓存I/O：又称标准I/O，是大多数文件系统的默认I/O。在Linux中，OS会将I/O的数据缓存在文件系统的页缓存中，即数据会被先拷贝到OS内核的缓冲区中，然后才会从操作系统内核的缓冲区拷贝到应用程序的地址空间。
 
-### 3.2.2.poll
+### 3.2.1.select/poll
 
-### 3.2.3.epoll
+![img](assets/20190527213148418.png)
+
+```c
+int select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, const struct timeval *timeout);
+```
+
+* 参数：
+  * `int maxfdp1`：指定待监听的文件描述符个数，它的值是待监听的最大描述符加1；
+  * `fd_set *readset, fd_set *writeset, fd_set *exceptset`：fd_set可以理解为存放fd的集合，三种不同的参数指定内核监听读、写和异常的fd集合；
+  * `const struct timeval *timeout`：告知内核等待所指定fd集合中的任何一个就绪的最大等待时间。
+* 返回值：若有就绪的fd则返回其数量，若超时则为0，出错则为-1；
+* 运行机制：select机制提供一种fd_set数据结构，是一个long类型的数组，数组中的每个元素都能于一个fd建立联系。当select()被调用时，由内核根据IO状态修改fd_set的内容，由此来通知执行了select()的进程哪一个Socket或文件可读/写或建立连接。TODO
+* 优点：在一个线程内可以同时处理多个Socket的IO请求。
+* 缺点：
+  * 每次调用select，都需要将fd_set从用户空间拷贝到内核空间，若集合很大会造成很大的开销；
+  * 每次调用select，都需要在内核遍历整个fd_set，若集合很大会造成很大的开销；
+  * 为了减少拷贝数据带来的性能消耗，内核对被监控的fd_set做了大小限制（1024），且是通过宏实现的，大小不可改变。
+
+```C
+int poll(struct pollfd *fds, nfds_t nfds, int timeout);
+
+typedef struct pollfd {
+	int fd;			// 需要被检测或选择的文件描述符
+	short events;	// 对文件描述符fd上感兴趣的事件
+    short revents;	// 文件描述符fd上当前实际发生的事件
+} pollfd_t;
+```
+
+* 参数：
+  * `struct pollfd *fds`：fds是一个pollfd类型的数组，用于存放需要检测其状态的fd，且调用poll后fds不会被清空。一个pollfd结构体用于表示一个被监视的fd，通过传递fds指示poll监视多个fd。其中，events域是监视该fd的事件掩码（由用户设置），revents域是fd的操作结果事件掩码（内核在调用返回时设置）；
+  * `nfds_t nfds`：记录数组fds中描述符的总数量。
+* 返回值：返回集合中已就绪的读写或异常的fd数量，返回0表示超时，返回-1表示异常。
+* 针对select的改进：改变了fd集合的结构，使用pollfd结构替代了select的fd_set结构，使得poll没有了最大fd数量的限制。
+
+### 3.2.2.epoll
+
+![img](assets/20190527231438974.png)
+
+```C
+int epoll_create(int size);
+int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
+int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout);
+
+struct epoll_event {
+    __uint32_t events;  /* Epoll events */
+    epoll_data_t data;  /* User data variable */
+};
+
+typedef union epoll_data {
+    void *ptr;
+    int fd;
+    __uint32_t u32;
+    __uint64_t u64;
+} epoll_data_t;
+```
+
+* `epoll_create`：创建一个epoll句柄，参数size表示内核要监听的fd数量，调用成功时返回一个epoll句柄描述符，失败返回-1；
+* `epoll_ctl`：用于注册要监听的事件类型。
+  * `epfd`：
+  * `op`：
+  * `fd`：
+  * `event`：
+* `epoll_wait`：等待事件的就绪，成功时返回就绪的事件数目，失败则返回-1，等待超时返回0。
+  * `epfd`：
+  * `events`：
+  * `maxevents`：
+  * `timeout`：
+
+### 3.2.3.总结
+
+|            |                       select                       |                       poll                       |                            epoll                             |
+| :--------- | :------------------------------------------------: | :----------------------------------------------: | :----------------------------------------------------------: |
+| 操作方式   |                        遍历                        |                       遍历                       |                             回调                             |
+| 底层实现   |                        数组                        |                       链表                       |                            红黑树                            |
+| IO效率     |      每次调用都进行线性遍历，时间复杂度为O(n)      |     每次调用都进行线性遍历，时间复杂度为O(n)     | 事件通知方式，每当fd就绪，系统注册的回调函数就会被调用，将就绪fd放到readyList里面，时间复杂度O(1) |
+| 最大连接数 |              1024（x86）或2048（x64）              |                      无上限                      |                            无上限                            |
+| fd拷贝     | 每次调用select，都需要把fd集合从用户态拷贝到内核态 | 每次调用poll，都需要把fd集合从用户态拷贝到内核态 |  调用epoll_ctl时拷贝进内核并保存，之后每次epoll_wait不拷贝   |
 
 ## 3.3.Java的I/O模型
 
@@ -2600,18 +2677,21 @@ Java虚拟机规范规定类加载的过程要完成3件事：
   strace -ff -o out /usr/java/j2sdk1.4.2_19/bin/java SocketBIO	# 最终应用程序的系统调用，并重定向到以out开头的文件中，每个线程一个文件
   ```
 
-  * 首先通过`socket(PF_INET6, SOCKET_STREAM, IPPROTO_IP) = 3`创建TCP的流式套接字，返回套接字的文件描述符；
+  * 通过`socket(PF_INET6, SOCKET_STREAM, IPPROTO_IP) = 3`创建TCP的流式套接字，返回套接字的文件描述符；
+  
   * 通过`bind(3, {sa_famliy=AF_INET6, sin6_port=htons(9090), inet_pton(AF_INET6, "::", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, 24) = 0`为套接字绑定端口；
-  * 通过`listen(3, 50)`将套接字置为监听状态；
-  * 通过`accept(3, )`阻塞线程等待连接建立；
-
-  ```shell
-  nc localhost 9090	# 开启一个本地客户端
+  
+* 通过`listen(3, 50)`将套接字置为监听状态；
+  
+    ```SHELL
+    nc localhost 9090	# 开启一个本地客户端
   ```
-
-  * 通过`accept(3, {sa_family=AF_INET6, sin6_port=htons(53311), inet_pton(AF_INET6. "::1", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, [28]) = 5`接收连接建立，新建和连接对应的套接字，返回套接字的文件描述符；
+  
+  * 通过`accept(3, {sa_family=AF_INET6, sin6_port=htons(53311), inet_pton(AF_INET6. "::1", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, [28]) = 5`阻塞用户线程，等待连接请求并接收，新建套接字，返回该套接字的文件描述符；
   * 通过`clone(child_stack=0xea2bd494, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tidptr=0xea2bdbd8, tls=0xea2bdbd8, child_tidptr=0xffb2e44c) = 2386`创建子线程去处理，每个线程处理一个连接，返回进程描述符（PID）；
-  * 在子线程中，通过`recv(5, )`读取套接输入流（阻塞等待）。
+  * 在子线程中，通过`recv(5, `读取套接字输入流（阻塞等待）。
+
+* BIO的缺点：
 
 ### 3.3.2.NIO
 
@@ -2657,18 +2737,261 @@ Java虚拟机规范规定类加载的过程要完成3件事：
 * Kernel角度：
 
   * 首先通过`socket(PF_INET6, SOCK_STREAM, IPPROTO_IP) = 4`创建TCP的流式套接字，并返回套接字的文件描述符；
+  
   * 通过`bind(4, {sa_famliy=AF_INET6, sin6_port=htons(9090), inet_pton(AF_INET6, "::", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, 28) = 0`为套接字绑定端口；
+  
   * 通过`listen(4, 50)`将套接字置为监听状态；
+
   * 通过`fcntl(4, F_SETFL, 0_RDWR|0_NONBLOCK) = 0`将套接字设置为非阻塞状态；
+  
   * 通过`accept(4, 0x7f00580f0070, [28]) = -1`接收连接请求，但不会阻塞线程，若是当前没有连接建立，则返回-1；
 
-  ```shell
-  nc localhost 9090	# 开启一个本地客户端
-  ```
-
+    ```SHELL
+    nc localhost 9090	# 开启一个本地客户端
+    ```
+  
   * 通过`accept(4, {sa_family=AF_INET6, sin6_port=htons(53311), inet_pton(AF_INET6. "::1", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, [28]) = 5`接收连接建立，新建和连接对应的套接字，返回套接字的文件描述符；
   * 通过`fcntl(5, F_SETFL, 0_RDWR|0_NONBLOCK) = 0`将新的连接套接字设置为非阻塞；
   * 通过`read(5, 0x7f0003efcc10, 4096) = -1`读取套接输入流中的数据到大小为4096的缓冲区中，但不会阻塞线程，若是当前没有数据可读，则返回-1。
+
+* NIO的优缺点：
+  * 优点：避免了BIO的一个连接一个线程而导致存在大量线程造成的资源消耗巨大的问题，即会把大量资源用在线程的上下文切换上；
+  * 缺点：可能会存在大量无意义的系统调用，若是有1w个连接，但只有1个连接有数据读取，但NIO机制每次循环还是会发送1w次的read系统调用，即会把大量的资源用在用户态到内核态的切换上。
+
+### 3.3.3.多路复用器
+
+* Java角度：
+
+  ```JAVA
+  // JDK底层使用了epoll机制
+  public class SocketMultiplexingSingleThread {
+      
+      private ServerSocketChannel server = null;
+      private Selector selector = null;
+      int port = 9090;
+      
+      public void initServer() {
+          try {
+              server = ServerSocketChannel.open();
+              server.configureBlocking(false);
+              server.bind(new InetSocketAddress(port));
+              
+              selector = Selector.open();
+              server.register(selector, SelectionKey.OP_ACCEPT);
+          } catch (IOException e) {
+              e.printStackTrace();
+          }
+      }
+      
+      public void start() {
+          initServer();
+          try {
+              while (true) {
+                  Set<SelectionKey> keys = selector.keys();
+                  while (selector.select(500) > 0) {
+                      Set<SelectionKey> selectionKeys = selector.selectedKeys();
+                      Iterator<SelectionKey> iter = selectionKeys.iterator();
+                      while (iter.hasNext()) {
+                          SelectionKey key = iter.next();
+                          iter.remove();
+                          if (key.isAcceptable()) {
+                          	// 连接处理器
+                              acceptHandler(key);
+                          } else if (key.isReadable()) {
+                              // 读处理器
+                              key.cancel();
+                              readHandler(key);
+                          } else if (key.isWritable()) {
+                              // 写处理器
+                              key.cancel();
+                              writeHandler(key);
+                          }
+                      }
+                  }
+              }
+          } catch (IOException e) {
+              e.printStackTrace();
+          }
+      }
+      
+      public void acceptHandler(SelectionKey key) {
+          try {
+              ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
+              SocketChannel client = ssc.accept();
+              client.configureBlocking(false);
+              
+              ByteBuffer buffer = ByteBuffer.allocate(8192);
+  			client.register(selector, SelectionKey.OP_READ, buffer);
+          } catch (IOException e) {
+          	e.printStackTrace(); 
+          }
+      }
+      
+      public void readHandler(SelectionKey key) {
+          SocketChannel client = (SocketChannel) key.channel();
+          ByteBuffer buffer = (ByteBuffer) key.attachment();
+          buffer.clear();
+          int read = 0;
+          try {
+              while (true) {
+                  
+              }
+          } catch (IOException e) {
+              e.printStackTrace();
+          }
+      }
+  }
+  ```
+
+* Kernel的角度看select/poll：
+
+  * 通过socket创建套接字，返回文件描述符；
+  * 通过bind为套接字绑定端口；
+  * 通过listen将套接字置为监听状态；
+  * 通过select或poll将所有套接字的文件描述符注册给多路复用器（select对文件描述符的个数有限制，poll取消了限制），并使用户线程阻塞在select/poll这个系统调用上；
+  * 当内核遍历发现有文件描述符变为可连接或可读写等状态时，select/poll会返回，然后再通过accept或read去处理相应的事件。
+
+* select/poll的优缺点：
+
+  * 优点：通过一次系统调用，将所有文件描述符传递给内核，由内核进行遍历，直到相应事件的发生，这种方式相对于NIO减少了系统调用的次数，即避免了用户态到内核态的频繁切换，节省资源；
+  * 缺点：
+    * 每次调用select/poll系统调用时都需要传递文件描述符，解决方案是在内核开辟一块空间保存文件描述符避免重复传递；
+    * 每次调用select/poll系统调用时还会让内核重新遍历一遍文件描述符。
+
+* Kernel的角度看epoll：
+
+  * 通过`socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 4`创建套接字，并返回其文件描述符；
+
+  * 通过`fcntl(4, F_SETFL, O_RDWR|O_NONBLOCK) = 0`将套接字设置为非阻塞；
+
+  * 通过`bind(4, {sa_family=AF_INET, sin_port=htons(9090)})`为套接字绑定端口；
+
+  * 通过`listen(4, 50)`将套接字设置为监听状态；
+
+  * 通过``epoll_create(256) = 7``初始化多路复用器，并在内核空间建立一块用于保留套接字文件描述符的红黑树结构；
+
+  * 通过`epoll_ctl(7, EPOLL_CTL_ADD, 4, {EPOLLIN, {u32=4, u64=13736798553693487108}}) = 0`将初始套接字的文件描述符加入红黑树；
+
+  * 通过`epoll_wait(7, {{EPOLLIN, {u32=4, u64=13736798553693487108}}}, 4096, -1) = 1`阻塞用户线程，交由内核监听rbtree上的fd，当fd的状态发生变化时，即发生连接和读写等事件后，返回事件的数量；
+
+    ```SHELL
+    nc localhost 9090	# 开启一个本地客户端
+    ```
+
+  * 若发生的事件是连接请求，则通过`accept(4, {sa_family=AF_INET, sin_port=htons(53687), sin_addr=inet_addr("127.0.0.1")}, [16]) = 8`接收连接，为连接建立套接字，并返回其文件描述符； 
+
+  * 接收连接后，接着通过`epoll_ctl(7, EPOLL_CTL_ADD, 8, {EPOLLIN, {u32=8, u64=13823012355644063752}}) = 0`将连接套接字的文件描述符添加到红黑树上；
+
+  * 循环去通过epoll_wait监听事件、接收连接、添加套接字fd、处理读写请求，以此构建出使用epoll多路复用机制的服务器。
+
+* epoll和多线程结合使用：
+
+  ```JAVA
+  public class SocketMultiplexingThreads {
+      
+      private ServerSocketChannel server = null;
+      private Selector selector1 = null;
+      private Selector selector2 = null;
+      private Selector selector3 = null;
+      int port = 9090;
+      
+      public void initServer() {
+          try {
+              server = ServerSocketChannel.open();
+              server.configureBlocking(false);
+              server.bind(new InetSocketAddress(port));
+              selector1 = Selector.open();
+              selector2 = Selector.open();
+              selector3 = Selector.open();
+  			server.register(selector1, SelectionKey.OP_ACCEPT);
+          } catch (IOException e) {
+              e.printStackTrace();
+          }
+      }
+      
+      public static void main(String[] args) {
+          SocketMultiplexingThreads service = new SocketMultiplexingThreads();
+          service.initServer();
+          NioThread T1 = new NioThread(service.selector1, 2);
+          NioThread T1 = new NioThread(service.selector2);
+          NioThread T1 = new NioThread(service.selector3);
+          
+          T1.start();
+          try {
+              
+          } catch (InterruptedException e) {
+              e.printStackTrace();
+          }
+          T2.start();
+          T3.start();
+      }
+  }
+  
+  class NioThread extends Thread {
+      
+      Selector selector = null;
+      static int selectors = 0;
+      
+      int id = 0;
+      volatile static BlockingQueue<SocketChannel>[] queue;
+      static AtomicInteger idx = new AtomicInteger();
+      
+      NioThread(Selector sel, int n) {
+          this.selector = sel;
+          this.selectors = n;
+          
+          queue = new LinkedBlockingQueue[selectors];
+          for (int i = 0; i < n; i++) {
+              queue[i] = new LinkedBlockingQueue<>();
+          }
+      }
+      
+      NioThread(Selector sel) {
+          this.selector = sel;
+          id = idx.getAndIncrement() % selectors;
+      }
+      
+      @Override
+      public void run() {
+  		try {
+              while (true) {
+                  while (selector.select(10) > 0) {
+                      Set<SelectionKey> selectionKeys = selector.selectedKeys();
+                      Iterator<SelectionKey> iter = selectionKeys.iterator();
+                      while (iter.hasNext()) {
+                          SelectionKey key = iter.next();
+                          iter.remove();
+                          if (key.isAcceptable()) {
+                              acceptHandler(key);
+                          } else if (key.isReadable()) {
+                              readHandler(key);
+                          }
+                      }
+                  }
+                  if (!queue[id].isEmpty()) {
+                      ByteBuffer buffer = ByteBuffer.allocate(8192);
+                      SocketChannel client = queue[id].take();
+                      client.register(selector, SelectionKey.OP_READ, buffer);
+                  }
+              }
+          } catch (IOException e) {
+              e.printStackTrace();
+          }     
+      }
+      
+      public void acceptHandler(SelectionKey key) {
+          try {
+              ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
+              SockerChannel client = ssc.accept();
+              client.configureBlocking(false);
+              int num = idx.getAndIncrement() % selectors;
+              queue[num].add(client);
+          } catch (IOException e) {
+              e.printStackTrace();
+          }
+      }
+  }
+  ```
 
 ## 3.1.OSI与TCP/IP各层结构、功能和协议
 
