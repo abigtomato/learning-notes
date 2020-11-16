@@ -2455,7 +2455,78 @@ Java虚拟机规范规定类加载的过程要完成3件事：
 
 # 3.从I/O模型到计算机网络再到Netty
 
-## 3.1.Linux的五种I/O模型
+## 3.1.Linux的Socket API
+
+* 网络应用进程通信时需要通过API接口请求底层协议的服务，如传输层服务，目前因特网最广泛的应用编程接口就是Socket API。Linux内核也实现了Socket API，实现了底层协议的封装。
+
+```C
+int socket(int family, int type, int protocol);
+```
+
+* 功能：创建套接字；
+* 参数：
+  * family：协议族，通常取值为PF_INET或AF_INET表示面向IPv4协议栈；
+  * type：套接字类型，**数据报套接字SOCK_DGRAM、流式套接字SOCK_STREAM**和原始套接字SOCK_RAW；
+  * protocol：协议，取值IPPROTO_TCP、IPPROTO_UDP分别表示TCP和UDP协议。
+* 返回：成功返回非负整数，为套接字描述符。失败，则返回-1。
+
+```C
+int bind(int sockfd, const struct sockaddr *myaddr, socklen_t addrlen);
+```
+
+* 功能：为套接字绑定本地端口；
+* 参数：
+  * sockfd：本地套接字描述符；
+  * myaddr：本地端点地址；
+  * addrlen：端点地址长度。
+* 返回：成功返回0，失败返回-1。
+
+```C
+int listen(int sockfd, int backlog);
+```
+
+* 功能：将套接字置为监听状态；
+* 参数：
+  * sockfd：本地套接字描述符；
+  * backlog：连接请求队列大小。
+* 返回：成功返回0，失败返回-1。
+
+```C
+int accept(int sockfd, struct socketaddr *cliaddr, socklen_t addrlen);
+```
+
+* 功能：从监听状态的流套接字的客户连接请求队列中，取出排在最前的一个客户请求，并且创建一个新的套接字来与客户套接字建立TCP连接；
+* 参数：
+  * sockfd：本地流套接字描述符；
+  * cliaddr：用于存储客户端点地址；
+  * addrlen：端点地址长度。
+* 返回：成功返回非负整数，即新建与客户连接的套接字描述符。失败则返回-1。
+
+```C
+ssize_t send(int sockfd, const void *buff, size_t nbytes, int flags);
+```
+
+* 功能：发送数据；
+* 参数：
+  * sockfd：本地套接字描述符；
+  * buff：指向存储待发送数据的缓存指针；
+  * nbytes：数据长度；
+  * flags：控制比特，通常取0。
+* 返回：成功返回发送的字节数，失败返回-1。
+
+```C
+ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
+```
+
+* 功能：接收数据；
+* 参数：
+  * sockfd：本地套接字描述符；
+  * buff：指向存储接收数据的缓存指针；
+  * nbytes：数据长度；
+  * flags：控制比特，通常取0。
+* 返回：成功返回接收到的字节数，失败返回-1。
+
+## 3.2.Linux的五种I/O模型
 
 ### 3.1.1.相关概念
 
@@ -2480,7 +2551,7 @@ Java虚拟机规范规定类加载的过程要完成3件事：
     * 非阻塞：先去做其他事，只需要等通知即可。
 * Linux中I/O执行：
   * 在Linux中，对于一次读取I/O操作，数据并不会直接拷贝到程序的缓冲区，而是经过两个阶段；
-  * 首先，等待数据准备好，到达内核缓冲区；
+  * 首先，等待数据准备好，即文件的状态发送变化，到达内核缓冲区；
   * 其次，从内核向进程复制数据，即从内核拷贝到用户空间；
   * 对于一个套接字上的输入操作，第一步通常涉及等待数据从网络中到达，当所有分组都到达时，会被复制到内核中的某缓冲区。第二步就是把数据从内核缓冲区复制到应用程序缓冲区。
 
@@ -2546,7 +2617,7 @@ Java虚拟机规范规定类加载的过程要完成3件事：
 * 前四种IO模型都是同步模型，区别在于第一阶段，第二阶段都是一样的，都是在数据从内核复制到应用程序缓冲区期间（用户空间），进程阻塞于recvfrom调用；
 * 相反，异步IO模型在等待数据和接收数据这两个阶段都是非阻塞的，可以处理其他的逻辑，即用户进程将整个IO操作交给内核完成，内核完成后会发起通知，在此期间，用户进程不需要去检查IO状态，也不需要主动的去触发数据的拷贝。
 
-## 3.2.Linux的I/O多路复用
+## 3.3.Linux的I/O多路复用
 
 * 文件描述符（File Descriptor）：用于表述指向文件引用的抽象化概念。fd在形式上是一个非负整数，实际上是一个索引值，指向内核为每一个进程所维护的该进程打开文件的记录表。当程序打开一个现有文件或创建一个新文件时，内核向进程返回一个文件描述符。
 * 缓存I/O：又称标准I/O，是大多数文件系统的默认I/O。在Linux中，OS会将I/O的数据缓存在文件系统的页缓存中，即数据会被先拷贝到OS内核的缓冲区中，然后才会从操作系统内核的缓冲区拷贝到应用程序的地址空间。
@@ -2589,49 +2660,86 @@ typedef struct pollfd {
 
 ### 3.2.2.epoll
 
+* epoll是Linux内核对多路复用IO接口作出的改进版本，显著提高程序在大量并发连接中只有少量活跃的情况下CPU的利用率。即在监听事件就绪的过程中，不需要遍历整个被监听的描述符集，只要遍历那些被内核IO事件异步唤醒而加入Ready队列（链表）的描述符集合即可。
+* fd进入红黑树时会注册事件和回调函数，当网络连接和数据读写等事件发生时，由网卡驱动发出中断，产生事件然后调用call_back使fd加入就绪队列。
+* epoll没有描述符个数的限制，使用一个fd管理多个fd，将用户关心的fd的事件存放到内核的一个事件表中，这样在用户空间和内核空间的copy只需要一次。
+* epoll提供了两种IO事件的触发方式：
+  * **水平触发（LT）**：默认工作模式，即当epoll_wait检测到某描述符事件的就绪并通知应用程序时，应用程序可以不立即处理该事件，待下次调用epoll_wait时，会再次通知此事件；
+  * **边缘触发（ET）**：当epoll_wait检测到某描述符事件就绪并通知应用程序时，应用程序必须立即处理该事件。如果不处理，下次调用epoll_wait时，不会再次通知此事件，即边缘触发机制只会在状态由未就绪变为就绪时通知一次。
+
 ![img](assets/20190527231438974.png)
 
 ```C
 int epoll_create(int size);
 int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
 int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout);
-
-struct epoll_event {
-    __uint32_t events;  /* Epoll events */
-    epoll_data_t data;  /* User data variable */
-};
-
-typedef union epoll_data {
-    void *ptr;
-    int fd;
-    __uint32_t u32;
-    __uint64_t u64;
-} epoll_data_t;
 ```
 
 * `epoll_create`：创建一个epoll句柄，参数size表示内核要监听的fd数量，调用成功时返回一个epoll句柄描述符，失败返回-1；
 * `epoll_ctl`：用于注册要监听的事件类型。
-  * `epfd`：
-  * `op`：
-  * `fd`：
-  * `event`：
+  
+  * `epfd`：表示epoll的句柄；
+  
+  * `op`：表示对fd的操作类型：
+  
+    * **EPOLL_CTL_ADD**：注册新的fd到epfd中；
+    * **EPOLL_CTL_MOD**：修改已注册fd的监听事件；
+    * **EPOLL_CTL_DEL**：从epfd中删除一个fd。
+  
+  * `fd`：表示需要监听的描述符；
+  
+  * `event`：表示需要监听的事件。
+  
+    ```C
+    struct epoll_event {
+        __uint32_t events;  /* Epoll events */
+        epoll_data_t data;  /* User data variable */
+    };
+    
+    typedef union epoll_data {
+        void *ptr;
+        int fd;
+        __uint32_t u32;
+        __uint64_t u64;
+    } epoll_data_t;
+    
+    // events可以是以下几个宏的集合
+    EPOLLIN ：表示对应的文件描述符可以读（包括对端SOCKET正常关闭）；
+    EPOLLOUT：表示对应的文件描述符可以写；
+    EPOLLPRI：表示对应的文件描述符有紧急的数据可读（这里应该表示有带外数据到来）；
+    EPOLLERR：表示对应的文件描述符发生错误；
+    EPOLLHUP：表示对应的文件描述符被挂断；
+    EPOLLET：将EPOLL设为边缘触发（Edge Triggered）模式，这是相对于水平触发（Level Triggered）来说的；
+    EPOLLONESHOT：只监听一次事件，当监听完这次事件之后，如果还需要继续监听这个socket的话，需要再次把这个socket加入到EPOLL队列里。
+    ```
 * `epoll_wait`：等待事件的就绪，成功时返回就绪的事件数目，失败则返回-1，等待超时返回0。
-  * `epfd`：
-  * `events`：
-  * `maxevents`：
-  * `timeout`：
+  
+  * `epfd`：表示epoll的句柄；
+  * `events`：表示从内核得到的就绪事件集合；
+  * `maxevents`：通知内核events的大小；
+  * `timeout`：表示等待的超时时间。
 
 ### 3.2.3.总结
 
-|            |                       select                       |                       poll                       |                            epoll                             |
-| :--------- | :------------------------------------------------: | :----------------------------------------------: | :----------------------------------------------------------: |
-| 操作方式   |                        遍历                        |                       遍历                       |                             回调                             |
-| 底层实现   |                        数组                        |                       链表                       |                            红黑树                            |
-| IO效率     |      每次调用都进行线性遍历，时间复杂度为O(n)      |     每次调用都进行线性遍历，时间复杂度为O(n)     | 事件通知方式，每当fd就绪，系统注册的回调函数就会被调用，将就绪fd放到readyList里面，时间复杂度O(1) |
-| 最大连接数 |              1024（x86）或2048（x64）              |                      无上限                      |                            无上限                            |
-| fd拷贝     | 每次调用select，都需要把fd集合从用户态拷贝到内核态 | 每次调用poll，都需要把fd集合从用户态拷贝到内核态 |  调用epoll_ctl时拷贝进内核并保存，之后每次epoll_wait不拷贝   |
+|            |                         select                         |                         poll                         |                            epoll                             |
+| :--------: | :----------------------------------------------------: | :--------------------------------------------------: | :----------------------------------------------------------: |
+|  操作方式  |                          遍历                          |                         遍历                         |                             回调                             |
+|  底层实现  |                          数组                          |                         链表                         |                         红黑树+链表                          |
+|   IO效率   |        每次调用都进行线性遍历，时间复杂度为O(n)        |       每次调用都进行线性遍历，时间复杂度为O(n)       | 事件通知方式，每当fd就绪，系统注册的回调函数就会被调用，将就绪fd放到readyList里面，时间复杂度O(1) |
+| 最大连接数 |                1024（x86）或2048（x64）                |                        无上限                        |                            无上限                            |
+|   fd拷贝   | 每次调用select，都需要把fd集合从用户空间拷贝到内核空间 | 每次调用poll，都需要把fd集合从用户空间拷贝到内核空间 | 调用epoll_ctl时拷贝进内核并保存，之后每次epoll_wait都不用拷贝 |
 
-## 3.3.Java的I/O模型
+### 3.2.4.内存映射和零拷贝
+
+* 普通数据IO过程：
+* 内存映射`mmap()`：
+* 零拷贝`sendfile()`：
+* 应用：
+  * Kafka：
+  * Redis：
+  * Nginx：
+
+## 3.4.Java的I/O模型
 
 ### 3.3.1.BIO
 
@@ -4284,10 +4392,104 @@ JDk1.8之后的HashMap：这个版本的HashMap在解决哈希冲突的时候变
   * 如果头节点hash值小于0，说明正在扩容或是红黑树，查找之；
   * 如果是链表，遍历查找之。
 
-# 数据结构和算法 
+# 5.MySQL+Redis
 
-# Redis+MySQL
+## 5.1.MySQL存储引擎
 
-# Spring原理
+## 5.2.MySQL索引原理
 
-# 设计模式
+## 5.3.MySQL的事务
+
+## 5.4.数据库的大表优化
+
+## 5.5.数据库的池化设计
+
+## 5.6.MySQL的分库分表
+
+## 5.7.MySQL执行SQL语句的流程
+
+## 5.8.MySQL的高性能优化规范
+
+
+
+Redis的特征
+
+* 基于内存，k-v对存储；
+* 单核心CPU使用单线程串行处理（IO+计算）；
+* io threads：Redis6.x对于多核心CPU的并行优化，1个worker线程，n个io线程；
+* 基于Linux的epoll多路复用处理大量IO事件。
+
+Redis使用场景
+
+* String：
+  * 底层使用二进制安全的字节数组存储；
+  * 字符串操作：session、对象和小文件存储；
+  * 数值操作：秒杀、限流、计数；
+  * 位图操作（二进制操作）：
+    * 统计任意时间窗口内用户的登录次数；
+    * 统计任意时间窗口内用户是否活跃；
+    * OA系统用户对应模块是否有权限；
+    * 布隆过滤器。
+* List：
+  * 底层使用双向链表存储；
+  * 模拟栈、队列、数组，截取操作；
+  * 数据共享、迁出；
+* Hash：
+  * 类似于Java的HashMap；
+  * 商品详情页、用户的聚合数据。
+* Set：
+  * 底层使用无序且唯一的哈希表存储；
+  * 随机抽取抽奖等场景、共同好友-交集、推荐好友-差集。
+* Sorted Set：
+  * 底层使用带分值排序的压缩表/跳表存储；
+  * 排行榜、有序事件、评论+分页。
+
+Redis持久化
+
+* 快照RDB：内存快照写文件，重启恢复速度快，可能造成大的缺失；
+* 日志AOF：操作更加完整，比起RDB需要重新执行指令更慢，且大量无意义操作也会冗余执行。
+
+MySQL索引
+
+* OLAP和OLTP：
+* 为什么使用B+树？
+  * 哈希表做索引存在的问题：
+  * 使用BST、AVL、RBT、BT做索引存在的问题：
+  * 使用B+树做索引：
+* 什么是存储引擎？
+  * innoDB和mySAM的区别：
+* 聚簇索引：
+* 回表：
+* 索引下推：
+
+
+
+# 6.Spring+SpringBoot
+
+1. Spring源码的架构设计：
+   1. 
+
+1. Spring IOC：
+2. Spring启动原理：
+3. Spring加载配置文件原理：
+4. BeanDefinitionReader接口原理：
+5. BeanFactory接口原理：
+6. Spring的refresh方法：
+7. BeanPostProcessor接口原理：
+8. BeanFactoryPostProcessor接口原理：
+9. Spring Bean实现Aware接口：
+10. Spring Bean实例化过程：
+11. Spring Bean初始化过程：
+12. FactoryBean接口原理：
+13. Spring Bean的声明周期：
+14. Environment接口原理：
+15. 循环依赖问题：
+16. Spring解决循环依赖：
+
+
+
+# 7.数据结构和算法
+
+
+
+# 8.设计模式
