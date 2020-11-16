@@ -1553,6 +1553,53 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 
 ## 2.11.操作系统的处理器管理
 
+* 处理器：
+  * 特权指令和非特权指令：
+  * 处理器工作状态：
+    * 用户态和内核态：
+    * 工作状态的切换：
+  * 程序状态字PSW：
+* 中断机制：
+  * 中断与异常：
+  * 中断系统：
+  * 中断优先级、中断屏蔽和中断嵌套：
+* 系统调用：
+  * 系统调用和函数调用的区别：
+  * 系统调用的分类：
+  * 系统调用与库函数、API、内核函数的关系：
+  * 系统调用处理过程：
+* 进程：
+  * 进程的概念：
+  * 进程的状态与转换：
+  * 进程控制块PCB：
+  * 进程控制：
+* 线程：
+  * 线程的概念：
+  * 线程和进程的区别：
+  * 线程实现机制：
+* 进程调度：
+  * 调度的概念：
+  * 调度算法：
+* 进程同步：
+  * 同步的概念：
+  * 进程的互斥：
+  * 临界区：
+  * 信号量：
+  * P、V操作：
+  * 生产者—消费者问题：
+  * 多生产者—消费者问题：
+  * 读者—写者问题：
+* 进程通信：
+  * 共享内存：
+  * 消息机制：
+* 死锁：
+  * 死锁产生原因：
+  * 死锁预防：
+  * 死锁避免：
+  * 银行家算法：
+  * 死锁检测和解除：
+  * 哲学家就餐问题：
+
 ### 2.3.1.指令与处理器模式
 
 * 指令执行周期：取址、译码、执行；
@@ -1855,6 +1902,8 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 
 ## 2.13.操作系统的内存管理
 
+
+
 1. **操作系统的内存管理主要是做什么？**主要负责内存的分配和回收（`malloc`函数申请内存，`free`函数释放内存），另外地址转换也就是将逻辑地址转换成相应的物理地址等功能也是内存管理做的事。
 
 2. **内存管理有哪几种方式？**
@@ -1908,7 +1957,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
    1. 作用：管理虚拟存储器的硬件控制线路，把虚拟地址映射为物理地址，并提供内存保护，必须时淘汰页面。
    2. 实现：使用一种叫做反置页表IPT。
 
-## 2.14.操作系统的虚拟内存
+## 2.14.操作系统的虚拟内存管理
 
 ### 2.8.1.什么是虚拟内存？
 
@@ -2732,8 +2781,15 @@ int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout
 ### 3.2.4.内存映射和零拷贝
 
 * 普通数据IO过程：
+
 * 内存映射`mmap()`：
+
 * 零拷贝`sendfile()`：
+
+  ```java
+  ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count);
+  ```
+
 * 应用：
   * Kafka：
   * Redis：
@@ -4400,7 +4456,7 @@ JDk1.8之后的HashMap：这个版本的HashMap在解决哈希冲突的时候变
 
 ## 5.3.MySQL的事务
 
-## 5.4.数据库的大表优化
+## 5.4.MySQL的大表优化
 
 ## 5.5.数据库的池化设计
 
@@ -4409,6 +4465,20 @@ JDk1.8之后的HashMap：这个版本的HashMap在解决哈希冲突的时候变
 ## 5.7.MySQL执行SQL语句的流程
 
 ## 5.8.MySQL的高性能优化规范
+
+## 5.9.Redis的线程模型
+
+## 5.10.Redis的数据结构和使用场景
+
+## 5.11.Redis的内存淘汰机制
+
+## 5.12.Redis的持久化机制
+
+## 5.13.Redis缓存雪崩和缓存穿透问题
+
+## 5.14.Redis的并发竞争Key问题
+
+## 5.15.保证缓存和数据库双写时的一致性
 
 
 
@@ -4466,29 +4536,91 @@ MySQL索引
 
 # 6.Spring+SpringBoot
 
-1. Spring源码的架构设计：
-   1. 
-
-1. Spring IOC：
-2. Spring启动原理：
-3. Spring加载配置文件原理：
-4. BeanDefinitionReader接口原理：
-5. BeanFactory接口原理：
-6. Spring的refresh方法：
-7. BeanPostProcessor接口原理：
-8. BeanFactoryPostProcessor接口原理：
-9. Spring Bean实现Aware接口：
-10. Spring Bean实例化过程：
-11. Spring Bean初始化过程：
-12. FactoryBean接口原理：
-13. Spring Bean的声明周期：
-14. Environment接口原理：
-15. 循环依赖问题：
-16. Spring解决循环依赖：
-
 
 
 # 7.数据结构和算法
+
+* 时间复杂度（流程决定）：
+* 额外空间复杂度（流程决定）：
+* 常数项时间（实现细节决定）：
+
+选择排序：
+
+```JAVA
+public class SelectionSort {
+    
+    public static void selectionSort(int[] arr) {
+        if (arr == null || arr.length < 2) {
+            return;
+        }
+        for (int i = 0; i < arr.length - 1; i++) {
+          	int minIndex = i;
+            for (int j = i + 1; j < arr.length; j++) {
+                minIndex = arr[j] < arr[minIndex] ? j : minIndex;
+            }
+            swap(arr, i, minIndex);
+        }
+    }
+    
+    public static void swap(int[] arr, int i, int j) {
+        int tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+}
+```
+
+冒泡排序：
+
+```JAVA
+public class BubbleSort {
+    
+    public static void bubbleSort(int[] arr) {
+        if (arr == null || arr.length < 2) {
+            return;
+        }
+        for (int e = arr.length - 1; e > 0; e--) {
+            for (int i = 0; i < e; i++) {
+                if (arr[i] > arr[i + 1]) {
+                    swap(arr, i, i + 1);
+                }
+            }
+        }
+    }
+    
+    public static void swap(int[] arr) {
+        arr[i] = arr[i] ^ arr[j];
+        arr[j] = arr[i] ^ arr[j];
+        arr[i] = arr[i] ^ arr[j];
+    }
+}
+```
+
+插入排序：
+
+```JAVA
+public class InsertionSort {
+    
+    public static void insertionSort(int[] arr) {
+        if (arr == null || arr.length < 2) {
+            return;
+        }
+        for (int i = 1; i < arr.length; i++) {
+            for (int j = i - 1; j >= 0 && arr[j] > arr[j+1]; j--) 
+                swap(arr, j, j+1); 
+            }
+        }
+    }
+    
+    public static void swap(int[] arr) {
+        arr[i] = arr[i] ^ arr[j];
+        arr[j] = arr[i] ^ arr[j];
+        arr[i] = arr[i] ^ arr[j];
+    }
+}
+```
+
+
 
 
 
