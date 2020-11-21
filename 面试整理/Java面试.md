@@ -5084,18 +5084,18 @@ JDk1.8之后的HashMap：这个版本的HashMap在解决哈希冲突的时候变
 
 ### 缓存击穿
 
+* 所谓的缓存击穿就是某个热点key访问非常频繁，处于集中式高并发访问的情况，当这个key超时失效的瞬间，大量的请求就击穿了缓存，直接请求数据库，给数据库巨大的压力。
+* 解决方法：
+  * 若缓存的数据基本不会发生更新，则可将热点key设置为**永不过期**；
+  * 若缓存的数据更新不频繁，且缓存刷新的整个流程耗时较少，则可以采用基于Redis、Zookeeper等分布式中间件的**分布式锁**，或者本地互斥锁以保证仅有少量的请求能进入数据库并重新构建缓存，其余线程则在锁释放后能访问到新缓存；
+  * 若缓存的数据更新频繁或者在缓存刷新的流程耗时较长的情况下，可以利用**定时线程**在缓存过期前主动的重新构建缓存或者延后缓存的过期时间，以保证所有的请求能一直访问到对应的缓存。
+
 
 
 ## Redis的并发竞争的问题
 
-### 问题描述和解决方法
-
 * 所谓的并发竞争指的是多个用户同时对一个key进行操作，造成最后执行的顺序和期望的顺序不同，导致结果不同。
 * 分布式锁解决方法：推荐使用Zookeeper实现的分布式锁来解决，当客户端需要对操作加锁时，在zk上与该操作对应的节点的目录下，生成一个唯一的瞬时有序节点，判断是否获取锁的方式就是去判断有序节点中序号最小的一个，当释放锁时，只需要将这个瞬时节点删除即可。
-
-
-
-### 分布式锁
 
 
 
@@ -5104,6 +5104,336 @@ JDk1.8之后的HashMap：这个版本的HashMap在解决哈希冲突的时候变
 ## Redis的主从架构
 
 ## Redis的哨兵集群
+
+
+
+## 分布式锁
+
+### Redis分布式锁
+
+* 普通实现：使用 `SET key value [EX seconds] [PX milliseconds] NX` 创建一个key，做为互斥锁：
+  * `NX`：表示只有key不存在时才会设置成功，如果此时redis中存在这个key，那么设置失败，返回nil；
+  * `EX seconds`：设置key的过期时间，精确到秒级，即seconds秒后自动释放锁；
+  * `PX milliseconds`：设置key的过期时间，精确到毫秒级。
+
+  * 加锁：`SET resource_name my_random_value PX 30000 NX`；
+  * 释放锁：
+
+  ```lua
+  -- 删除key之前先判断释放是自己创建的，即释放自己持有的锁
+  if redis.call('get', KEYS[1]) == ARGV[1] then
+      return redis.call('del', KEYS[1])
+  else
+      return 0
+  end
+  ```
+
+  * 缺点：如果是普通的Redis单实例，会存在单点故障问题。若是Redis主从异步复制，主节点宕机导致还未失效的key丢失，但key还没有同步到从节点，此时切换到从节点，其他用户就可以创建key从而获取锁。
+
+* RedLock算法：
+
+
+
+### Zookeeper分布式锁
+
+* 临时znode：加锁的时候由某个节点尝试创建临时的znode，若创建成功就获取到锁，这时其他客户端再创建znode时就会失败，只能注册监听器监听这个锁。释放锁就是删除这个znode，一旦释放就会通知客户端，然后有一个等待着的客户端就可以再次重新加锁。
+
+  ```JAVA
+  public class ZookeeperSession {
+      
+      // 闭锁
+      private static CountDownLatch connectedSemaphore = new CountDownLatch(1);
+      // zk客户端
+      private Zookeeper zookeeper;
+      private CountDownLatch latch;
+      
+      public ZookeeperSession() {
+          try {
+              // zk客户端
+              this.zookeeper = new Zookeeper("192.168.56.10:2181,192.168.56.10", 50000, new ZookeeperWatcher());
+              try {
+          	    connectedSemaphore .await();
+              } catch (InterruptedException e) {
+                  e.printStackTrace();
+              }
+              // zk会话连接成功
+              System.out.println("ZooKeeper session established......");
+          } catch (Exception e) {
+              e.printStackTrace();
+          }
+      }
+      
+      /**
+       * 获取分布式锁
+       */
+      public Boolean acquireDistributedLock(Long productId) {
+          // zk锁节点目录
+          String path = "/product-lock-" + productId;
+          try {
+              // 创建znode，即获取锁
+              zookeeper.create(path, "".getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHMERAL);
+              return true;
+          } catch (Exception e) {
+              // 若创建失败，即证明获取失败，锁已被其他人创建，接着自旋等待获取锁节点的创建权
+              while (true) {
+                  try {
+                     // 给znode注册一个监听器，判断监听器是否存在
+                     Stat stat = zk.exists(path, true);
+                     if (stat != null) {
+                         // 在闭锁上阻塞，直到超时或被唤醒（持有锁的用户countDown一次）
+                         this.latch = new CountDownLatch();
+                         this.latch.await(waitTime, TimeUnit.MILLISECOND);
+                         this.latch = null;
+                     }
+                     // 尝试获取锁
+                     zookeeper.create(path, "".getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+                     return true;
+                  } catch (Exception e) {
+                      // 抢锁失败，自旋
+                      continue; 
+                  }
+              }
+          }
+          return true;
+      }
+      
+      /**
+       * 释放分布式锁
+       */
+      public void releaseDistributedLock(Long productId) {
+          // zk锁节点目录
+          String path = "/product-lock-" + productId;
+      	try {
+              // 删除临时znode，即释放锁
+              zookeeper.delete(path, -1);
+              System.out.println("release the lock for product[id=" + productId + "]......");
+          } catch (Exception e) {
+              e.printStackTrace();
+          }
+      }
+      
+      /**
+       * 实现zk的监听器
+       */
+      private class ZookeeperWatcher implements Watcher {
+          
+          private void process(WatchedEvent event) {
+              System.out.println("Receive watched event: " + event.getState());
+              if (KeeperState.SyncConnected == event.getState()) {
+                  connectedSemphore.countDown();
+              }
+              // 若监听器发现节点已被删除，就立即解除闭锁的阻塞，让等待自旋等待的线程去抢锁
+              if (this.latch != null) {
+                  this.latch.countDown();
+              }
+          }
+      }
+      
+      /**
+       * 封装单例的静态内部类
+       */
+      private static class Singleton {
+  		
+          // 单例的zk会话对象
+          private static ZookeeperSession instance;
+          
+          static {
+              instance = new ZookeeperSession();
+          }
+          
+          public static ZookeeperSession getInstance() {
+              return instance;
+          }
+      }
+      
+      /**
+       * 获取单例
+       */
+      public static ZookeeperSession getInstance() {
+          return Singleton.getInstance();
+      }
+  
+      public static void init() {
+          getInstance();
+      }
+  }
+  ```
+
+* 临时顺序节点：如果有一把锁，被多个人竞争，此时多个人会排队，第一个拿到锁的人会执行，然后释放锁。后面的每个人都会在排在自己前面的那个人创建的znode上监听，一旦某个人释放了锁，排在自己后面的人就会被Zookeeper通知，即获取到了锁。
+
+  ```JAVA
+  public class ZookeeperDistributedLock implements Watcher {
+      
+      private Zookeeper zk;
+      private String locksRoot = "/locks";
+      private String productId;
+      private String waitNode;
+      private String lockNode;
+      private CountDownLatch latch;
+      private CountDownLatch conectedLatch = new CountDownLatch(1);
+      private int sessionTimeout = 30000;
+      
+      public ZookeeperDistributedLock(String productId) {
+          this.productId = productId;
+          try {
+              String address = ;
+              zk = new Zookeeper("192.168.56.10:2181,192.168.56.11:2181,192.168.56.12:2181", sessionTimeout, this);
+              connectedLatch.await();
+          } catch (IOException e) {
+              throw new LockException(e);
+          } catch (KeeperException e) {
+              throw new LockException(e);
+          } catch (InterruptedException e) {
+              throw new LockException(e);
+          }
+      }
+      
+      public void process(WatchedEvent event) {
+          if (event.getState() == KeeperState.SyncConnected) {
+              connectedLatch.countDown();
+              return;
+          }
+          
+          if (this.latch != null) {
+              this.latch.coutDown();
+          }
+      }
+      
+      /**
+       * 获取锁
+       */
+      public void acquireDistributedLock() {
+          try {
+              if (this.tryLock()) {
+                  return;
+              } else {
+                  waitForLock(waitNode, sessionTimeout);
+              }
+          } catch (KeeperException e) {
+              throw new LockException(e);
+          } catch (InterruptedException e) {
+              throw new LockException(e);
+          }
+      }
+      
+      /**
+       * 尝试获取锁
+       */
+      public boolean tryLock() {
+          try {
+              // 创建锁节点
+              lockNode = zk.create(locksRoot + "/" + productId, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
+              
+              // 对locksRoot目录下的所有节点排序
+              List<String> locks = zk.getChildren(locksRoot, false);
+              Collections.sort(locks);
+              
+              // 判断刚才创建的节点是否为最小节点
+              if (lockNode.equals(locksRoot + "/" + locks.get(0))) {
+                  // 若是则表示获得锁
+              	return true;    
+              }
+              
+              // 若不是则找到自己的前一个节点
+              int previousLockIndex = -1;
+              for (int i = 0; i < locks.size(); i++) {
+                  if (lockNode.equals(locksRoot + "/" + locks.get(i))) {
+                 		previousLockIndex = i - 1;
+                      break;
+                  }
+              }
+              // 并且将其设置为当前等待节点
+              this.waitNode = locks.get(previousLockIndex);
+          } catch (KeeperException e) {
+              throw new LockException(e);
+          } catch (InterruptedException e) {
+              throw new LockException(e);
+          }
+          return false;
+      }
+      
+      private boolean waitForLock(String waitNode, long waitTime) throws InterruptedException, KeeperException {
+          Stat stat = zk.exists(locksRoot + "/" + waitNode, true);
+          if (stat != null) {
+              this.latch = new CountDownLatch(1);
+              this.latch.await(waitTime, TimeUnit.MILLISECONDS);
+              this.latch = null;
+          }
+          return true;
+      }
+      
+      /**
+       * 释放锁
+       */
+      public void unlock() {
+          try {
+              System.out.println("unlock " + lockNode);
+              zk.delete(lockNode, -1);
+              lockNode = null;
+              zk.close();
+          } catch (InterruptedException e) {
+              e.printStackTrace();
+          } catch (KeeperException e) {
+              e.printStackTrace();
+          }
+      }
+      
+      /**
+       * 自定义锁异常
+       */
+      public class LockException extends RuntimeException {
+          
+          private static final long serialVersionUID = 1L;
+          
+          public LockException(String e) {
+              super(e);
+          }
+          
+          public LockException(Exception e) {
+              super(e);
+          }
+      }
+  }
+  ```
+
+  
+
+### Redis分布式锁和zk分布式锁的区别
+
+* Redis的分布式锁需要不断去尝试获取锁，比较消耗性能。而zk的分布式锁，在获取不到锁时注册监听器即可，不需要不断的主动尝试获取锁，性能开销小。
+* 当Redis获取锁的客户端挂了，那么只能等待超时时间过期才能释放锁。而zk只是创建了临时znode，只要客户端挂了，znode也就没了，就会自动释放锁。
+
+
+
+## 分布式事务
+
+### 两阶段提交方案（XA方案）
+
+
+
+
+
+### TCC方案
+
+
+
+### Saga方案
+
+
+
+### 本地消息表
+
+
+
+### 可靠消息最终一致性方案
+
+
+
+### 最大努力通知方案
+
+
+
+# 消息队列和搜索引擎
 
 
 
