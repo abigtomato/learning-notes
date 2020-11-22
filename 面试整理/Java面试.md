@@ -1,95 +1,158 @@
 # 1.Java多线程高并发
 
-## 1.1.什么是进程和线程？
+## 进程和线程的区别
 
-1. **程序的本质**：
+**以操作系统的角度来看：**
 
-     1. 程序的本质就是CPU可以执行的指令和内存中的数据；
-     2. 从内存中读出PC（指令计数器）当前指向的指令地址和对应数据，通过总线写入CPU的寄存器中；
-     3. CPU的ALU（逻辑计算单元）会进行计算，并将计算结果写回到内存中；
-     4. 此时CPU的PC会指向下一条指令。
+* 程序的概念：
 
- 2. **进程的概念：**
+  * 程序的本质就是CPU可以执行的指令和内存中的数据；
+  * 从内存中读出PC（指令计数器）当前指向的指令地址和对应数据，通过总线写入CPU的寄存器中；
+  * CPU的ALU（逻辑计算单元）会进行计算，并将计算结果写回到内存中；
+  * 此时CPU的PC会指向下一条指令。
 
-    1. 是资源分配的基本单位；
-    2. 是程序启动后从磁盘进入到被分配到的内存的资源和代码的集合；
-    3. 也是CPU指令和内存数据的集合。
+* 进程的概念：
 
-3. **线程的概念：**
-   
-   1. 程序执行的基本单位；
-   2. 进程中代码执行的路径（可以存在多条执行路径）；
-3. 在JVM中，多个线程共享进程的堆和方法区，每个线程有自己的程序计数器、虚拟机栈和本地方法栈。
-   
-4. **普通Java程序启动会有哪些线程？**
+  * 是资源分配的基本单位；
+  * 是程序启动后从磁盘进入到被分配到的内存的资源和代码的集合；
+  * 也是CPU指令和内存数据的集合。
 
-   ```JAVA
-   public class TestMultiThread {
-       
-       public static void main(String[] args) {
-           // 获取 Java 线程管理 MXBean
-           ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
-           
-           // 不需要获取同步的 monitor 和 synchronizer 信息，仅获取线程和线程堆栈信息
-           ThreadInfo[] threadInfos = threadMXBean.dumpAllThreads(false, false);
-           
-           // 遍历线程信息，仅打印线程 ID 和线程名称信息
-           for (ThreadInfo threadInfo : threadInfos) {
-               System.out.println("[" + threadInfo.getThreadId() + "] " + threadInfo.getThreadName());
-           }
-       }
-   }
-   ```
+* 线程的概念：
 
-   ```
-   [5] Attach Listener 	// 添加事件
-   [4] Signal Dispatcher	// 分发处理给 JVM 信号的线程
-   [3] Finalizer			// 调⽤对象 finalize ⽅法的线程
-   [2] Reference Handler 	// 清除 reference 线程
-   [1] main 				// main 线程，即程序⼊⼝
-   ```
+  * 程序执行的基本单位；
+  * 进程中代码执行的路径（可以存在多条执行路径）；
+  * 普通Java程序启动会有哪些线程？
 
-## 1.2.进程和线程的关系、区别和优缺点
+  ```java
+  public class TestMultiThread {
+      
+      public static void main(String[] args) {
+          // 获取 Java 线程管理 MXBean
+          ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
+          
+          // 不需要获取同步的 monitor 和 synchronizer 信息，仅获取线程和线程堆栈信息
+          ThreadInfo[] threadInfos = threadMXBean.dumpAllThreads(false, false);
+          
+          // 遍历线程信息，仅打印线程 ID 和线程名称信息
+          for (ThreadInfo threadInfo : threadInfos) {
+              System.out.println("[" + threadInfo.getThreadId() + "] " + threadInfo.getThreadName());
+          }
+      }
+  }
+  ```
 
-1. 以概念的角度解释：见1.1；
+  ```java
+  [5] Attach Listener 	// 添加事件
+  [4] Signal Dispatcher	// 分发处理给 JVM 信号的线程
+  [3] Finalizer			// 调⽤对象 finalize ⽅法的线程
+  [2] Reference Handler 	// 清除 reference 线程
+  [1] main 				// main 线程，即程序⼊⼝
+  ```
 
-2. 以JVM的角度解释：一个JVM进程运行时所管理的内存区域如下图，一个进程中可以存在多个线程，多个线程共享堆空间和本地方法区（元空间），每个线程有自己的虚拟机栈、本地方法栈和程序计数器。
+**以JVM的角度来看：**
 
-   <img src="assets/image-20200928231644475.png" alt="image-20200928231644475" style="zoom: 67%;" />
+* 一个JVM进程运行时所管理的内存区域如下图，一个进程中可以存在多个线程，多个线程共享堆空间和本地方法区（元空间），每个线程有自己的虚拟机栈、本地方法栈和程序计数器。
 
-3. 总结：线程是进程划分出来的执行单元，最大的不同在于进程间是独立的，而线程则不一定，这是因为同一进程中各线程可能会相互影响。
+<img src="assets/image-20200928231644475.png" alt="image-20200928231644475" style="zoom: 67%;" />
 
-4. 为什么PC计数器、VM栈、NM栈是线程私有？又为什么堆和元空间是线程共享的？
+* 总结：线程是进程划分出来的执行单元，最大的不同在于进程间是独立的，而线程则不一定，这是因为同一进程中各线程可能会相互影响。在JVM中，多个线程共享进程的堆和方法区，每个线程有自己的程序计数器、虚拟机栈和本地方法栈。
+* PC计数器为什么私有（**简单概括：各线程的代码执行位置独立**）？
+  * 在JVM中，字节码解释器通过改变PC计数器的指向依次读取指令，从而实现代码的流程控制；
+  * 在多线程情况下，PC计数器用于记录所属线程暂停执行时的位置，从而当线程被切换回来后能恢复之前的执行状态；
+  * 总结：因为PC计数器是针对各线程内字节码指令进行控制的，即针对程序的执行单位做控制。
 
-   1. PC计数器为什么私有？（**简单概括：各线程的代码执行位置独立**）
-      1. 在JVM中，字节码解释器通过改变PC计数器的指向依次读取指令，从而实现代码的流程控制；
-      2. 在多线程情况下，PC计数器用于记录所属线程暂停执行时的位置，从而当线程被切换回来后能恢复之前的执行状态；
-      3. 总结：因为PC计数器是针对各线程内字节码指令进行控制的，即针对程序的执行单位做控制。
-   2. VM栈和NM栈为什么私有？（**简单概括：各线程的局部资源独立**）
-      1. 虚拟机栈：每个java方法在执行时都会在VM栈中创建一个栈帧用于存储局部变量表、操作数栈、常量池等信息。从方法调用直至执行完成的过程，就对应一个栈帧在虚拟机栈中压栈和弹栈的过程；
-      2. 本地方法栈：和虚拟机栈相似，区别是VM栈为虚拟机执行java方法（即字节码）服务，而NM栈则为虚拟机使用的native方法服务（在HotSpot虚拟机中，虚拟机栈和本地方法栈合二为一了）；
-      3. 总结：所以，为了保证线程中的局部变量不能被其他线程所访问，虚拟机栈和本地方法栈都是线程私有的，其实也就是针对程序的各条执行路径做控制。
-   3. 堆和元空间为什么共享？（**简单概括：代码执行中的共享资源**）
-      1. 堆是进程被分配到的内存中最大的一块，主要用于存放新创建的对象（所有的对象都在这里被分配内存），方法区主要用于存放已被加载的类信息，如：常量、静态变量、即时编译器编译获得代码等数据；
-      2. 总结：因为二者存储的都是程序的资源单位，不存在执行时的独立问题，所以堆和元空间是和进程绑定的。
+* VM栈和NM栈为什么私有（**简单概括：各线程的局部资源独立**）？
+  * 虚拟机栈：每个java方法在执行时都会在VM栈中创建一个栈帧用于存储局部变量表、操作数栈、常量池等信息。从方法调用直至执行完成的过程，就对应一个栈帧在虚拟机栈中压栈和弹栈的过程；
+  * 本地方法栈：和虚拟机栈相似，区别是VM栈为虚拟机执行java方法（即字节码）服务，而NM栈则为虚拟机使用的native方法服务（在HotSpot虚拟机中，虚拟机栈和本地方法栈合二为一了）；
+  * 总结：所以，为了保证线程中的局部变量不能被其他线程所访问，虚拟机栈和本地方法栈都是线程私有的，其实也就是针对程序的各条执行路径做控制。
+* 堆和元空间为什么共享（**简单概括：代码执行中的共享资源**）？
+  * 堆是进程被分配到的内存中最大的一块，主要用于存放新创建的对象（所有的对象都在这里被分配内存），方法区主要用于存放已被加载的类信息，如：常量、静态变量、即时编译器编译获得代码等数据；
+  * 总结：因为二者存储的都是程序的资源单位，不存在执行时的独立问题，所以堆和元空间是和进程绑定的。
 
-## 1.3.并发与并行有什么区别？
+
+
+## Java创建线程的方式
+
+**实现Runnable接口：**
+
+```java
+public class MyRunnable implements Runnable {
+    
+    @Override
+    public void run() {
+		// ...        
+    }
+}
+```
+
+```java
+public static void main(String[] args) {
+    new Thread(new MyRunnable()).start();
+}
+```
+
+**实现Callable接口：**
+
+```java
+public class MyCallable implements Callable<Integer> {
+    
+    public Integer call() {
+        return 123;
+    }
+}
+```
+
+```java
+public static void main(String[] args) throws ExecutionException, InterruptedException {
+    MyCallable mc = new MyCallable();
+    FutureTask<Integer> ft = new FutureTask<>(mc);
+    new Thread(ft).start();
+    System.out.println(ft.get());
+}
+```
+
+**继承Thread类：**
+
+```java
+public class MyThread extends Thread {
+    
+    public void run() {
+        // ...
+    }
+}
+```
+
+```java
+public static void main(String[] args) {
+    new MyThread().start();
+}
+```
+
+
+
+## 并发与并行有什么区别？
 
 1. 并发：同一时间段，多个任务都在执行，但单位时间内不一定同时执行；
 2. 并行：单位时间内，多个任务同时执行。
 
-## 1.4.为什么要使用多线程?
+
+
+## 为什么要使用多线程?
 
 1. 从总体来看：线程是程序执行的最小单位，切换和调度的成本远远小于进程，并且多核CPU时代意味着多线程可以并行执行，减少了线程上下文切换的开销，再者，随着互联网飞速发展，百万千万级别的并发量要求，多线程也是高并发系统的基础。
 2. 从底层探讨：
     1. 单核时代：主要是为了提高CPU和IO设备的综合利用率。只有一个线程时，当CPU计算时IO设备空闲，IO操作时CPU空闲，但多个线程会让两个操作在一段时间内都执行；
     2. 多核时代：主要是为了提高CPU利用率。若CPU计算复杂的任务只使用一个线程，那只有一个核在工作，但多个线程会被分配到多个核去执行，从而提高多核CPU利用率。
 
-## 1.5.使用多线程可能带来的问题？
+
+
+## 使用多线程可能带来的问题？
 
 内存泄漏、上下文切换、死锁还有受限于硬件和软件的资源闲置问题。
 
-## 1.6.线程的生命周期和状态
+
+
+## 线程的生命周期和状态
 
 ![image-20200930123828410](assets/image-20200930123828410.png)
 
@@ -105,18 +168,22 @@
 
    ![image-20201111140624405](assets/image-20201111140624405.png)
 
-## 1.7.线程的上下文切换
+
+
+## 线程的上下文切换
 
 1. 线程数大于CPU核心数的情况下，每个CPU在同一时刻只能执行一个线程，为了让其他线程都能有效的执行，CPU采取的策略就是为每个线程分配时间片轮转，即当一个线程获取到CPU执行权时也会得到一个时间片，当时间片用完就会重新进入就绪状态给其他线程执行的机会；
 2. 从当前线程在执行完CPU时间片切换到另一个线程前会保存自己的状态，以便下次再切换回这个线程时，可以恢复之前的执行状态，**线程从保存到恢复的过程就是一次上下文切换**；
 3. 注：上下文切换通常是计算密集型，即对CPU来说需要相当可观的处理时间，每个切换都要消耗纳秒级的时间，所以频繁的切换意味着对CPU性能巨大的浪费；
 4. 从计算机系统层面解释：当CPU的核心切换到其他线程执行时，当前中断的线程相关的数据（寄存器数据，堆栈信息）会被暂存在内存中，等下次切换回来时从中断的位置继续执行。
 
-## 1.8.线程死锁，如何避免死锁?
 
- ![image-20200930182226098](assets/image-20200930182226098.png)
+
+## 线程死锁，如何避免死锁? 
 
  * 死锁指多个线程被同时阻塞，它们中的一个或全部都在等待某资源被释放，由于线程被无限期的阻塞，因此程序不可能正常终止。如上图，线程A持有资源2，线程B持有资源1，它们都想申请对方锁住的资源，但又不能释放自己锁住的资源，所以这两个线程会因为互相等待而进入死锁状态；
+
+   ![image-20200930182226098](assets/image-20200930182226098.png)
 
  * Java代码实现上图的死锁：
 
@@ -201,387 +268,455 @@
 
  * 代码分析：两个线程竞争锁的顺序置为相同，线程1先后获得锁1和锁2，线程2无法获取锁1而阻塞，等线程1执行完毕释放锁1和锁2时，线程2就能够获取锁了（这样是破坏了产生死锁的循环等待条件）。
 
-## 1.9.sleep()方法和wait()方法的区别和共同点
+
+
+## sleep()方法和wait()方法的区别
 
  1. 最主要的区别：sleep方法不会释放锁，wait方法会释放锁；
  2. 二者都可以暂停线程的执行；
  3. wait通常被用于线程间交互/通信，sleep通常被用于暂停执行；
  4. wait被调用后，线程不会自动苏醒，而是需要别的线程调用同一个对象上的notify()或者notifyAll()方法进行唤醒。或者可以使用wait(long timeout)超时后自动苏醒。
 
-## 1.10.synchronized关键字
 
-### 1.10.1.概念
+
+## synchronized关键字
+
+### 概念
 
 用于解决多线程间资源访问的同步问题，保证任意时刻被其修饰的代码块或方法只能有一个线程执行。在Java早期版本，synchronized底层使用效率低下重量级锁，因为监视器锁（monitor）是依赖于OS的Mutex Lock实现的，JVM线程是1:1与OS内核线程映射的，这种方式的实现下，线程的挂起和唤醒，都需要和OS产生系统调用的全套过程，即CPU从用户态转为内核态，开销较大。
 
-### 1.10.2.使用方式
 
-1. **修饰实例方法**：即对象锁，给当前对象实例加锁，进入同步代码前要获得当前对象实例的锁；
-2. **修饰静态方法**：即类锁，给当前类加锁，会作用于类的所有对象实例，一旦线程持有类锁，无论其他线程调用的是该类的任意对象实例的方法，都会同步；
-3. **修饰代码块**：指定加锁对象，对给定对象加锁，进入同步代码库前要获得给定对象的锁；
-4. 注：不要使用``synchronized(String str)``加锁，因为JVM中字符串常量池具有缓存功能。
 
-### 1.10.3.CAS
+### 使用方式
 
-### 1.10.4.synchronized的底层原理
+* **修饰实例方法**：即对象锁，给当前对象实例加锁，进入同步代码前要获得当前对象实例的锁；
+* **修饰静态方法**：即类锁，给当前类加锁，会作用于类的所有对象实例，一旦线程持有类锁，无论其他线程调用的是该类的任意对象实例的方法，都会同步；
+* **修饰代码块**：指定加锁对象，对给定对象加锁，进入同步代码库前要获得给定对象的锁；
+* 注：不要使用``synchronized(String str)``加锁，因为JVM中字符串常量池具有缓存功能。
 
-1. JDK1.6之后优化了synchronized操作，锁会随着竞争的激烈而逐渐升级，主要存在4种状态：无锁、偏向锁、轻量级锁、重量级锁。
-2. 偏向锁：
-   1. 概念：偏向锁会偏向第一个获取它的线程，若接下来的执行中，该锁没有被其他线程所获取，那么持有偏向锁的线程在访问锁住的资源时不需要再进行同步操作，即加锁和释放锁。
-   2. 加锁：
-      1. 当一个线程访问同步块并获取锁时，会在锁对象的对象头和栈帧中的锁记录里存储锁偏向的线程ID；
-      2. 以后该线程进入或退出同步块时不需要再进行CAS操作来加锁和释放锁，只需要测试锁对象的对象头的MarkWord是否存储着指向自己的偏向锁；
-      3. 若成功则表示已获取锁，若失败则需要再测试MarkWord中偏向锁的标识是否设置为1；
-      4. 若没设置，则使用CAS竞争锁，若已设置则尝试使用CAS将锁对象的对象头中的偏向锁指向该线程。
-   3. 释放锁：
-      1. 偏向锁直到出现竞争才会释放锁，即当有其他线程尝试竞争偏向锁时，持有偏向锁的线程才会释放锁；
-      2. 偏向锁的释放需要等到全局安全点，即在该时间点上没有正在执行的字节码指令；
-      3. 首先会暂停持有锁的线程，然后检查该线程是否存活，若不活动，则将锁对象的对象头设置为无锁状态；
-      4. 若仍存活，则锁对象的对象头中的MarkWord和栈中的锁记录要么重新偏向于其他线程要么恢复成无锁状态，最后唤醒被暂停的线程。
-3. 轻量级锁：
-   1. **偏向锁升级为轻量级锁**：在存在锁竞争的场合下，偏向锁就会失效，因为这样的场合存在每次申请锁的线程都是不相同的情况，所以不适合使用偏向锁，而是升级成轻量级锁；
-   2. 概念：轻量级锁在多线程竞争不会非常激烈的情况下，可以减少获取重量级锁时需要操作系统进行调度和使用互斥量而产生的性能消耗（线程的挂起和唤醒需要CPU从用户态转为内核态），而轻量级锁使用的是自旋竞争锁和CAS的方式加锁。
-   3. 自旋锁和适应性自旋锁：
-      1. **为什么引入自旋锁？**所谓自旋锁是为了避免线程在未获取到锁时的挂起/唤醒操作而提出的技术，并且很多对象锁的锁定状态只会持续很短的一段时间（如整数的自增操作），在很短的时间内挂起/唤醒线程显然不值得；
-      2. 所谓自旋，就是让线程去执行一个无意义的循环，循环结束后再去重新竞争锁，如果竞争不到继续循环，循环过程中线程会一直处于running状态，但是基于JVM的线程调度，会出让时间片（但不会让出CPU时间片），所以其他线程依旧有申请锁和释放锁的机会。
-      3. JDK1.6引入了适应性自旋锁，自旋的次数不固定，而是由前一次同一个锁上的自旋时间以及锁拥有者的状态决定。
-   4. 加锁：
-      1. 线程进入同步代码块之前，JVM会在当前的线程的栈帧中创建用于存储锁记录（Lock Record）的空间，并将锁对象MarkWord拷贝到这片空间中（Displaced Mark Word）；
-      2. 然后线程尝试使用CAS操作将锁对象MarkWord替换为指向自己锁记录的指针，同时将锁记录中的owner指针指向锁对象MarkWord；
-      3. 若替换成功，则当前线程获取了锁，并且锁对象的MarkWord的锁标志位设置为00，即表示此对象处于轻量级锁定状态；
-      4. 若替换失败，则当前线程尝试自旋获取锁，直到自旋失败，即自旋若干次后仍未获取到锁，这时线程会被挂起阻塞等待锁，轻量级锁会膨胀成重量级锁，锁对象的MarkWord的锁标志位设置为10。
-   5. 释放锁：
-      1. 线程使用CAS操作将自己的Displaced Mark Word替换回锁对象的MarkWord；
-      2. 若替换成功，则表示同步操作完成；
-      3. 若替换失败，则表示锁对象的MarkWord被修改过，即存在竞争锁的线程自旋失败将锁升级为重量级锁了，此时在释放锁的同时要唤醒阻塞在该锁上的线程。
-4. 重量级锁：重量锁在JVM中又叫对象监视器（Monitor），它很像C中的Mutex，除了具备Mutex(0|1)互斥的功能，它还负责实现了Semaphore信号量的功能，也就是说它至少包含一个竞争锁的队列，和一个信号阻塞队列，前者负责做互斥，后者用于做线程同步。
-5. 锁消除：当JVM检测到共享数据不存在竞争，就会撤销锁，节省无意义的请求锁的时间。
-6. 锁粗化：在编写代码的时候，推荐将同步块的作用范围限制的尽量小，一直到共享数据的实际作用域才进行同步，这样是为了使需要同步操作的数据尽可能小，若存在锁竞争，那等待的线程也能够尽快的获取到锁。
-7. **轻量级锁一定比重量级锁效率更高吗？**不一定，如果锁的竞争非常激烈，有非常多的线程在自旋等待锁，则CPU的资源会大量消耗在上下文切换上面（即不断切换线程去执行循环操作）。
 
-### 1.10.5.synchronized和ReentrantLock的区别
 
-1. **都是可重入锁**：所谓可重入锁就是同一个线程可以重复获取自己已经获得的锁。如一个线程获得了某个对象的锁，此时该锁还没有释放，当其想要再次获取的时候仍能成功。若该锁是不可重入的话，会发生死锁，即同一个线程获取锁时，锁的计数器会自增1，只有等到0时才能释放。
-2. synchronized是依赖于JVM实现的，ReentrantLock是依赖于JDK的API实现的（需要通过lock()和unlock()方法和try/finally配合实现）。
-3. ReentrantLock比synchronized增加了一些高级功能：
-   1. **等待可中断**：提供中断等待锁的线程的机制，ReentrantLock可通过``lock.lockInterruptibly()``来实现让正在等待该锁的线程放弃等待，改为处理其他事情；
-   2. **可实现公平锁**：提供了指定公平锁或非公平锁的机制，synchronized只能是公平锁，所谓的公平锁就是先等待锁先线程先获取锁。ReentrantLock可通过`new ReentrantLock(boolean fair)`来指定锁的公平机制；
-   3. **可实现选择性通知（锁可以绑定多个条件）**：借助Condition接口与newCondition()方法实现等待/唤醒机制，与synchronized不同之处在于ReentrantLock可以在一个Lock对象中创建多个Condition实例（对象监视器）实现多路通知功能，线程对象可以注册在指定的Condition中，从而可以有选择性的进行线程唤醒，而notify()/notifyAll()方式通知的线程是由JVM选择的。
+### CAS
 
-## 1.11.volatile关键字
+* **CAS（Compare And Swap/Set）比较并交换**。CAS 算法的过程是这样：它包含 3 个参数CAS(V,E,N)。V 表示要更新的变量(内存值)，E 表示预期值(旧的)，N 表示新值。当且仅当 V 值等
+  于 E 值时，才会将 V 的值设为 N，如果 V 值和 E 值不同，则说明已经有其他线程做了更新，则当
+  前线程什么都不做。最后，CAS 返回当前 V 的真实值。CAS 操作是抱着乐观的态度进行的(乐观锁)，它总是认为自己可以成功完成操作。当多个线程同时使用 CAS 操作一个变量时，只有一个会胜出，并成功更新，其余均会失败。失败的线程不会被挂起，仅是被告知失败，并且允许再次尝试，当然也允许失败的线程放弃操作。基于这样的原理，CAS 操作即使没有锁，也可以发现其他线程对当前线程的干扰，并进行恰当的处理。
+* **CAS会导致ABA 问题**。CAS 算法实现一个重要前提需要取出内存中某时刻的数据，而在下时刻比较并替换，那么在这个时间差类会导致数据的变化。比如说一个线程 one 从内存位置 V 中取出 A，这时候另一个线程 two 也从内存中取出 A，并且two 进行了一些操作变成了 B，然后 two 又将 V 位置的数据变成 A，这时候线程 one 进行 CAS 操作发现内存中仍然是 A，然后 one 操作成功。尽管线程 one 的 CAS 操作成功，但是不代表这个过程就是没有问题的。部分乐观锁的实现是通过版本号（version）的方式来解决 ABA 问题，乐观锁每次在执行数据的修改操作时，都会带上一个版本号，一旦版本号和数据的版本号一致就可以执行修改操作并对版本号执行+1 操作，否则就执行失败。因为每次操作的版本号都会随之增加，所以不会出现 ABA 问题，因为版本号只会增加不会减少。
 
- 1. **Java内存模型引出的问题**：线程可以将变量保存在本地内存（如寄存器）中，而不是直接在主存中进行读写，这样可能会造成一个线程在主存中修改了一个变量的值，而另一个线程还继续使用它之前存储在寄存器中变量值的拷贝，从而造成了数据的不一致；
 
-    ![image-20201027193729276](assets/image-20201027193729276.png)
 
-    通过将变量声明为volatile，指示JVM该变量是不稳定的，每次使用都需要从主存中进行读取。即**volatile关键字就是保证了变量的可见性和防止指令重排序**。
+### 锁升级原理
 
-    ![image-20201027193936448](assets/image-20201027193936448.png)
+JDK1.6之后优化了synchronized操作，锁会随着竞争的激烈而逐渐升级，主要存在4种状态：无锁、偏向锁、轻量级锁、重量级锁。
 
- 2. 并发编程的三个重要特性：
+**偏向锁：**
 
-      1. 原子性：一个操作或多次操作，要么所有操作都执行，要么都不执行。synchronized关键字可以保证代码的原子性；
-      2. 可见性：当一个变量对共享变量进行修改，那么另外的线程都可以立即看到修改后的最新值。volatile关键字可以保证共享变量的可见性；
-      3. 有序性：代码在执行过程中应具有先后顺序，Java在编译器以及运行期间的优化，代码的执行顺序未必就是编写代码时候的顺序。volatile关键字可以禁止指令进行重排序优化。
+* 概念：偏向锁会偏向第一个获取它的线程，若接下来的执行中，该锁没有被其他线程所获取，那么持有偏向锁的线程在访问锁住的资源时不需要再进行同步操作（即加锁和释放锁）。
+* 加锁过程：
+  1. 当一个线程访问同步块并获取锁时，会在锁对象的对象头和栈帧中的锁记录里存储锁偏向的线程ID；
+  2. 以后该线程进入或退出同步块时不需要再进行CAS操作来加锁和释放锁，只需要测试锁对象的对象头的MarkWord是否存储着指向自己的偏向锁；
+  3. 若成功则表示已获取锁，若失败则需要再测试MarkWord中偏向锁的标识是否设置为1；
+  4. 若没设置，则使用CAS竞争锁，若已设置则尝试使用CAS将锁对象的对象头中的偏向锁指向该线程。
+* 释放锁过程：
+  1. 偏向锁直到出现竞争才会释放锁，即当有其他线程尝试竞争偏向锁时，持有偏向锁的线程才会释放锁；
+  2. 偏向锁的释放需要等到全局安全点，即在该时间点上没有正在执行的字节码指令；
+  3. 首先会暂停持有锁的线程，然后检查该线程是否存活，若不活动，则将锁对象的对象头设置为无锁状态；
+  4. 若仍存活，则锁对象的对象头中的MarkWord和栈中的锁记录要么重新偏向于其他线程要么恢复成无锁状态，最后唤醒被暂停的线程。
 
- 3. 与synchronized的区别：
+**偏向锁升级为轻量级锁：**在存在锁竞争的场合下，偏向锁就会失效，因为这样的场合存在每次申请锁的线程都是不相同的情况，所以不适合使用偏向锁，而是升级成轻量级锁；
 
-      1. volatile是轻量级实现线程同步的机制，性能比synchronized好，但只能作用于变量，而synchronized可以修饰方法和代码块；
-      2. 多线程访问volatile关键字修饰的变量不会发生阻塞，而synchronized修饰的代码会发生阻塞；
-      3. volatile只能保证数据的可见性但不能保证原子性，synchronized二者都能保证；
-      4. volatile关键字主要用于解决多线程间的变量可见性，synchronized关键字主要解决多线程间访问资源的同步性。
+**轻量级锁：**
 
-## 1.12.volatile+synchronized+DCL带双重校验锁的单例模式
+* 概念：轻量级锁在多线程竞争不会非常激烈的情况下，可以减少获取重量级锁时需要操作系统进行调度和使用互斥量而产生的性能消耗（线程的挂起和唤醒需要CPU从用户态转为内核态），而轻量级锁使用的是自旋竞争锁和CAS的方式加锁。
+* 自旋锁和适应性自旋锁：
+  * 为什么引入自旋锁？所谓自旋锁是为了避免线程在未获取到锁时的挂起/唤醒操作而提出的技术，并且很多对象锁的锁定状态只会持续很短的一段时间（如整数的自增操作），在很短的时间内挂起/唤醒线程显然不值得；
+  * 所谓自旋，就是让线程去执行一个无意义的循环，循环结束后再去重新竞争锁，如果竞争不到继续循环，循环过程中线程会一直处于running状态，但是基于JVM的线程调度，会出让时间片（但不会让出CPU时间片），所以其他线程依旧有申请锁和释放锁的机会。
+  * JDK1.6引入了适应性自旋锁，自旋的次数不固定，而是由前一次同一个锁上的自旋时间以及锁拥有者的状态决定。
+* 加锁过程：
+  1. 线程进入同步代码块之前，JVM会在当前的线程的栈帧中创建用于存储锁记录（Lock Record）的空间，并将锁对象MarkWord拷贝到这片空间中（Displaced Mark Word）；
+  2. 然后线程尝试使用CAS操作将锁对象MarkWord替换为指向自己锁记录的指针，同时将锁记录中的owner指针指向锁对象MarkWord；
+  3. 若替换成功，则当前线程获取了锁，并且锁对象的MarkWord的锁标志位设置为00，即表示此对象处于轻量级锁定状态；
+  4. 若替换失败，则当前线程尝试自旋获取锁，直到自旋失败，即自旋若干次后仍未获取到锁，这时线程会被挂起阻塞等待锁，轻量级锁会膨胀成重量级锁，锁对象的MarkWord的锁标志位设置为10。
+* 释放锁过程：
+  1. 线程使用CAS操作将自己的Displaced Mark Word替换回锁对象的MarkWord；
+  2. 若替换成功，则表示同步操作完成；
+  3. 若替换失败，则表示锁对象的MarkWord被修改过，即存在竞争锁的线程自旋失败将锁升级为重量级锁了，此时在释放锁的同时要唤醒阻塞在该锁上的线程。
+
+**重量级锁：**重量锁在JVM中又叫对象监视器（Monitor），它很像C中的Mutex，除了具备Mutex(0|1)互斥的功能，它还负责实现了Semaphore信号量的功能，也就是说它至少包含一个竞争锁的队列，和一个信号阻塞队列，前者负责做互斥，后者用于做线程同步。
+
+**锁消除：**当JVM检测到共享数据不存在竞争，就会撤销锁，节省无意义的请求锁的时间。
+
+**锁粗化：**在编写代码的时候，推荐将同步块的作用范围限制的尽量小，一直到共享数据的实际作用域才进行同步，这样是为了使需要同步操作的数据尽可能小，若存在锁竞争，那等待的线程也能够尽快的获取到锁。
+
+**轻量级锁一定比重量级锁效率更高吗？**不一定，如果锁的竞争非常激烈，有非常多的线程在自旋等待锁，则CPU的资源会大量消耗在上下文切换上面（即不断切换线程去执行循环操作）。
+
+
+
+### synchronized和ReentrantLock的区别
+
+* **都是可重入锁**：所谓可重入锁就是同一个线程可以重复获取自己已经获得的锁。如一个线程获得了某个对象的锁，此时该锁还没有释放，当其想要再次获取的时候仍能成功。若该锁是不可重入的话，会发生死锁，即同一个线程获取锁时，锁的计数器会自增1，只有等到0时才能释放。
+* synchronized是依赖于JVM实现的，而ReentrantLock是依赖于JDK的API实现的（需要通过lock()和unlock()方法和try/finally配合实现）。
+* ReentrantLock比synchronized增加了一些高级功能：
+  * **等待可中断**：提供中断等待锁的线程的机制，ReentrantLock可通过``lock.lockInterruptibly()``来实现让正在等待该锁的线程放弃等待，改为处理其他事情；
+  * **可实现公平锁**：提供了指定公平锁或非公平锁的机制，synchronized只能是公平锁，所谓的公平锁就是先等待锁的线程先获取锁。ReentrantLock可通过`new ReentrantLock(boolean fair)`来指定锁的公平机制；
+  * **可实现选择性通知（锁可以绑定多个条件）**：借助Condition接口与newCondition()方法实现等待/唤醒机制，与synchronized不同之处在于ReentrantLock可以在一个Lock对象中创建多个Condition实例（对象监视器）实现多路通知功能，线程对象可以注册在指定的Condition中，从而可以有选择性的进行线程唤醒，而notify()/notifyAll()方式通知的线程是由JVM选择的。
+
+
+
+## volatile关键字
+
+### Java内存模型引出的问题
+
+线程可以将变量保存在本地内存（如寄存器）中，而不是直接在主存中进行读写，这样可能会造成一个线程在主存中修改了一个变量的值，而另一个线程还继续使用它之前存储在寄存器中变量值的拷贝，从而造成了数据的不一致；
+
+![image-20201027193729276](assets/image-20201027193729276.png)
+
+通过将变量声明为volatile，指示JVM该变量是不稳定的，每次使用都需要从主存中进行读取。即**volatile关键字就是保证了变量的可见性和防止指令重排序**。
+
+![image-20201027193936448](assets/image-20201027193936448.png)
+
+
+
+### 并发编程的三个重要特性
+
+1. 原子性：一个操作或多次操作，要么所有操作都执行，要么都不执行。synchronized关键字可以保证代码的原子性；
+2. 可见性：当一个变量对共享变量进行修改，那么另外的线程都可以立即看到修改后的最新值。volatile关键字可以保证共享变量的可见性；
+3. 有序性：代码在执行过程中应具有先后顺序，Java在编译器以及运行期间的优化，代码的执行顺序未必就是编写代码时候的顺序。volatile关键字可以禁止指令进行重排序优化。
+
+
+
+### volatile与synchronized的区别
+
+1. volatile是轻量级实现线程同步的机制，性能比synchronized好，但只能作用于变量，而synchronized可以修饰方法和代码块；
+2. 多线程访问volatile关键字修饰的变量不会发生阻塞，而synchronized修饰的代码会发生阻塞；
+3. volatile只能保证数据的可见性但不能保证原子性，synchronized二者都能保证；
+4. volatile关键字主要用于解决多线程间的变量可见性，synchronized关键字主要解决多线程间访问资源的同步性。
+
+
+
+### volatile+synchronized+DCL带双重校验锁的单例模式
+
+
+
+## ThreadLocal类
 
 TODO
 
-## 1.13.ThreadLocal类
 
-TODO
 
-## 1.14.线程池
+## 线程池
 
-1. 使用线程池带来的好处：
+### 使用线程池带来的好处
 
-   1. 降低资源消耗：通过重复利用已经创建的线程降低因为频繁创建和销毁而造成的消耗；
-   2. 提供响应速度：当任务到达时，无需等待线程的创建即可立即执行；
-   3. 提高线程的可管理性：线程池可以统一的分配、调优和监控线程。
+1. 降低资源消耗：通过重复利用已经创建的线程降低因为频繁创建和销毁而造成的消耗；
+2. 提供响应速度：当任务到达时，无需等待线程的创建即可立即执行；
+3. 提高线程的可管理性：线程池可以统一的分配、调优和监控线程。
 
-2. 实现`Runnable`接口和`Callable`接口的区别：
 
-   1. Runnable接口不会返回结果或者抛出异常，Callable接口可以。
 
-   2. 工具类Executors可以实现Runnable和Callable对象的相互转换，使用`Executors.callable(Runnable task)`或`Executors.callable(Runnable task, Object result)`。
+### 实现Runnable接口和Callable接口的区别
 
-   3. 源码分析：
+1. Runnable接口不会返回结果或者抛出异常，Callable接口可以。
 
-      `Runnable.java`
+2. 工具类Executors可以实现Runnable和Callable对象的相互转换，使用`Executors.callable(Runnable task)`或`Executors.callable(Runnable task, Object result)`。
 
-      ```java
-      @FunctionalInterface
-      public interface Runnable {
-          
-          // 被线程执⾏，没有返回值也⽆法抛出异常
-      	public abstract void run();
-      }
-      ```
+3. 源码分析：
 
-      `Callable.java`
-
-      ```java
-      @FunctionalInterface
-      public interface Callable<V> {
-      
-          /**
-           * 计算结果，或在⽆法这样做时抛出异常
-           * @return 计算得出的结果
-           * @throws 如果⽆法计算结果，则抛出异常
-           */
-      	V call() throws Exception;
-      }
-      ```
-
-3. 执行`execute()`方法和`submit()`方法的区别：
-
-   1. `execute()`：用于提交不需要返回值的任务，无法判断任务是否被成功执行。
-
-   2. `submit()`：用于提交需要返回值的任务，线程池会返回`Future`对象，通过该对象可以判断任务是否成功执行，并且可以通过get()方法获取返回值，``get()``方法会阻塞当前线程直到任务完成，而使用``get(long timeout, TimeUnit unit)``方法则会阻塞当前线程一段时间后立即返回，这时候任务有可能没有执行完。
-
-   3. `AbstractExecutorService`接口的``submit()``方法源码分析：
-
-      ```JAVA
-      public Future<?> submit(Runnable task) {
-          if (task WX null) throw new NullPointerException();
-      	RunnableFuture<Void> ftask = newTaskFor(task, null);
-      	execute(ftask);
-      	return ftask;
-      }
-      ```
-
-      ```JAVA
-      protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
-          return new FutureTask<T>(runnable, value);
-      }
-      ```
-
-      ```JAVA
-      public void execute(Runnable command) {
-      	...
-      }
-      ```
-
-4. 线程池的创建：
-
-   1. 为什么不推荐使用`Executors`去创建，而是通过`ThreadPoolExecutor`的方式创建？使用前者的弊端如下：
-      1. FixedThreadPool和SingleThreadExecutor：默认允许请求的队列长度为Integer.MAX_VALUE，可能堆积过多的请求，从而导致OOM。
-      2. CachedThreadPool和ScheduledThreadPool：默认允许创建的线程数量为Integer.MAX_VALUE，可能会创建过多的线程，从而导致OOM。
-   2. 创建线程池的方式：
-      1. 通过ThreadPoolExecutor的重载的4种有参构造方法实现：
-      2. 通过Executor框架的工具类Executors来创建3种类型的线程池：
-         1. FixedThreadPool：通过`Executors.newFixedThreadPool()`创建，该方法返回一个固定容量的线程池，当有新任务提交时，池中若有空闲线程，则立即执行，若没有则将任务暂存到任务队列中，待池中有线程空闲，便处理队列中的任务。
-         2. SingleThreadExecutor：通过`Executors.newSingleThreadExecutor()`创建，该方法返回一个只有一个线程的线程池，同一时间只能执行一个任务，若多余出来的任务被提交则会被暂存任务队列，待池中有线程空闲，按FIFO的原则出队任务执行。
-         3. CachedThreadPool：通过`Executors.newCachedThreadPool()`创建，该方法返回一个可根据实际情况调整线程数量的线程池，其中的线程数量是不确定的，但若有空闲线程可以复用，则优先使用，反之无空闲线程，则会创建新线程处理任务。
-         4. WorkStealingPool：通过`Executors.newWorkStealingPool()`创建，具有任务窃取机制的线程池。
-
-5. ThreadPoolExecutor类构造方法源码分析：
+   `Runnable.java`
 
    ```java
-   /**
-    * ⽤给定的初始参数创建⼀个新的ThreadPoolExecutor
-    */
-   public ThreadPoolExecutor(int corePoolSize,
-                             int maximumPoolSize,
-                             long keepAliveTime,
-                             TimeUnit unit,
-                             BlockingQueue<Runnable> workQueue,
-                             ThreadFactory threadFactory,
-                             RejectedExecutionHandler handler) {
-   	if (corePoolSize < 0 ||
-   		maximumPoolSize <= 0 ||
-           maximumPoolSize < corePoolSize ||
-   		keepAliveTime < 0)
-   		throw new IllegalArgumentException();
-   	if (workQueue == null || threadFactory == null || handler ==
-   null)
-   		throw new NullPointerException();
-   	this.corePoolSize = corePoolSize;
-   	this.maximumPoolSize = maximumPoolSize;
-   	this.workQueue = workQueue;
-   	this.keepAliveTime = unit.toNanos(keepAliveTime);
-   	this.threadFactory = threadFactory;
-   	this.handler = handler;
-   }
-   ```
-
-   构造方法参数：
-
-   * `corePoolSize`：核心线程数，定义了最小可以同时运行的线程数量；
-   * `maximumPoolSize`：最大线程数，当队列中存放的任务达到队列容量时，当前可以同时运行的线程数量变为最大线程数；
-   * `keepAliveTime`：线程等待超时，当线程池中的线程数量大于核心线程数时，如果这时没有新的任务提交，核心线程外的线程不会立即销毁，而是等待一个超时时间；
-   * `unit`：keepAliveTime参数的时间单位；
-   * `workQueue`：任务队列，当新任务到来的时候会先判断当前运行的线程数量是否达到核心线程数，若已经达到，则新任务会存放到该队列中；
-   * `threadFactory`：executor创建新线程时使用的线程工厂，即为了统一在创建线程时设置的参数（如是否守护线程），线程一些特性（如优先级）等。通过这个ThreadFactory创建出来的线程能保证具有相同的特性。
-   * `handler`：饱和策略。
-
-   饱和策略（若当前同时运行的线程数量达到最大线程数并且队列中任务已满）：
-
-   * `ThreadPoolExecutor.AbortPolicy`：默认策略，直接抛出`RejectedExecutionException  `异常来拒绝接收新的任务；
-   * `ThreadPoolExecutor.CallerRunsPolicy`：由启动线程池的线程运行这个新任务；
-   * `ThreadPoolExecutor.DiscardPolicy`：不处理新任务，直接丢弃；
-   * `ThreadPoolExecutor.DiscardOldestPolicy`：丢弃最早的未处理的任务请求。
-
-6. 线程池代码示例：
-
-   ```JAVA
-   import java.util.concurrent.ArrayBlockingQueue;
-   import java.util.concurrent.ThreadPoolExecutor;
-   import java.util.concurrent.TimeUnit;
-   
-   public class ThreadPoolExecutorDemo {
+   @FunctionalInterface
+   public interface Runnable {
        
-       private static final int CORE_POOL_SIZE = 5;
-       private static final int MAX_POOL_SIZE = 10;
-       private static final int QUEUE_CAPACITY = 100;
-       private static final Long KEEP_ALIVE_TIME = 1L;
-   	
-       public static void main(String[] args) {
-           // 通过ThreadPoolExecutor构造函数⾃定义参数创建
-           ThreadPoolExecutor executor = new ThreadPoolExecutor(
-               CORE_POOL_SIZE,
-          		MAX_POOL_SIZE,
-           	KEEP_ALIVE_TIME,
-           	TimeUnit.SECONDS,
-           	new ArrayBlockingQueue<>(QUEUE_CAPACITY),
-           	new ThreadPoolExecutor.CallerRunsPolicy());
-           for (int i = 0; i < 10; i++) {
-               // 创建WorkerThread对象（WorkerThread类实现了Runnable 接⼝）
-               Runnable worker = new MyRunnable("" + i);
-               // 执⾏Runnable
-               executor.execute(worker);
-   		}
-           
-           // 终⽌线程池
-   		executor.shutdown();
-   		while (!executor.isTerminated()) {}
-   		System.out.println("Finished all threads");
-   	}
+       // 被线程执⾏，没有返回值也⽆法抛出异常
+   	public abstract void run();
    }
    ```
 
-7. 线程池底层原理：
+   `Callable.java`
 
-   `execute()`方法源码分析：
+   ```java
+   @FunctionalInterface
+   public interface Callable<V> {
+   
+       /**
+        * 计算结果，或在⽆法这样做时抛出异常
+        * @return 计算得出的结果
+        * @throws 如果⽆法计算结果，则抛出异常
+        */
+   	V call() throws Exception;
+   }
+   ```
+
+
+
+### 执行execute()方法和submit()方法的区别
+
+1. `execute()`：用于提交不需要返回值的任务，无法判断任务是否被成功执行。
+
+2. `submit()`：用于提交需要返回值的任务，线程池会返回`Future`对象，通过该对象可以判断任务是否成功执行，并且可以通过get()方法获取返回值，``get()``方法会阻塞当前线程直到任务完成，而使用``get(long timeout, TimeUnit unit)``方法则会阻塞当前线程一段时间后立即返回，这时候任务有可能没有执行完。
+
+3. `AbstractExecutorService`接口的``submit()``方法源码分析：
 
    ```JAVA
-   // 存放线程池的运⾏状态runState和线程池内有效线程的数量workerCount
-   private final AtomicInteger ctl = new AtomicInteger(ctlOf(RUNNING, 0));
-   
-   private static int workerCountOf(int c) {
-   	return c & CAPACITY;
+   public Future<?> submit(Runnable task) {
+       if (task WX null) throw new NullPointerException();
+   	RunnableFuture<Void> ftask = newTaskFor(task, null);
+   	execute(ftask);
+   	return ftask;
    }
-   
-   // 任务队列
-   private final BlockingQueue<Runnable> workQueue;
-   
+   ```
+
+   ```JAVA
+   protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
+       return new FutureTask<T>(runnable, value);
+   }
+   ```
+
+   ```JAVA
    public void execute(Runnable command) {
-       // 如果提交的任务为null，则抛出空指针异常
-       if (command == null)
-       	throw new NullPointerException();
-       // ctl中保存的是线程池当前的⼀些状态信息
-       int c = ctl.get();
-       
-       // 1.⾸先判断当前线程池中执行的任务数量是否⼩于corePoolSize，若⼩于则通过addWorker(command, true)方法新建⼀个线程，并将任务command添加到该线程中执⾏任务
-       if (workerCountOf(c) < corePoolSize) {
-       	if (addWorker(command, true))
-               return;
-           c = ctl.get();
-   	}
-   	// 2.如果当前执行的任务数量⼤于等于corePoolSize时，则通过isRunning()⽅法判断线程池状态，只有线程池处于RUNNING状态并且队列未满，该任务才会被加⼊队列中
-   	if (isRunning(c) && workQueue.offer(command)) {
-   		int recheck = ctl.get();
-   		// 再次获取线程池状态，若线程池状态不是RUNNING状态就需要从任务队列中移除任务，并尝试判断线程是否全部执⾏完毕，同时执⾏拒绝策略
-   		if (!isRunning(recheck) && remove(command))
-               reject(command);
-           // 如果当前线程池为空就创建⼀个新线程并执⾏。
-   		else if (workerCountOf(recheck) == 0)
-   			addWorker(null, false);
-       }
-   	// 3.若队列已满，则通过addWorker(command, false)新建⼀个线程，并将任务command添加到该线程中启动并执⾏任务。若addWorker(command, false)执⾏失败则代表线程池已满，则通过reject()执⾏相应的饱和策略
-   	else if (!addWorker(command, false))
-   		reject(command);
+   	...
    }
    ```
 
-   ![image-20201028180253371](assets/image-20201028180253371.png)
 
-## 1.15.Atomic原子类
 
-1. Atomic原子类的概念：原子是指一个操作是不可中断的，即使是在多个线程共同执行的时候，一个操作一旦开始，就不会被其他线程干扰。JUC下的原子类都存放在`java.util.concurrent.atomic`包下。
+### 线程池的创建
 
-2. JUC包中的原子类：
+1. 为什么不推荐使用`Executors`去创建，而是通过`ThreadPoolExecutor`的方式创建？使用前者的弊端如下：
+   1. FixedThreadPool和SingleThreadExecutor：默认允许请求的队列长度为Integer.MAX_VALUE，可能堆积过多的请求，从而导致OOM。
+   2. CachedThreadPool和ScheduledThreadPool：默认允许创建的线程数量为Integer.MAX_VALUE，可能会创建过多的线程，从而导致OOM。
+2. 创建线程池的方式：
+   1. 通过ThreadPoolExecutor的重载的4种有参构造方法实现：
+   2. 通过Executor框架的工具类Executors来创建3种类型的线程池：
+      1. FixedThreadPool：通过`Executors.newFixedThreadPool()`创建，该方法返回一个固定容量的线程池，当有新任务提交时，池中若有空闲线程，则立即执行，若没有则将任务暂存到任务队列中，待池中有线程空闲，便处理队列中的任务。
+      2. SingleThreadExecutor：通过`Executors.newSingleThreadExecutor()`创建，该方法返回一个只有一个线程的线程池，同一时间只能执行一个任务，若多余出来的任务被提交则会被暂存任务队列，待池中有线程空闲，按FIFO的原则出队任务执行。
+      3. CachedThreadPool：通过`Executors.newCachedThreadPool()`创建，该方法返回一个可根据实际情况调整线程数量的线程池，其中的线程数量是不确定的，但若有空闲线程可以复用，则优先使用，反之无空闲线程，则会创建新线程处理任务。
+      4. WorkStealingPool：通过`Executors.newWorkStealingPool()`创建，具有任务窃取机制的线程池。
 
-   1. 基本类型：AtomicInteger、AtomicLong、AtomicBoolean；
-   2. 数组类型：AtomicIntegerArray、AtomicLongArray、AtomicReferenceArray；
-   3. 引用类型：AtomicReference、AtomicStampedReference原子更新带有版本号的引用类型（该类将整数值与引用关联起来，可用于解决原子的更新数据和数据的版本号，可以解决使用CAS进行原子更新时可能出现的ABA问题）、AtomicMarkableReference原子更新带有标记位的引用类型；
-   4. 对象属性修改类型：AtomicIntegerFieldUpdater原子更新整型字段的更新器、AtomicLongFieldUpdater。
 
-3. AtomicInteger的使用：
 
-   ```JAVA
-   public final int get()	// 获取当前的值
-   public final int getAndSet(int newValue)	// 获取当前的值，并设置新的值
-   public final int getAndIncrement()	// 获取当前的值，并⾃增
-   public final int getAndDecrement() 	// 获取当前的值，并⾃减
-   public final int getAndAdd(int delta)	// 获取当前的值，并加上预期的值
-   boolean compareAndSet(int expect, int update)	// 如果输⼊的数值等于预期值expect，则以原⼦⽅式将更新值update设置为输⼊值
-   public final void lazySet(int newValue)	// 懒设置，即最终设置为newValue,使⽤lazySet设置之后可能导致其他线程在之后的⼀⼩段时间内还是可以读到旧的值
-   ```
+### ThreadPoolExecutor类构造方法源码分析
 
-   ```JAVA
-   class AtomicIntegerTest {
-       	
-       // 使用原子类的变量存储数据，无需加锁也可以保证线程安全
-       private AtomicInteger count = new AtomicInteger();
-       
-       public void increment() {
-           cout.incrementAndGet();
-       }
-       
-       public int getCount() {
-           return count.get();
-       }
-   }
-   ```
+```java
+/**
+ * ⽤给定的初始参数创建⼀个新的ThreadPoolExecutor
+ */
+public ThreadPoolExecutor(int corePoolSize,
+                          int maximumPoolSize,
+                          long keepAliveTime,
+                          TimeUnit unit,
+                          BlockingQueue<Runnable> workQueue,
+                          ThreadFactory threadFactory,
+                          RejectedExecutionHandler handler) {
+	if (corePoolSize < 0 ||
+		maximumPoolSize <= 0 ||
+        maximumPoolSize < corePoolSize ||
+		keepAliveTime < 0)
+		throw new IllegalArgumentException();
+	if (workQueue == null || threadFactory == null || handler ==
+null)
+		throw new NullPointerException();
+	this.corePoolSize = corePoolSize;
+	this.maximumPoolSize = maximumPoolSize;
+	this.workQueue = workQueue;
+	this.keepAliveTime = unit.toNanos(keepAliveTime);
+	this.threadFactory = threadFactory;
+	this.handler = handler;
+}
+```
 
-4. AtomicInteger的原理：
+**构造方法参数：**
 
-   源码分析（其底层主要使用了CAS+volatile+native方法来保证原子性）：
+* `corePoolSize`：核心线程数，定义了最小可以同时运行的线程数量；
+* `maximumPoolSize`：最大线程数，当队列中存放的任务达到队列容量时，当前可以同时运行的线程数量变为最大线程数；
+* `keepAliveTime`：线程等待超时，当线程池中的线程数量大于核心线程数时，如果这时没有新的任务提交，核心线程外的线程不会立即销毁，而是等待一个超时时间；
+* `unit`：keepAliveTime参数的时间单位；
+* `workQueue`：任务队列，当新任务到来的时候会先判断当前运行的线程数量是否达到核心线程数，若已经达到，则新任务会存放到该队列中；
+* `threadFactory`：executor创建新线程时使用的线程工厂，即为了统一在创建线程时设置的参数（如是否守护线程），线程一些特性（如优先级）等。通过这个ThreadFactory创建出来的线程能保证具有相同的特性。
+* `handler`：饱和策略。
 
-   ```JAVA
-   // 更新操作时提供CAS
-   private static final Unsafe unsafe = Unsafe.getUnsafe();
-   private static final long valueOffset;
-   
-   static {
-   	try {
-   		valueOffset = unsafe.objectFieldOffset(AtomicInteger.class.getDeclaredField("value"));
-   	} catch (Exception ex) { 
-           throw new Error(ex); 
-       }
-   }
-   
-   private volatile int value;
-   ```
+**饱和策略（若当前同时运行的线程数量达到最大线程数并且队列中任务已满）：**
 
-5. CAS原理：比较并替换的原理就是当线程要修改数据时先用更新期望值与原来的旧值作比较，若相同则更新（相同则说明没有被其他线程修改）。UnSafe类的``objectFieldOffset()``方法是一个本地方法，这个方法用来获取旧值的内存地址，返回值是valueOffset。此外原子类中用于存值的value字段由volatile修饰，内存可见，因此JVM可以保证任意时刻任意线程都能获取原子变量的最新值。
+* `ThreadPoolExecutor.AbortPolicy`：默认策略，直接抛出`RejectedExecutionException  `异常来拒绝接收新的任务；
+* `ThreadPoolExecutor.CallerRunsPolicy`：由启动线程池的线程运行这个新任务；
+* `ThreadPoolExecutor.DiscardPolicy`：不处理新任务，直接丢弃；
+* `ThreadPoolExecutor.DiscardOldestPolicy`：丢弃最早的未处理的任务请求。
 
-## 1.16.AQS
 
-### 1.16.1.AQS概念
+
+### 线程池代码示例
+
+```JAVA
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
+public class ThreadPoolExecutorDemo {
+    
+    private static final int CORE_POOL_SIZE = 5;
+    private static final int MAX_POOL_SIZE = 10;
+    private static final int QUEUE_CAPACITY = 100;
+    private static final Long KEEP_ALIVE_TIME = 1L;
+	
+    public static void main(String[] args) {
+        // 通过ThreadPoolExecutor构造函数⾃定义参数创建
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(
+            CORE_POOL_SIZE,
+       		MAX_POOL_SIZE,
+        	KEEP_ALIVE_TIME,
+        	TimeUnit.SECONDS,
+        	new ArrayBlockingQueue<>(QUEUE_CAPACITY),
+        	new ThreadPoolExecutor.CallerRunsPolicy());
+        for (int i = 0; i < 10; i++) {
+            // 创建WorkerThread对象（WorkerThread类实现了Runnable 接⼝）
+            Runnable worker = new MyRunnable("" + i);
+            // 执⾏Runnable
+            executor.execute(worker);
+		}
+        
+        // 终⽌线程池
+		executor.shutdown();
+		while (!executor.isTerminated()) {}
+		System.out.println("Finished all threads");
+	}
+}
+```
+
+
+
+### 线程池底层原理
+
+`execute()` 方法源码分析：
+
+```JAVA
+// 存放线程池的运⾏状态runState和线程池内有效线程的数量workerCount
+private final AtomicInteger ctl = new AtomicInteger(ctlOf(RUNNING, 0));
+
+private static int workerCountOf(int c) {
+	return c & CAPACITY;
+}
+
+// 任务队列
+private final BlockingQueue<Runnable> workQueue;
+
+public void execute(Runnable command) {
+    // 如果提交的任务为null，则抛出空指针异常
+    if (command == null)
+    	throw new NullPointerException();
+    // ctl中保存的是线程池当前的⼀些状态信息
+    int c = ctl.get();
+    
+    // 1.⾸先判断当前线程池中执行的任务数量是否⼩于corePoolSize，若⼩于则通过addWorker(command, true)方法新建⼀个线程，并将任务command添加到该线程中执⾏任务
+    if (workerCountOf(c) < corePoolSize) {
+    	if (addWorker(command, true))
+            return;
+        c = ctl.get();
+	}
+	// 2.如果当前执行的任务数量⼤于等于corePoolSize时，则通过isRunning()⽅法判断线程池状态，只有线程池处于RUNNING状态并且队列未满，该任务才会被加⼊队列中
+	if (isRunning(c) && workQueue.offer(command)) {
+		int recheck = ctl.get();
+		// 再次获取线程池状态，若线程池状态不是RUNNING状态就需要从任务队列中移除任务，并尝试判断线程是否全部执⾏完毕，同时执⾏拒绝策略
+		if (!isRunning(recheck) && remove(command))
+            reject(command);
+        // 如果当前线程池为空就创建⼀个新线程并执⾏。
+		else if (workerCountOf(recheck) == 0)
+			addWorker(null, false);
+    }
+	// 3.若队列已满，则通过addWorker(command, false)新建⼀个线程，并将任务command添加到该线程中启动并执⾏任务。若addWorker(command, false)执⾏失败则代表线程池已满，则通过reject()执⾏相应的饱和策略
+	else if (!addWorker(command, false))
+		reject(command);
+}
+```
+
+![image-20201028180253371](assets/image-20201028180253371.png)
+
+
+
+## Atomic原子类
+
+### Atomic原子类的概念
+
+原子是指一个操作是不可中断的，即使是在多个线程共同执行的时候，一个操作一旦开始，就不会被其他线程干扰。JUC下的原子类都存放在`java.util.concurrent.atomic`包下。
+
+
+
+### JUC包中的原子类
+
+1. 基本类型：AtomicInteger、AtomicLong、AtomicBoolean；
+2. 数组类型：AtomicIntegerArray、AtomicLongArray、AtomicReferenceArray；
+3. 引用类型：AtomicReference、AtomicStampedReference原子更新带有版本号的引用类型（该类将整数值与引用关联起来，可用于解决原子的更新数据和数据的版本号，可以解决使用CAS进行原子更新时可能出现的ABA问题）、AtomicMarkableReference原子更新带有标记位的引用类型；
+4. 对象属性修改类型：AtomicIntegerFieldUpdater原子更新整型字段的更新器、AtomicLongFieldUpdater。
+
+
+
+### AtomicInteger的使用
+
+```JAVA
+public final int get()	// 获取当前的值
+public final int getAndSet(int newValue)	// 获取当前的值，并设置新的值
+public final int getAndIncrement()	// 获取当前的值，并⾃增
+public final int getAndDecrement() 	// 获取当前的值，并⾃减
+public final int getAndAdd(int delta)	// 获取当前的值，并加上预期的值
+boolean compareAndSet(int expect, int update)	// 如果输⼊的数值等于预期值expect，则以原⼦⽅式将更新值update设置为输⼊值
+public final void lazySet(int newValue)	// 懒设置，即最终设置为newValue,使⽤lazySet设置之后可能导致其他线程在之后的⼀⼩段时间内还是可以读到旧的值
+```
+
+```JAVA
+class AtomicIntegerTest {
+    	
+    // 使用原子类的变量存储数据，无需加锁也可以保证线程安全
+    private AtomicInteger count = new AtomicInteger();
+    
+    public void increment() {
+        cout.incrementAndGet();
+    }
+    
+    public int getCount() {
+        return count.get();
+    }
+}
+```
+
+
+
+### AtomicInteger的原理
+
+源码分析（其底层主要使用了CAS+volatile+native方法来保证原子性）：
+
+```JAVA
+// 更新操作时提供CAS
+private static final Unsafe unsafe = Unsafe.getUnsafe();
+private static final long valueOffset;
+
+static {
+	try {
+		valueOffset = unsafe.objectFieldOffset(AtomicInteger.class.getDeclaredField("value"));
+	} catch (Exception ex) { 
+        throw new Error(ex); 
+    }
+}
+
+private volatile int value;
+```
+
+
+
+### CAS原理
+
+比较并替换的原理就是当线程要修改数据时先用更新期望值与原来的旧值作比较，若相同则更新（相同则说明没有被其他线程修改）。UnSafe类的 ``objectFieldOffset()`` 方法是一个本地方法，这个方法用来获取旧值的内存地址，返回值是valueOffset。此外原子类中用于存值的value字段由volatile修饰，内存可见，因此JVM可以保证任意时刻任意线程都能获取原子变量的最新值。
+
+
+
+## AQS
+
+### AQS概念
 
 AQS是用来构建锁和同步器的框架，如ReentrantLock、Semaphore、ReentrantReadWriteLock、SynchronousQueue、FutureTask都是基于AQS实现的。
 
-### 1.16.2.AQS原理
+
+
+### AQS原理
 
 ![image-20201027215712930](assets/image-20201027215712930.png)
 
@@ -614,7 +749,8 @@ AQS是用来构建锁和同步器的框架，如ReentrantLock、Semaphore、Reen
    ```
 
 
-### 1.16.3.AQS对资源的共享方式
+
+### AQS对资源的共享方式
 
 1. **Exclusive（独占）**：只有一个线程能够访问资源，如ReentrantLock，该方式又能分为公平锁和非公平锁：
    
@@ -740,7 +876,9 @@ AQS是用来构建锁和同步器的框架，如ReentrantLock、Semaphore、Reen
    2. ReentrantReadWriteLock允许多个线程同时对某一资源进行读操作，但写操作是互斥的；
    3. 不同同步器竞争共享资源得方式不同，自定义同步器在实现时只需要实现共享资源state的获取与释放方式即可，至于线程的等待队列的维护（如获取资源失败入队/唤醒出队操作），AQS已经实现。
 
-### 1.16.4.AQS底层使用了模板方法模式
+
+
+### AQS底层使用了模板方法模式
 
 1. 使用AQS自定义同步器：
 
@@ -779,7 +917,9 @@ AQS是用来构建锁和同步器的框架，如ReentrantLock、Semaphore、Reen
       2. 主调用线程会通过await()阻塞，当有线程调用countDown()方法一次，state就会以CAS的方式自减一次（释放一把锁）；
       3. 当state归0时，或者说所有的锁都被释放完毕时，会unpark()主调用线程，使其从await()方法返回，继续执行。
 
-### 1.16.5.Semaphore信号量
+
+
+### Semaphore信号量
 
 与synchronized和ReetrantLock去区别是前两者都是一次只允许一个线程访问资源，而Semaphore可以指定多个线程同时访问某个资源。
 
@@ -842,9 +982,14 @@ public Semaphore(int permits, boolean fair) {
 
 Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初始化AQS的state为permits，当同时访问资源的线程超出permits，那么超出的线程会进入阻塞队列Park，并自旋判断state是否大于0，只有当state大于0时，阻塞的线程才能进行执行。
 
-### 1.16.6.CountDownLatch倒计时器
+
+
+### CountDownLatch闭锁
 
 1. 概念：
+   
+   <img src="assets/4765686876.png" alt="4765686876" style="zoom:80%;" />
+   
    1. 是共享锁的一种实现，默认构造AQS的state为count，当线程调用countDown()方法时，其底层是使用了tryReleaseShared()方法以CAS的操作来减少state；
    2. 当调用await()方法时，若state不为0，就代表countDown()的操作没有全部执行完，则会进入阻塞队列自旋等待，直到state归0则继续执行。
    
@@ -888,38 +1033,40 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
    1. CountDownLatch是一次性的，计数器只能在构造方法种初始化一次，之后没有任何机制可以修改，当CountDownLatch使用完毕后，就不能再次被使用；
    2. CountDownLatch的await()方法使用不当容易发生死锁，若是没有足够的线程去countDown()将state置为0，那么通过await()阻塞的线程会永久等待下去。
 
-### 1.16.7.CyclicBarrier循环栅栏
 
-1. 概念：
 
-   ![image-20201031165914108](assets/image-20201031165914108.png)
+### CyclicBarrier循环栅栏
+
+1. 概念：![image-20201031165914108](assets/image-20201031165914108.png)
 
    1. 与CountDownLatch类似，可以实现线程等待，但更为复杂强大。字面意思是可循环使用的屏障，就是让一组线程到一个屏障或同步点时被阻塞，直到最后一个线程到达时屏障才会放开，再让所有被拦截的的线程继续执行；
 
+      ![CyclicBarrier](assets/CyclicBarrier.png)
+
    2. CountDownLatlansanch是基于AQS实现的，而CyclicBarrier是居于ReentrantLock和Condition实现的（ReentrantLock也是基于AQS实现的同步器）；
 
-   3. 构造方法：
+2. 构造方法：
 
-      ```JAVA
-      // parties表示屏障拦截的线程数，当拦截的线程数量达到该值时，就打开栅栏，放行所有线程
-      public CyclicBarrier(int parties) {
-          this(parties, null);
-      }
-      
-      public CyclicBarrier(int parties, Runnable barrierAction) {
-          if (parties <= 0) throw new IllegalArgumentException();
-          this.parties = parties;
-          this.count = parties;
-          this.barrierCommand = barrierAction;
-      }
-      ```
+   ```JAVA
+   // parties表示屏障拦截的线程数，当拦截的线程数量达到该值时，就打开栅栏，放行所有线程
+   public CyclicBarrier(int parties) {
+       this(parties, null);
+   }
+   
+   public CyclicBarrier(int parties, Runnable barrierAction) {
+       if (parties <= 0) throw new IllegalArgumentException();
+       this.parties = parties;
+       this.count = parties;
+       this.barrierCommand = barrierAction;
+   }
+   ```
 
-2. 应用场景（可用于多线程计算数据，最后合并结果的场景）：
+3. 应用场景（可用于多线程计算数据，最后合并结果的场景）：
 
    1. 如要统计2010-2020年某银行账户的年平均流水，可以通过多个子线程去计算每一年的流水总和，等所有线程计算完毕后，放开栅栏，由主线程或是注册在栅栏上的方法合并这些数据求平均值；
    2. 若在上例的基础上，还要统计2010-2020各年度的流水占总流水的比例，则栅栏之后还可以加逻辑，在统计总流水之后，即放行之后，所有线程各自再去计算比例。
 
-3. 使用示例：
+4. 使用示例：
 
    ```JAVA
    public class CyclicBarrierExample {
@@ -961,7 +1108,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
    }
    ```
 
-4. 源码分析：
+5. 源码分析：
 
    ```java
    public int await() throws InterruptedException, BrokenBarrierException {
@@ -1066,18 +1213,108 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
    }
    ```
 
-5. 与CountDownLatch的区别：
+6. 与CountDownLatch的区别：
 
-   1. CountDownLatch的计数器只能使用一次，在有些场合需要不停的创建CoutDownLatch的示例，存在浪费资源的现象；CyclicBarrier的计数器可以多次使用，并且能够通过``reset()``方法重置。
+   1. CountDownLatch的计数器只能使用一次，在有些场合需要不停的创建CoutDownLatch的示例，存在浪费资源的现象；CyclicBarrier的计数器可以多次使用，并且能够通过 ``reset()`` 方法重置。
    2. JavaDoc的描述：CountDownLatch是一个或多个线程，等待其他多个线程完成某些事情后才能执行；CyclicBarrier是多个线程互相等待，直达到达同一个同步点，再继续一起执行。
 
-## 1.17.线程间的同步方式
 
- 1. **互斥量（Mutex）**：采用互斥对象机制，只有拥有互斥对象的线程才有访问公共资源的权限。因为互斥对象只有一个，所以可以保证公共资源不会被多个线程同时访问，如Java中的synchronized和各种Lock锁；
- 2. **信号量（Semphares）**：允许同一时刻多个线程访问同一资源，但是需要控制同一时刻访问此资源的最大线程数量；
- 3. **事件（Event）**：即`wait/notify`操作，通过通知操作的方式来保持多线程同步，还可以方便的实现多线程的优先级。
 
-## 1.18.协程
+## JUC
+
+### FutureTask
+
+用于异步获取执行结果或取消执行任务的场景。当一个计算任务需要执行很长时间，那么就可以用FutureTask来封装该任务，主线程可以在完成自己的任务后再去获取结果。
+
+```java
+public class FutureTaskExample {
+    
+    public static void main(String[] args) throws ExecutionException, InterruptedException {        
+        new Thread(new FutureTask<Integer>(new Callable<Integer>() {
+            @Override
+            public Integer call() throws Exception {
+                int result = 0;
+                for (int i = 0; i < 100; i++) {
+                    Thread.sleep(10);
+                    result += i;
+                }
+                return result;
+            }
+        })).start();
+        
+        new Thread(() -> {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+        
+      	System.out.println(futureTask.get());
+    }
+}
+```
+
+
+
+### BlockingQueue
+
+java.util.concurrent.BlockingQueue 接口有以下阻塞队列的实现：
+
+* FIFO队列：固定长度的 `LinkedBlockingQueue、ArrayBlockingQueue`；
+* 优先级队列：`PriorityBlockingQueue`。
+
+```JAVA
+public class ProducerConsumer {
+    
+    private static BlockingQueue<String> queue = new ArrayBlockingQueue<>(5);
+    
+    public static void main(String[] args) {
+        for (int i = 0; i < 2; i++) {
+            new Thread(() -> {
+                try {
+                    // 若队列已满，put()将阻塞
+                    queue.put("product");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+        }
+        
+        for (int i = 0; i < 3; i++) {
+            new Thread(() -> {
+                try {
+                    // 若队列为空，task()将阻塞
+                    String product = queue.task();
+                    System.out.println("product: " + product);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+        }   
+    }
+}
+```
+
+
+
+### ForkJoin
+
+
+
+## 线程间的同步方式
+
+* **互斥量（Mutex）**：采用互斥对象机制，只有拥有互斥对象的线程才有访问公共资源的权限。因为互斥对象只有一个，所以可以保证公共资源不会被多个线程同时访问，如Java中的synchronized和各种Lock锁；
+* **信号量（Semphares）**：允许同一时刻多个线程访问同一资源，但是需要控制同一时刻访问此资源的最大线程数量；
+* **事件（Event）**：即 `wait/notify` 操作，通过通知操作的方式来保持多线程同步，还可以方便的实现多线程的优先级。
+
+
+
+## Java线程的内存模型
+
+
+
+## 协程
 
  1. 即线程中的多条执行路径，使用了操作系统的用户线程模型（即用户空间线程和内核空间线程多对一）；
  2. JVM的线程和OS内核线程是1:1的关系，每启动一个线程就需要和OS交互，开销大。而协程就是在用户态模拟内核级别线程的调度，在用户态的内存空间维护寄存器信息和堆信息等，这样用户级别的线程（即协程）无需和OS交互就能撑起并发执行；
@@ -1099,9 +1336,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 
 # 2.从计算机组成到操作系统再到JVM
 
-## 2.1.计算机的组成
-
-冯·诺依曼体系结构：
+## 冯·诺依曼体系结构
 
 * 计算机由**运算器、存储器、控制器、输入设备和输出设备**五大部件组成：
   * 运算器：用于完成算术运算和逻辑运算，并能够暂存中间结果；
@@ -1117,11 +1352,13 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 * 指令在存储器内按顺序存放，且指令也通常是按顺序执行的，但在特定条件下，可根据运算结果或设定的条件改变执行顺序；
 * 计算机以运算器为中心，输入输出设备与存储器间的数据传输通过运算器完成。
 
-## 2.2.计算机的数据与运算
 
-### 2.2.1.位运算
 
-按位与&：
+## 计算机的数据与运算
+
+### 位运算
+
+**按位与&：**
 
 * 定义：0为假，1为真，&运算符两边都为真时，结果才为真；
 * 规则：`0&0=0 0&1=0 1&0=0 1&1=1`；
@@ -1129,7 +1366,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 * 例如：`3&5 即 0000 0011 & 0000 0101 = 0000 0001 = 1`；
 * 注意：负数按补码的形式参与按位与运算。
 
-按位或|：
+**按位或|：**
 
 * 定义：0为假，1为真，|运算符两边任意一边为真时，结果为真；
 * 规则：`0|0=0 0|1=1 1|0=1 1|1=1`；
@@ -1137,7 +1374,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 * 例如：`3|5 即 0000 0011 | 0000 0101 = 0000 0111 = 7`；
 * 注意：负数按补码的形式参与按位或运算。
 
-异或^：
+**异或^：**
 
 * 定义：0为假，1为真，^运算符两边各不相同时，结果为真；
 * 规则：`0^0=0 0^1=1 1^0=1 1^1=0`；
@@ -1148,25 +1385,27 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   * 对于任何数x，都有`x^x=0,x^0=x`；
   * 自反性：`a^b^b=a^0=a`。
 
-取反~：
+**取反~：**
 
 * 定义：对二进制位进行按位取反操作，即让各位上的0变1，1变0；
 * 规则：`~0=1 ~1=0`；
 * 总结：1为0，0为1。
 
-左移<<：
+**左移<<：**
 
 * 定义：将一个运算对象的各二进制位全部左移若干位（左边丢弃，并在右边补0）；
 * 例如：`a=1010 1110, a=a<<2=1011 1000`；
 * 若左移时舍弃的高位不包含1，则每左移1位，相当于该数乘2。
 
-右移>>：
+**右移>>：**
 
 * 定义：将一个运算对象的各二进制位全部右移若干位（右边丢弃，正数左补0，负数左补1）；
 * 例如：`a=1010 1110, a=a>>2=1110 1011`；
 * 操作数每右移一位，相当于该数除以2。
 
-### 2.2.2.原码、反码、补码
+
+
+### 原码、反码和补码
 
 原码就是符号位加上真值的绝对值，即用第一位表示符号位，其余表示值，如：
 
@@ -1191,9 +1430,11 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 [-1] = [10000001]原 = [11111110]反 = [11111111]补
 ```
 
-### 2.2.3.进制转换
 
-二进制 —> 十进制：
+
+### 进制转换
+
+**二进制 —> 十进制：**
 
 * 方法：二进制数从低位到高位（即从右往左）计算，第0位的权值是2的0次方，第1位的权值是2的1次方，第2位的权值是2的2次方，依次递增计算下去，最后将所有结果求和就是十进制的值；
 
@@ -1229,7 +1470,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   1+2+8+32=43
   ```
 
-八进制 —> 十进制：
+**八进制 —> 十进制：**
 
 * 方法：八进制数从低位到高位（即从右往左）计算，第0位的权值是8的0次方，第1位的权值是8的1次方，第2位的权值是8的2次方，依次递增计算下去，最后将所有结果求和就是十进制的值；
 
@@ -1241,7 +1482,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   求和：3+40=43，即(53)O=(43)D
   ```
 
-十六进制 —> 十进制：
+**十六进制 —> 十进制：**
 
 * 方法：十六进制数从低位到高位（即从右往左）计算，第0位的权值是16的0次方，第1位的权值是16的1次方，第2位的权值是16的2次方，依次递增计算下去，最后将所有结果求和就是十进制的值；
 
@@ -1253,7 +1494,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   求和：11+32=43，即(2B)H=(43)D
   ```
 
-十进制 —> 二进制：
+**十进制 —> 二进制：**
 
 * 方法：除2取余法，即每次将整数部分除以2，余数为该位权上的数据，而商继续除以2，余数又为上一个位权上的数，依次执行到商为0为止，最后读数的时候，从最后一个余数开始，直到最开始的余数结束。
 
@@ -1291,7 +1532,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   第三步：101011
   ```
 
-十进制 —> 八进制：
+**十进制 —> 八进制：**
 
 * 方法：除8取余法，即每次将整数部分除以8，余数为该位权上的数据，而商继续除以8，余数又为上一个位权上的数，依次执行到商为0为止，最后读数的时候，从最后一个余数开始，直到最开始的余数结束。
 
@@ -1305,7 +1546,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   读数：(796)D=(1434)O
   ```
 
-十进制 —> 十六进制：
+**十进制 —> 十六进制：**
 
 * 方法：除16取余法，即每次将整数部分除以16，余数为该位权上的数据，而商继续除以16，余数又为上一个位权上的数，依次执行到商为0为止，最后读数的时候，从最后一个余数开始，直到最开始的余数结束。
 
@@ -1318,7 +1559,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   读数：(796)D=(31C)H
   ```
 
-二进制 —> 八进制：
+**二进制 —> 八进制：**
 
 * 方法：取3合1法，即从二进制的小数点为分界点，向左（向右）每3位取成1位，接着将这3位二进制按权相加，然后按顺序排列，小数点位置不变，得到的数字就是所求的八进制数。如果向左（向右）取3位后，取到最高（最低）位时无法凑足3位，可以在小数点最左边（最右边），即整数的最高位（最低位）添0来凑足3位。最后从高位到低位（从左到右）开始读数。
 
@@ -1330,7 +1571,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   读数：(11010111.0100111)B=(327.234)O
   ```
 
-二进制 —> 十六进制：
+**二进制 —> 十六进制：**
 
 * 方法：取4合1法，即从二进制的小数点为分界点，向左（向右）每4位取成1位，接着将这4位二进制按权相加，然后按顺序排列，小数点位置不变，得到的数字就是所求的十六进制数。如果向左（向右）取4位后，取到最高（最低）位时无法凑足4位，可以在小数点最左边（最右边），即整数的最高位（最低位）添0来凑足4位。最后从高位到低位（从左到右）开始读数。
 
@@ -1342,7 +1583,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   读数：(11010111)B=(7D)H
   ```
 
-八进制 —> 二进制：
+**八进制 —> 二进制：**
 
 * 方法：取1分3法，即将每一位八进制数分解成3位二进制数（按十进制转二进制计算），用所有的3位二进制按权相加去拼凑，小数点位置不变。最后从高位到低位（从左到右）开始读数。
 
@@ -1355,7 +1596,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   读数：(327)O=(011010111)B
   ```
 
-十六进制 —> 二进制：
+**十六进制 —> 二进制：**
 
 * 方法：取1分4法，即将每一位十六进制数分解成4位二进制数（按十进制转二进制计算），用所有的4位二进制按权相加去拼凑，小数点位置不变。最后从高位到低位（从左到右）开始读数。
 
@@ -1367,7 +1608,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   读数：(D7)H=(11010111)B
   ```
 
-八进制 —> 十六进制：
+**八进制 —> 十六进制：**
 
 * 方法：将八进制转换为二进制，然后将二进制转换为十六进制，小数点位置不变。
 
@@ -1383,7 +1624,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   读数：(327)O=(D7)H
   ```
 
-十六进制 —> 八进制：
+**十六进制 —> 八进制：**
 
 * 方法：将十六进制转换为二进制，然后将二进制转换为八进制，小数点位置不变。
 
@@ -1399,14 +1640,16 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   读数：(D7)H=(327)O
   ```
 
-## 2.5.计算机的层次存储系统
+
+
+## 计算机的层次存储系统
 
 * **存储器层次**：远程文件存储 -> 磁盘 -> 主存 -> 三级缓存 -> 二级缓存 -> 一级缓存 -> CPU寄存器；
 
 * **高速缓存（Cache）**：介于CPU与内存之间，Intel系列的CPU有L1、L2、L3共三级缓存。读写速度高于内存，当CPU在内存中读取或写入数据时，数据会被保存在高速缓冲存储器中，当下次访问该数据时，CPU直接读取高速缓存，而不是更慢的内存；
 
 * **内存（Memory）**：也称内存储器或主存储器，是CPU能直接寻址的存储空间，其作用是用于暂时存放CPU中的运算数据，以及与硬盘等外部存储器交换的数据。是计算机中最重要的部件之一，是外存和CPU沟通的桥梁，计算机中所有程序的运行都是在内存中进行的，所以内存的速度影响计算机的速度。当计算机在运行过程中，操作系统会将需要运算的数据从内存中调入CPU中进行运算，当运算完成后再将结果写回，所以内存的运行情况也决定计算机的运行情况。
-* 随机存取存储器（RAM）：是一种可读可写的存储器，特点是存储器的任何一个存储单元的内容都可以随机存储，而且存取时间与存取单元的物理位置无关（计算机系统中的主存都采用这种随机存储器）；
+* **随机存取存储器（RAM）：**是一种可读可写的存储器，特点是存储器的任何一个存储单元的内容都可以随机存储，而且存取时间与存取单元的物理位置无关（计算机系统中的主存都采用这种随机存储器）；
   * 只读存储器（ROM）：只能读出其存储的内容，而不能对其重新写入。通常用于存放固定不变的程序、常数、汉字字库和操作系统的固定信息。与随机存储器共同作为主存的一部分，统一构成主存的地址域。
 
 * **外存**：外存储器是指除了内存和高速缓存以外的存储器，此类存储器一般永久的保存数据，常见的外存有硬盘、软盘、光盘、U盘等；
@@ -1416,17 +1659,18 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 * **辅存**：外存，狭义上就是指硬盘。即需要通过I/O系统交换数据的外部存储器；
 
 * **数据存储方式**：
-* 小端方式：先存储低位字节，后存储高位字节；
+  * 小端方式：先存储低位字节，后存储高位字节；
   * 大端方式：先存储告位字节，后存储低位字节。
-  
+
 * **边界对齐方式**：字节在任何CPU上都是8bit；
 
 * **按块读取**：即从内存中一次性读取一块存入缓存中，利用空间局部性原理（如一个数组，内存空间是紧挨着的）可以提高效率，充分发挥CPU一次性读取更多数据的能力。
 
 
-## 2.6.计算机的指令系统
 
-### 2.6.1.指令格式
+## 计算机的指令系统
+
+### 指令格式
 
 * 指令集：一台机器所有指令的集合；
 * 指令字长：指令中包含的二进制位数；
@@ -1443,7 +1687,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
     * 寄存器 - 存储器（RS）。
 * 指令格式：操作码+数据源+寻址方式。
 
-### 2.6.2.寻址方式
+
+
+### 寻址方式
 
 <img src="assets/1542615-20200211203054598-1504101122.png" alt="img" style="zoom: 67%;" />
 
@@ -1451,7 +1697,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 
 * **指令跳跃寻址**：当程序需要转移执行的顺序时，指令的寻址就采取跳跃寻址的方式。所谓的跳跃，是指下条指令的地址码不是由PC给出的，而是由本条指令给出的。在程序跳跃后，按新的指令地址开始顺序执行，因此PC也必须改变，及时的跟踪指令地址。可以实现程序转移或构成循环程序，从而缩短程序的长度，或将某些程序作为公共程序引用。指令系统中的各种条件转移或无条件转移指令，就是为了实现指令的跳跃寻址而设置的。
 
-## 2.7.计算机的中央处理器
+
+
+## 计算机的中央处理器
 
 <img src="assets/1542615-20200430175412824-1862426202.png" alt="img" style="zoom: 67%;" />
 
@@ -1488,9 +1736,11 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 
   ![img](assets/1542615-20200430175422875-1203563604.png)
 
-## 2.8.计算机的I/O系统
 
-### 2.8.1.磁盘结构
+
+## 计算机的I/O系统
+
+### 磁盘结构
 
 * 硬磁盘存储器：
   * 磁盘驱动器：
@@ -1503,7 +1753,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 * 磁道：通常将磁盘片表面称为记录面，记录面上一系列同心圆称为磁道；
 * 扇区：将磁盘划分为若干个小的区段，这个区段被称为扇区。
 
-### 2.8.2.中断请求与响应
+
+
+### 中断请求与响应
 
 * 概念：CPU由内部或外部事件引起的中断正在运行的程序的过程，具有随机性，即符合I/O系统的特性；
 
@@ -1533,7 +1785,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
     * 中断嵌套：中断正在执行的中断程序，不可屏蔽中断不能嵌套；
     * 中断屏蔽：处理器内部有个触发器，为"1"时才会。
 
-## 2.9.操作系统及其内核
+
+
+## 操作系统及其内核
 
 * **什么是操作系统？**是一种运行在硬件系统上的特殊的软件程序，既能管理计算机的硬件和软件资源，又能为用户提供与系统交互的界面，内核就是操作系统的核心逻辑；
 * **什么是内核？**以Linux系统为例，内核负责管理文件系统、应用进程调度、中断处理设备驱动、CPU调度、内存管理、文件系统、网络系统等，是连接应用程序和硬件的桥梁；
@@ -1542,7 +1796,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 * **外内核**：会根据当前运行的应用自动调整使其更适合应用程序运行；
 * **虚拟化**：通过底层的虚拟化技术管理多个虚拟的OS以充分的利用硬件资源。
 
-## 2.10.操作系统启动流程
+
+
+## 操作系统启动流程
 
 1. 开机，首先给主板通电；
 2. 主板上有一块BIOS芯片会加电自检，检测硬件的故障问题，自检完毕后加载bootloader到内存；
@@ -1551,7 +1807,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 
 注：在OS未启动之前，有些针对计算机硬件的设置信息，如：启动硬盘还是软盘等，会被写入到主板上的另一块芯片cmos中，这块芯片由电池供电。
 
-## 2.11.操作系统的处理器管理
+
+
+## 操作系统的处理器管理
 
 * 处理器：
   * 特权指令和非特权指令：
@@ -1600,7 +1858,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   * 死锁检测和解除：
   * 哲学家就餐问题：
 
-### 2.3.1.指令与处理器模式
+### 指令与处理器模式
 
 * 指令执行周期：取址、译码、执行；
 * 指令分类（根据权限）：
@@ -1613,7 +1871,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
     * 用户模式 —> 内核模式（系统调用、异常、响应中断）；
     * 内核模式 —> 用户模式（中断返回指令）。
 
-### 2.3.2.中断
+
+
+### 中断
 
 * 概念：
 
@@ -1645,7 +1905,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 
 * 多中断处理：中断屏蔽、中断优先级、中断嵌套。
 
-### 2.3.3.进程
+
+
+### 进程
 
 * 概念：操作系统进行资源分配和调度的独立单位；
 * 进程剖析：操作系统管理进程的数据结构PCB+内存指令+内存数据+通用寄存器GR+程序状态字PSW；
@@ -1713,7 +1975,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
     * 概念：由若干指令构成，用于完成某种特定功能，具有原子性；
     * 应用：修改OS核心数据结构（进程表、PCB池）。
 
-### 2.3.4.线程
+
+
+### 线程
 
 * 进程的多线程技术：一个进程内有多条执行路径；
 
@@ -1766,7 +2030,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 3. **资源拥有**：进程是拥有资源的一个独立单位，而线程不拥有资源（只会有程序计数器，一组寄存器和栈），但可以访问所属进程的所有资源；
 4. **系统开销**：由于在创建或撤销进程时，系统都要为之分配或回收资源，在进程切换时，会涉及整个进程当前的CPU环境的保存以及新调度进程的CPU环境的设置，而线程只需要保存和设置少量寄存器内容，开销相对更小。进程内多个线程共享进程地址空间，多线程之间的同步与通信非常容易实现，甚至无需OS干预。
 
-### 2.3.5.处理器调度
+
+
+### 处理器调度
 
 处理器调度的层次：
 
@@ -1788,7 +2054,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   * **轮转调度算法（RR）**：抢占式调度，给每个进程固定执行时间，根据进程到达的先后顺序让进程在单位时间片内执行，执行完成后便调度下一个进程执行，时间片轮转调度不考虑进程等待时间和执行时间；
   * **多级反馈队列调度算法（MLFQ）**：适合不同类型应用特征的综合进程调度算法。
 
-### 2.3.6.进程通信
+
+
+### 进程通信
 
 进程间通信IPC，用于进程之间的数据传输、资源共享、通知事件和进程控制：
 
@@ -1837,7 +2105,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   * 可以用于不同主机间进程通信的机制（通过因特网通信）；
   * 在两个进程进行网络通信时，首先本地的进程会绑定一个端口，并生成一个缓冲区，反回一个值，即socket对其进行标记。每当本地进程和远程进程建立连接时，就会根据远程进程的信息和本地进程的信息生成一个socket，然后双方借助于socket就可以进行通信，传输层得到的数据写入socket标志的缓冲区，然后在里面进行相应的操作后提交网络层。
 
-### 2.3.7.进程同步
+
+
+### 进程同步
 
 解决并发的方案：
 
@@ -1852,7 +2122,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 * 哲学家进餐问题：TODO
 * 读者-写者问题：TODO
 
-### 2.3.8.死锁
+
+
+### 死锁
 
 产生死锁的条件：
 
@@ -1871,7 +2143,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 * 死锁避免：银行家算法；TODO
 * 死锁的检查和恢复：死锁检测算法。TODO
 
-## 2.12.操作系统的系统调用
+
+
+## 操作系统的系统调用
 
 * **什么是系统调用？**先说明用户态和内核态的概念。
 * **内核态和用户态**：
@@ -1900,9 +2174,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
   8. 应用进程返回用户态；
   9. 应用程序继续执行。
 
-## 2.13.操作系统的内存管理
 
 
+## 操作系统的内存管理
 
 1. **操作系统的内存管理主要是做什么？**主要负责内存的分配和回收（`malloc`函数申请内存，`free`函数释放内存），另外地址转换也就是将逻辑地址转换成相应的物理地址等功能也是内存管理做的事。
 
@@ -1957,22 +2231,30 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
    1. 作用：管理虚拟存储器的硬件控制线路，把虚拟地址映射为物理地址，并提供内存保护，必须时淘汰页面。
    2. 实现：使用一种叫做反置页表IPT。
 
-## 2.14.操作系统的虚拟内存管理
 
-### 2.8.1.什么是虚拟内存？
+
+## 操作系统的虚拟内存管理
+
+
+
+### 什么是虚拟内存？
 
 1. 虚拟内存可以让程序拥有超过系统物理内存大小的可用内存空间。同时也使得应用程序认为它拥有连续的可用的内存（一个连续完整的地址空间），而实际上，它通常是被分隔成多个物理内存碎片，还有部分暂时存储在外部磁盘存储器上，在需要时进行数据交换；
 2. 为每个进程提供一个一致的、私有的地址空间，从而产生一种自己在独立主存的错觉，即每个进程拥有一片连续完整的内存空间以便更有效的管理内存；
 3. 虚拟内存的重要意义是定义了一个**连续的虚拟地址空间**（同一个程序使用的物理内存空间可能是不连续的，中间可能夹杂着其他进程的内存空间），并把内存扩展到硬盘空间。
 
-### 2.8.2.Linux中的虚拟内存系统
+
+
+### Linux中的虚拟内存系统
 
 <img src="assets/image-20200929172225277.png" alt="image-20200929172225277" style="zoom:80%;" />
 
 1. Linux为每个进程维护一个单独的虚拟地址空间，该空间分为内核空间和用户空间，用户空间包含代码、数据、堆、共享库以及栈，内核空间包括内核中的代码和数据结构，内核空间中的某些区域被映射到所有进程共享的物理页面；
 2. Linux将一组连续的虚拟页面（大小等同于内存总量）映射到相应的一组连续的物理页面，这种做法为内核提供了一种便利的方法来访问物理内存中任何特定的位置。
 
-### 2.8.3.局部性原理（高速缓存原理）
+
+
+### 局部性原理（高速缓存原理）
 
 1. 局部性是虚拟内存技术的基础，程序运行正是具有局部性，才能只装入部分程序到内存就能运行；
 2. 局部性规律：就是说在某个较短的时间段内，程序执行局限于某一个小部分，访问的存储空间也局限于某个区域；
@@ -1983,13 +2265,17 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 7. 虚拟内存技术就是建立了“内存-外存”的两级存储器结构，利用局部性原理实现高速缓存，即连续的局部的虚拟的内存地址空间，同样利用局部性原则的还有CPU高速缓存的缓存行概念；
 8. 局部性原则保证了在任意时刻，程序将趋向于在一个较小的活动页面集合上工作，这个集合被称为工作集。根据时间和空间局部性原则，只要将工作集缓存在物理内存中，接下来的地址翻译请求很大几率都在其中，从而减少了额外的硬盘流量。
 
-### 2.8.4.虚拟存储器（外存+内存=虚拟存储器）
+
+
+### 虚拟存储器（外存+内存=虚拟存储器）
 
 1. 基于局部性原理，在程序装入时，可用只装入一部分，其他部分留在外存，就可以启动程序执行，由于外存远大于内存，所以运行的软件内存大小可以大于计算机系统实际的内存大小；
 2. 在程序执行过程中，当所访问的信息不在内存时，由OS将所需的部分调入内存，然后继续执行程序；
 3. 另外，OS将内存中暂时不用的内容换到外存上，从而腾出空间存放将要调入内存的信息，这样计算机就好像为用户提供了一个比实际内存大得多得存储器，即虚拟存储器。
 
-### 2.8.5.虚拟内存的技术实现（建立在离散分配的内存管理方式的基础上）
+
+
+### 虚拟内存的技术实现（建立在离散分配的内存管理方式的基础上）
 
 1. 请求分页存储管理：建立在分页管理之上，在作业开始运行前，仅装入当前要执行的部分分页即可运行，假如在作业运行过程中发现要访问的页面不在内存，则由处理器通知OS按照对应的页面置换算法将相应的页面调入主存，同时OS可以将暂时不用的页面置换到外存；
 2. 请求分段存储管理：建立在分段管理之上，增加了请求调段功能、分段置换功能。请求分段存储管理方式就如同请求分页存储管理方式一样；
@@ -2000,7 +2286,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
    2. 缺页中断：如果需要执行的指令或访问的数据尚未在内存中，即发生缺页或缺段现象，则由CPU通知OS将相应的页面或段调入内存，然后继续执行；
    3. 虚拟地址空间：逻辑地址到物理地址的变换。
 
-### 2.8.6.页面置换算法
+
+
+### 页面置换算法
 
 1. 地址映射过程中，若在发现所要访问的页面不在内存中，则发生缺页中断，需要OS将其从外存调入内存，这时，被内存映射的文件就是一个分页交换文件；
 2. 当发生缺页中断时，如果当前内存没有空闲的页面可供调度，OS就需要在内存中选择一个页面将其移出内存，为需要调入的页面腾出空间，用来选择淘汰哪一页的规则叫做页面置换算法；
@@ -2009,9 +2297,11 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 5. **LRU页面置换算法**（最近最久未使用页面置换）：赋予每个页面一个访问字段，用于记录该页面上一次被访问的时间T，当淘汰一个页面时，选择现有页面的T的最大值，即最近最久未使用页面；
 6. **LFU页面置换算法**（最少使用页面置换）：该置换算法选择在之前时期使用最少的页面作为淘汰。
 
-## 2.15.Linux内核的进程管理
 
-### 2.9.1.进程在Linux中的实现
+
+## Linux内核的进程管理
+
+### 进程在Linux中的实现
 
 * Linux进程：处于执行期的程序以及相关资源（打开的文件、挂起的信号、内核内部数据、处理器状态）的总称。 
 
@@ -2060,13 +2350,17 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 
 * **写时拷贝**：Linux的fork()使用写时拷贝页实现，这是一种推迟甚至免除拷贝数据的技术，在创建子进程时，内核并不复制整个进程地址空间，而是让父子进程共享一个拷贝，只有在写入的时候，数据才会被复制。 
 
-### 2.9.2.线程在Linux中的实现
+
+
+### 线程在Linux中的实现
 
 * 从内核的角度来看，Linux将所有的线程当作进程来实现。线程仅仅被视为一个与其他进程共享某些资源的进程，拥有属于自己的`task_struct`描述符。 
 * **创建线程**：和创建普通进程类似，在调用clone()时传递参数指明共享资源：`clone(CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND, 0)`。调用结果和fork()差不多，只是父子进程共享地址空间、文件系统资源、打开的文件描述符和信号处理程序。
 * **内核线程**：用于内核在后台执行一些任务，是独立运行在内核空间的标准进程。和普通进程的区别是内核线程没有独立的地址空间，只在内核空间运行，不切换到用户空间。如软中断ksoftirqd和flush都是内核线程的例子。
 
-## 2.16.Linux内核的进程调度
+
+
+## Linux内核的进程调度
 
 * 进程调度：在可运行态进程之间分配有限处理器时间资源的内核子系统。
 * 多任务：多任务操作系统是同时并发的交互执行多个进程的操作系统。能使多个进程处于阻塞状态，这些任务位于内存中，但是并不处于可运行状态，而是通过内核阻塞自己，直到某一事件（键盘输入、网络数据等）发生而被唤醒。
@@ -2107,7 +2401,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
     * 内核任务显式的调用`schedule()`；
     * 内核中的任务阻塞。
 
-## 2.17.Linux内核的系统调用
+
+
+## Linux内核的系统调用
 
 * API、POSI、C库：当需要使用系统功能时，应用程序通过在用户空间实现的应用编程接口API而不是直接通过系统调用来完成，一个API定义了一组应用程序使用的编程接口。
 
@@ -2123,7 +2419,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 
   <img src="assets/20200531224934703.png" alt="在这里插入图片描述" style="zoom: 33%;" />
 
-### 2.9.1.整体结构
+
+
+### 整体结构
 
 JDK1.8之前的内存结构：
 
@@ -2135,7 +2433,9 @@ JDK1.8之后的内存结构（JVM运行时数据区中的方法区被直接内�
 
 其中程序计数器、虚拟机栈、本地方法栈属于线程私有，而堆、方法区（元空间）、直接内存属于线程共享。
 
-### 2.9.2.程序计数器
+
+
+### 程序计数器
 
 1. 概念：
    1. 是一块较小的内存空间，可以看作是当前线程所执行的字节码的行号指示器。字节码解释器工作时通过改变这个计数器的指向来选取下一条需要执行的字节码指令，分支、循环、跳转、异常处理、线程恢复等功能的指令都需要依赖这个计数器来获取；
@@ -2145,7 +2445,9 @@ JDK1.8之后的内存结构（JVM运行时数据区中的方法区被直接内�
    2. 在多线程的情况下，程序计数器用于记录当前线程的执行位置，从而当线程被切换回来后能正确恢复。
 3. 注：程序计数器是唯一不会出现OOM（OutOfMemoryError）的内存区域，其生命周期随线程的创建而创建，随线程的结束而死亡。
 
-### 2.9.3.虚拟机栈
+
+
+### 虚拟机栈
 
 1. 概念：
    1. 用于描述Java方法执行的内存模型，每次方法调用相关的数据都是通过栈传递的；
@@ -2157,13 +2459,17 @@ JDK1.8之后的内存结构（JVM运行时数据区中的方法区被直接内�
    2. OutOfMemoryError：若虚拟机栈的内存大小允许动态扩展，且当线程请求栈时无多余内存可分配，无法再动态扩展，就会抛出该异常。
 3. Java方法的调用原理：Java的方法每次调用都会对应一个栈帧被压入虚拟机栈中，每次方法调用结束后（return或抛出异常），其对应的栈帧都会被弹出，栈帧的压栈和弹栈遵循LIFO的机制。
 
-### 2.9.4.本地方法栈
+
+
+### 本地方法栈
 
 1. 与虚拟机栈的作用类型。区别是虚拟机栈为虚拟机提供Java方法的调用管理，本地方法栈则为虚拟机提供native方法的调用服务。在HotSpot虚拟机的实现中将二者合二为一了；
 2. 本地方法被调用时，也会发生栈帧的压栈和弹栈操作，栈帧中也会存在局部变量表、操作数栈、动态链接和出口信息；
 3. 和虚拟机栈一样，本地方法栈也会抛出StackOverFlowError和OutOfMemoryError两种异常。
 
-### 2.9.5.堆
+
+
+### 堆
 
 1. 堆是JVM管理的内存中最大的一块，是所有线程共享的区域，在虚拟机启动时创建，该区域的唯一作用就是存放对象的实例，几乎所有对象的实例以及数组都在这里分配内存；
 
@@ -2173,7 +2479,9 @@ JDK1.8之后的内存结构（JVM运行时数据区中的方法区被直接内�
 
 3. 上图eden区、s0区、s1区都属于新生代，tentired区属于老年代。大部分情况下对象都会在Eden区分配内存，在经过了一次新生代GC后，若还有对象存活，则会进入s0或s1，并且对象的年龄会增加1（从eden区进入survivor区后对象的初始年龄为1），当对象的年龄到达一个阈值后（默认15，可以通过参数`-XX:MaxTenuringThreshold`设置），就会进入老年代。
 
-### 2.9.6.方法区（元空间）
+
+
+### 方法区（元空间）
 
 1. 概念：方法区用于存储已被虚拟机加载的类信息、常量、静态变量、即时编译器编译后的代码等数据，和堆一样是多个线程共享的内存区域。别名是Non-Heap非堆，目的是和堆空间区别开来。
 
@@ -2190,20 +2498,26 @@ JDK1.8之后的内存结构（JVM运行时数据区中的方法区被直接内�
 
 4. 为什么方法区会被元空间替换？方法区存在于JVM内存中，JVM内存区域有大小上限，而元空间使用直接内存，受本机可用内存的限制，且不存在OutOfMemoryError。
 
-### 2.9.10.运行时常量池
+
+
+### 运行时常量池
 
 ![image-20201101151714592](assets/image-20201101151714592.png)
 
 1. JDK1.7之后，JVM已经将运行时常量池从方法区移动到堆空间的一块内存区域中；
 2. Class文件中除了有类的版本、字段、方法、接口等描述信息外，还有常量池信息（用于存放编译期生成的各种字面量和符号引用）。
 
-### 2.9.11.直接内存
+
+
+### 直接内存
 
 1. 直接内存不是JVM运行时数据区的一部分，也不是Java虚拟机规范中定义的内存区域，而是操作系统管理的直接内存区域，由于这部分内存也被频繁使用，也可能会抛出OutOfMemoryError；
 2. JDK1.4加入的NIO（New Input/Output），引入了基于通道channel和缓冲区buffer的IO方式，可以使用本地native函数直接分配堆外内存，然后通过一个存储在堆中的DirectByteBuffer对象作为这块内存的引用进行操作，在某些场景下显著提高性能，避免传统IO在Java堆和native堆之间来回复制数据；
 3. 直接内存的分配不会受到Java堆的限制，而是受到本机内存大小和处理器寻址空间的限制。
 
-## 2.18.Java对象的创建过程
+
+
+## Java对象的创建过程
 
 ![image-20201101155425804](assets/image-20201101155425804.png)
 
@@ -2220,7 +2534,9 @@ JDK1.8之后的内存结构（JVM运行时数据区中的方法区被直接内�
 4. **设置对象头**：初始化完成后，接下来JVM要对对象进行如所属类、哈希码、GC分代年龄、如果找到类的元数据等信息的设置。这些信息都存放在对象头中。
 5. **执行init方法**：此时从JVM的角度来看对象已经创建完毕，从Java程序的角度看，对象还需要执行对应的构造方法init才能算真正的创建完成。
 
-## 2.19.对象的访问定位方式
+
+
+## 对象的访问定位方式
 
 1. Java程序通过栈上的引用数据来操作堆上的具体对象（这是规范，具体的访问方式由JVM的实现而定）；
 
@@ -2232,18 +2548,24 @@ JDK1.8之后的内存结构（JVM运行时数据区中的方法区被直接内�
 
    ![image-20201101170304016](assets/image-20201101170304016.png)
 
-## 2.20.堆内存中对象的分配策略
+
+
+## 堆内存中对象的分配策略
 
 1. 对象优先在eden区进行分配；
 2. 大对象直接进入老年代；
 3. 长期存活的对象将进入老年代。
 
-## 2.21.Minor GC和Full GC的区别
+
+
+## Minor GC和Full GC的区别
 
 	1. 新生代GC（Minor GC）：大多数情况下对象都会在新生代的eden区分配，当eden区没有足够的空间可分配时，JVM会发起一次Minor GC，即发生在新生代的垃圾收集动作，执行频率高，回收速度快。
  	2. 老年代GC（Major GC/Full GC）：指发生在老年代的GC，出现Major GC时经常会伴随着至少一次的Minor GC，Major GC的速度一般会比Minor GC的速度慢上10倍以上。
 
-## 2.22.如何判断一个对象是否死亡？
+
+
+## 如何判断一个对象是否死亡？
 
 1. 堆空间的垃圾回收第一步就是判断有哪些对象已经死亡，即不能再被任何途径使用的对象。
 
@@ -2253,15 +2575,19 @@ JDK1.8之后的内存结构（JVM运行时数据区中的方法区被直接内�
 
    ![image-20201101172715257](assets/image-20201101172715257.png)
 
-## 2.23.强引用、软引用、弱引用、虚引用
 
-TODO
 
-## 2.24.如何判断一个常量是否废弃？
+## 强引用、软引用、弱引用、虚引用
+
+
+
+## 如何判断一个常量是否废弃？
 
 运行时常量池主要回收的是废弃的常量，若常量池中的常量无任何对象对其引用，说明该常量是废弃的常量，若此时发生内存回收，则该常量就会被垃圾回收。
 
-## 2.25.如何判断一个类是否无用？
+
+
+## 如何判断一个类是否无用？
 
 方法区主要回收的是无用的类，要判断一个类是无用的类需要满足以下3个条件（当类满足这3个条件后就可以被回收了，只是可以，不是一定要被回收）：
 
@@ -2269,9 +2595,11 @@ TODO
 2. 加载该类的类加载器ClassLoader已经被回收；
 3. 该类对应的java.lang.Class对象没有在任何地方被引用，无法在任何地方通过反射访问该类的方法。
 
-## 2.26.垃圾回收算法
 
-### 2.18.1.标记-清除算法
+
+## 垃圾回收算法
+
+### 标记-清除算法
 
 1. 概念：该算法分为标记和清除两个阶段，首先标记所有需要回收的对象，之后统一回收。是最基础的算法，后续的算法都是对其的改进。
 
@@ -2279,33 +2607,43 @@ TODO
 
 2. 问题：回收效率低下，内存碎片化严重。
 
-### 2.18.2.复制算法
+
+
+### 复制算法
 
 <img src="assets/image-20201102100119857.png" alt="image-20201102100119857" style="zoom:80%;" />
 
 针对标记-清除算法效率不足和内存空间碎片化的改进，首先将内存分为大小相同的两块，每次使用其中的一块存放对象，当这块区域使用完后，就将还存活的对象复制到另一块去，这时当前使用的区域只剩下了可回收的垃圾，直接全部清理即可，这样每次的内存回收都是对内存区间的一半进行回收。
 
-### 2.18.3.标记-整理算法
+
+
+### 标记-整理算法
 
 ![image-20201102101859747](assets/image-20201102101859747.png)
 
 根据老年代的特点推出的算法，标记的过程不变，但标记后不是直接对象回收，而是让所有存活的对象向一端移动，然后直接清理掉边界以外的内存，解决了内存的碎片化。
 
-### 2.18.4.分代收集算法
+
+
+### 分代收集算法
 
 1. 当前JVM使用的垃圾回收算法，这种算法会根据对象的存活周期将内存分为几块区域（一般划分为新生代和老年代），然后根据不同区域中对象的特点选择合适的垃圾回收算法；
 2. 如新生代中的对象，每次GC都会伴随着大量的对象被回收，实际存活的对象相对较少（高龄的对象已经进入了老年代），那么复制算法就会很合适，因为只需要复制较少的那部分对象就可以完成垃圾回收作业；
 3. 而老年代中的对象存活概率相对较高，所以使用标记-清除或标记-整理算法来进行垃圾回收。
 
-## 2.27.HotSpot为什么要划分新生代和老年代？
+
+
+## HotSpot为什么要划分新生代和老年代？
 
 主要是为了提高GC的效率，能够使用分代收集。
 
-## 2.28.垃圾回收器
+
+
+## 垃圾回收器
 
 垃圾回收器是基于垃圾回收算法的具体实现，不同的回收器适用于不同的场景，如HotSpot就实现了多种垃圾回收器用于适配各种场景的应用。
 
-### 2.20.1.Serial收集器
+### Serial收集器
 
 串行收集器是最基本的单线程收集器（新生代使用复制算法，老年代使用标记-整理算法），单线程不仅是指只有一条垃圾回收线程工作，而且在进行垃圾回收作业时必须暂停其他所有的工作线程（Stop the World），直到回收作业完成。
 
@@ -2313,7 +2651,9 @@ TODO
 
 Serial由于没有线程之间交互的开销所以高效，且实现简单，适用于运行在Client模式下的虚拟机。
 
-### 2.20.2.ParNew收集器
+
+
+### ParNew收集器
 
 ParNew是Serial的多线程版本，除了使用多线程进行垃圾回收以外，其他如控制参数、回收算法、回收策略等都和Serial一样。适用于运行在Server模式下的虚拟机，能与CMS收集器配合工作。
 
@@ -2323,7 +2663,9 @@ ParNew是Serial的多线程版本，除了使用多线程进行垃圾回收以�
 
 并发收集器：指用户线程与垃圾回收线程同时执行（可能是并行，也可能会交替执行），用户线程和垃圾回收线程可能运行在CPU不同的核心上。
 
-### 2.20.3.Parallel Scavenge收集器
+
+
+### Parallel Scavenge收集器
 
 ```JAVA
 // 使用Parallel收集器+老年代串行
@@ -2336,15 +2678,21 @@ Parallel Scavenge收集器与ParNew收集器类似，但其关注点是吞吐量
 
 ![image-20201102143259949](assets/image-20201102143259949.png)
 
-### 2.20.4.Serial Old收集器
+
+
+### Serial Old收集器
 
 Serial收集器的老年代版本，同样是单线程收集器。第一个用途是在JDK1.5之前与Parallel Scavenge收集器搭配使用，另一个用途是作为CMS收集器的后备方案。
 
-### 2.20.5.Parallel Old收集器
+
+
+### Parallel Old收集器
 
 Parallel Scavenge收集器的老年代版本。使用多线程和标记-整理算法。在注重吞吐量以及CPU资源的场合，都可以优先考虑Parallel Scavenge收集器和Parallel Old收集器。
 
-### 2.20.6.CMS收集器
+
+
+### CMS收集器
 
 CMS（Concurrent Mark Sweep）收集器是一种以获取最短停顿时间为目标的收集器，也是HotSpot第一款真正意义上的并发收集器，基本实现了让垃圾回收线程和用户线程同时工作。
 
@@ -2361,7 +2709,9 @@ CMS（Concurrent Mark Sweep）收集器是一种以获取最短停顿时间为�
 
 缺点：对CPU资源敏感、无法处理浮动垃圾、使用标记-清除算法会导致内存碎片化。
 
-### 2.20.7.G1收集器
+
+
+### G1收集器
 
 G1（Garbage-First）是面向服务器的垃圾回收器，主要针对配备了多颗处理器以及大容量内存的机器，以极高的概率满足了GC停顿时间要求的同时，还具备高吞吐量性能的特征。
 
@@ -2381,7 +2731,9 @@ G1收集器的工作过程分为4个步骤：
 
 优先级：G1收集器使用Region划分内存空间，并在后台维护了一个优先列表，每次根据允许的收集时间，优先选择回收价值最大的Regin。通过这种方式保证G1收集器在有限时间内具有尽可能高的回收效率。
 
-## 2.29.类文件结构
+
+
+## 类文件结构
 
 ```JAVA
 ClassFile {
@@ -2416,15 +2768,19 @@ ClassFile {
 8. 方法表集合：描述类中的方法；
 9. 属性表集合：在Class文件中，字段表和方法表都可以携带自己的属性表集合。
 
-## 2.30.类加载机制
 
-### 2.22.1.类加载的过程
+
+## 类加载机制
+
+### 类加载的过程
 
 类加载过程：加载 -> 连接 -> 初始化；
 
 连接过程：验证 -> 准备 -> 解析。
 
-### 2.22.2.加载阶段的过程
+
+
+### 加载阶段的过程
 
 Java虚拟机规范规定类加载的过程要完成3件事：
 
@@ -2440,13 +2796,17 @@ Java虚拟机规范规定类加载的过程要完成3件事：
 
 整个加载阶段和连接阶段是交叉进行的，加载阶段尚未结束，连接阶段可能就已经开始了。
 
-### 2.22.3.类加载器
+
+
+### 类加载器
 
 1. **BootstrapClassLoader启动类加载器**：由C++实现的最顶层的类加载器，负责加载%JAVA_HOME%/lib目录下的jar包和类，以及被-Xbootclasspath参数所指定路径下的所有类。
 2. **ExtensionClassLoader扩展类加载器**：主要负责加载%JRE_HOME%/lib/ext目录下的jar和类，以及被java.ext.dirs系统变量所指定的路径下的jar包。继承自java.lang.ClassLoader。
 3. **AppClassLoader应用程序类加载器**：面向应用程序的加载器，负责加载当前应用classpath下的所有jar包和类。继承自java.lang.ClassLoader。
 
-### 2.22.4.双亲委派机制
+
+
+### 双亲委派机制
 
 1. 双亲委派模型：
 
@@ -2526,13 +2886,13 @@ Java虚拟机规范规定类加载的过程要完成3件事：
    2. 若没有使用双亲委派机制，而是每个类加载器加载自己的话就会出现一些问题，比如编写一个java.lang.Object类的话，那么程序运行时，就会加载出多个不同的Object类。
    3. 自底向上检查类是否被重复加载，自定向下加载保证类加载的优先级。
 
-5. 如何避免使用双亲委派机制：可以自定义类加载器，继承ClassLoader类，重写loadClass()方法即可。
+5. 如何避免使用双亲委派机制？可以自定义类加载器，继承ClassLoader类，重写loadClass()方法即可。
 
 
 
 # 3.从I/O模型到计算机网络再到Netty
 
-## 3.1.Linux的Socket API
+## Linux的Socket API
 
 * 网络应用进程通信时需要通过API接口请求底层协议的服务，如传输层服务，目前因特网最广泛的应用编程接口就是Socket API。Linux内核也实现了Socket API，实现了底层协议的封装。
 
@@ -2603,9 +2963,11 @@ ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
   * flags：控制比特，通常取0。
 * 返回：成功返回接收到的字节数，失败返回-1。
 
-## 3.2.Linux的五种I/O模型
 
-### 3.1.1.相关概念
+
+## Linux的五种I/O模型
+
+### I/O相关概念
 
 * **同步和异步（消息的通知机制）**：
   * 所谓同步，就是发出一个功能调用时，在没有得到结果之前，该调用就不返回。如应用程序调用readfrom系统调度时，必须等待内核的I/O操作执行完成才能够返回；
@@ -2632,7 +2994,9 @@ ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
   * 其次，从内核向进程复制数据，即从内核拷贝到用户空间；
   * 对于一个套接字上的输入操作，第一步通常涉及等待数据从网络中到达，当所有分组都到达时，会被复制到内核中的某缓冲区。第二步就是把数据从内核缓冲区复制到应用程序缓冲区。
 
-### 3.1.2.阻塞式I/O
+
+
+### 阻塞式I/O
 
 <img src="assets/20180630234416208" alt="这里写图片描述" style="zoom:67%;" />
 
@@ -2641,7 +3005,9 @@ ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
 * 在IO执行的两个阶段中，进程都处于阻塞（blocked）状态，在等待数据返回的过程中不做其他任何工作，只能阻塞等待在那里；
 * 优点是简单、实时性高、相应及时无延迟。缺点是阻塞等待性能差。
 
-### 3.1.3.非阻塞式I/O
+
+
+### 非阻塞式I/O
 
 <img src="assets/20180630234618392" alt="这里写图片描述" style="zoom:67%;" />
 
@@ -2653,7 +3019,9 @@ ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
   * 优点：能够在等待任务完成得时间里做其他事，包括提交其他任务，也就是后台可以有多个任务在同时执行；
   * 缺点：任务完成的响应延迟增大了，因为每过一段时间才去轮询一次read操作，而任务可能在两次轮询之间的任意时间完成，这样会导致整体数据吞吐量降低。
 
-### 3.1.4.I/O多路复用
+
+
+### I/O多路复用
 
 <img src="assets/20180630234720199" alt="这里写图片描述" style="zoom:67%;" />
 
@@ -2668,14 +3036,18 @@ ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
   * 服务器需要监听多个端口或处理多种服务；
   * 服务器需要同时处理用户输入和网络连接。
 
-### 3.1.5.信号驱动式I/O
+
+
+### 信号驱动式I/O
 
 <img src="assets/20180630234803839" alt="这里写图片描述" style="zoom:67%;" />
 
 * 通过sigaction系统调用，允许socket进行信号驱动IO，并在用户进程注册一个SIGIO的信号处理函数，用户进程会继续运行不阻塞。当数据准备好时，进程会收到一个SIGIO信号，可以在信号处理函数中调用IO操作函数处理数据；
 * 用户进程不会在IO操作的第一阶段阻塞，只会在第二阶段阻塞。
 
-### 3.1.6.异步I/O
+
+
+### 异步I/O
 
 <img src="assets/20180630234859454" alt="这里写图片描述" style="zoom:67%;" />
 
@@ -2687,19 +3059,23 @@ ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
   * 如果这个进程现在被挂起了，如陷入睡眠，那就把这个进程唤醒，等待CPU调度，触发信号通知。
 * 在此模型下，IO的两个阶段均为非阻塞。
 
-### 3.1.7 .五种I/O模型的比较
+
+
+### 五种I/O模型的比较
 
 <img src="assets/2018063023500587" alt="这里写图片描述" style="zoom:67%;" />
 
 * 前四种IO模型都是同步模型，区别在于第一阶段，第二阶段都是一样的，都是在数据从内核复制到应用程序缓冲区期间（用户空间），进程阻塞于recvfrom调用；
 * 相反，异步IO模型在等待数据和接收数据这两个阶段都是非阻塞的，可以处理其他的逻辑，即用户进程将整个IO操作交给内核完成，内核完成后会发起通知，在此期间，用户进程不需要去检查IO状态，也不需要主动的去触发数据的拷贝。
 
-## 3.3.Linux的I/O多路复用
+
+
+## Linux的I/O多路复用
 
 * 文件描述符（File Descriptor）：用于表述指向文件引用的抽象化概念。fd在形式上是一个非负整数，实际上是一个索引值，指向内核为每一个进程所维护的该进程打开文件的记录表。当程序打开一个现有文件或创建一个新文件时，内核向进程返回一个文件描述符。
 * 缓存I/O：又称标准I/O，是大多数文件系统的默认I/O。在Linux中，OS会将I/O的数据缓存在文件系统的页缓存中，即数据会被先拷贝到OS内核的缓冲区中，然后才会从操作系统内核的缓冲区拷贝到应用程序的地址空间。
 
-### 3.2.1.select/poll
+### select/poll
 
 ![img](assets/20190527213148418.png)
 
@@ -2735,7 +3111,11 @@ typedef struct pollfd {
 * 返回值：返回集合中已就绪的读写或异常的fd数量，返回0表示超时，返回-1表示异常。
 * 针对select的改进：改变了fd集合的结构，使用pollfd结构替代了select的fd_set结构，使得poll没有了最大fd数量的限制。
 
-### 3.2.2.epoll
+
+
+### epoll
+
+![img](assets/20190527231438974.png)
 
 * epoll是Linux内核对多路复用IO接口作出的改进版本，显著提高程序在大量并发连接中只有少量活跃的情况下CPU的利用率。即在监听事件就绪的过程中，不需要遍历整个被监听的描述符集，只要遍历那些被内核IO事件异步唤醒而加入Ready队列（链表）的描述符集合即可。
 * fd进入红黑树时会注册事件和回调函数，当网络连接和数据读写等事件发生时，由网卡驱动发出中断，产生事件然后调用call_back使fd加入就绪队列。
@@ -2743,8 +3123,6 @@ typedef struct pollfd {
 * epoll提供了两种IO事件的触发方式：
   * **水平触发（LT）**：默认工作模式，即当epoll_wait检测到某描述符事件的就绪并通知应用程序时，应用程序可以不立即处理该事件，待下次调用epoll_wait时，会再次通知此事件；
   * **边缘触发（ET）**：当epoll_wait检测到某描述符事件就绪并通知应用程序时，应用程序必须立即处理该事件。如果不处理，下次调用epoll_wait时，不会再次通知此事件，即边缘触发机制只会在状态由未就绪变为就绪时通知一次。
-
-![img](assets/20190527231438974.png)
 
 ```C
 int epoll_create(int size);
@@ -2796,7 +3174,9 @@ int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout
   * `maxevents`：通知内核events的大小；
   * `timeout`：表示等待的超时时间。
 
-### 3.2.3.总结
+
+
+### 总结
 
 |            |                         select                         |                         poll                         |                            epoll                             |
 | :--------: | :----------------------------------------------------: | :--------------------------------------------------: | :----------------------------------------------------------: |
@@ -2806,26 +3186,19 @@ int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout
 | 最大连接数 |                1024（x86）或2048（x64）                |                        无上限                        |                            无上限                            |
 |   fd拷贝   | 每次调用select，都需要把fd集合从用户空间拷贝到内核空间 | 每次调用poll，都需要把fd集合从用户空间拷贝到内核空间 | 调用epoll_ctl时拷贝进内核并保存，之后每次epoll_wait都不用拷贝 |
 
-### 3.2.4.内存映射和零拷贝
 
-* 普通数据IO过程：
 
-* 内存映射`mmap()`：
+### 内存映射mmap
 
-* 零拷贝`sendfile()`：
 
-  ```java
-  ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count);
-  ```
 
-* 应用：
-  * Kafka：
-  * Redis：
-  * Nginx：
+### 零拷贝sendfile
 
-## 3.4.Java的I/O模型
 
-### 3.3.1.BIO
+
+## Java的I/O模型
+
+### BIO
 
 * Java角度：
 
@@ -2885,7 +3258,9 @@ int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout
 
 * BIO的缺点：
 
-### 3.3.2.NIO
+
+
+### NIO
 
 * Java角度：
 
@@ -2950,7 +3325,9 @@ int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout
   * 优点：避免了BIO的一个连接一个线程而导致存在大量线程造成的资源消耗巨大的问题，即会把大量资源用在线程的上下文切换上；
   * 缺点：可能会存在大量无意义的系统调用，若是有1w个连接，但只有1个连接有数据读取，但NIO机制每次循环还是会发送1w次的read系统调用，即会把大量的资源用在用户态到内核态的切换上。
 
-### 3.3.3.多路复用器
+
+
+### 多路复用器
 
 * Java角度：
 
@@ -3185,88 +3562,114 @@ int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout
   }
   ```
 
-## 3.1.OSI与TCP/IP各层结构、功能和协议
+
+
+## 计算机网络层次结构
 
 ![image-20201103090119536](assets/image-20201103090119536.png)
 
-1. **应用层（application layer）**：为用户的应用程序之间的交互提供网络服务。该层的协议是应用进程间的通信和交互的规则，对于不同的网络应用需要定义不同的应用层协议。运行在应用层的协议有很多，如域名系统DNS、支持Web应用的HTTP、支持电子邮件的SMTP协议等。应用层之间交互的数据单位称为报文。
+### **应用层（application layer）**
 
-   1. DNS域名系统：
-   2. HTTP超文本传输协议：
-   3. SMTP电子邮件传输协议：
-   4. FTP文件传输协议：
-   5. P2P点对点传输协议：
+为用户的应用程序之间的交互提供网络服务。该层的协议是应用进程间的通信和交互的规则，对于不同的网络应用需要定义不同的应用层协议。运行在应用层的协议有很多，如域名系统DNS、支持Web应用的HTTP、支持电子邮件的SMTP协议等。应用层之间交互的数据单位称为报文。
 
-2. **传输层（transport layer）**：为主机进程间的通信提供端到端的通用（所谓通用就是为上层应用提供复用和分解功能）数据传输服务。应用程序就是通过运行在该层的协议传输应用层的报文/报文段的。同时该层还会提供端到端数据传输的差错控制和流量控制。
+1. DNS域名系统：
+2. HTTP超文本传输协议：
+3. SMTP电子邮件传输协议：
+4. FTP文件传输协议：
+5. P2P点对点传输协议：
 
-   1. 复用与分解：
-   2. ARQ自动重传请求协议（停等协议）：
-   3. 滑动窗口协议：
-   4. UDP用户数据报协议：
-   5. TCP传输控制协议：
 
-3. **网络层（network layer）**：为源主机到目的主机提供分组交付、逻辑寻址、路由选择和分组转发服务。由于在网络中通信的两台主机之间可能会经过很多节点、数据链路和通信子网，所以该层就是针对这一过程提供主机间可靠的数据传输服务。该层会将传输层产生的报文段或数据报封装成分组或包进行传送，在TCP/IP体系中，分组也叫做IP数据报。
 
-   互联网是由大量异构网络通过路由器相互连接起来的，互联网使用的网络层协议是无连接的网际协议和许多路由选择协议，因此互联网的网络层也叫做网际层或IP层。
+### 传输层（transport layer）
 
-   1. 拥塞控制策略：
-   2. IPv4协议：
-   3. DHCP动态主机配置协议：
-   4. NAT网络地址转换协议：
-   5. ICMP互联网控制报文协议：
-   6. IPv6协议：
-   7. RIP路由信息协议：
-   8. OSPF开放式最短路径优先协议：
-   9. BGP边界网关协议：
+为主机进程间的通信提供端到端的通用（所谓通用就是为上层应用提供复用和分解功能）数据传输服务。应用程序就是通过运行在该层的协议传输应用层的报文/报文段的。同时该层还会提供端到端数据传输的差错控制和流量控制。
 
-4. **数据链路层（data link layer）**：为网络中相邻节点间的数据传输提供可靠的逻辑链路服务。在两个相邻节点间传输数据时，链路层会将网络层交付下来的IP数据报组装成帧结构，并在节点间建立逻辑链路传输，并通过差错控制为数据的正确传输提供保障。
+1. 复用与分解：
+2. ARQ自动重传请求协议（停等协议）：
+3. 滑动窗口协议：
+4. UDP用户数据报协议：
+5. TCP传输控制协议：
 
-   1. 差错编码-奇偶校验码：
-   2. 差错编码-汉明码：
-   3. 差错编码-CRC循环冗余校验码：
-   4. 信道划分MAC协议：
-   5. 随机访问MAC协议：
-   6. 受控接入MAC协议：
 
-5. **物理层（physical layer）**：为相邻节点间的比特流传输提供屏蔽物理设备和传输介质差异的服务。从而使上层的链路层不需要考虑具体的物理介质问题，即透明传输（表示经过实际电路传送后的比特流没有发生变化，对比特流来说，这些电路好像是看不见的）。
 
-   1. 物理介质：
-   2. 通信基础：
-   3. 基带传输：
-   4. 频带传输：
+### 网络层（network layer）
 
-## 3.2.TCP的三次握手和四次挥手
+为源主机到目的主机提供分组交付、逻辑寻址、路由选择和分组转发服务。由于在网络中通信的两台主机之间可能会经过很多节点、数据链路和通信子网，所以该层就是针对这一过程提供主机间可靠的数据传输服务。该层会将传输层产生的报文段或数据报封装成分组或包进行传送，在TCP/IP体系中，分组也叫做IP数据报。
 
-1. 三次握手：
+互联网是由大量异构网络通过路由器相互连接起来的，互联网使用的网络层协议是无连接的网际协议和许多路由选择协议，因此互联网的网络层也叫做网际层或IP层。
 
-   ![三次握手](assets/aHR0cDovL2ltZy5ibG9nLmNzZG4ubmV0LzIwMTcwNjA3MjA1NzA5MzY3)
+1. 拥塞控制策略：
+2. IPv4协议：
+3. DHCP动态主机配置协议：
+4. NAT网络地址转换协议：
+5. ICMP互联网控制报文协议：
+6. IPv6协议：
+7. RIP路由信息协议：
+8. OSPF开放式最短路径优先协议：
+9. BGP边界网关协议：
 
-   1. 第一次握手：客户端发起连接建立的请求，初始序号置为x，发送（SYN=1，seq=x）的SYN段，客户端状态由CLOSE（初始）进入SYN_SEND（同步已发送）状态，等待服务器确认；
 
-   2. 第二次握手：服务器收到客户发送的SYN段后，初始序号置为y，发送（SYN=1，ACK=1，seq=y，ack_seq=x+1）的SYNACK段，这时服务器的状态由LISTEN（监听）进入SYN_RCVD（同步已接收）状态；
 
-   3. 第三次握手：客户端收到服务器的SYNACK段后，发送（ACK=1，seq=x+1，ack_seq=y+1）的ACK段，这时客户端进入ESTABLISHED（已建立）状态，服务器收到ACK段后也进入ESTABLISHED（已建立）状态，至此连接建立。
-   4. 为什么要握手三次？目的是为了建立可靠的通信信道，握手三次则是为了确认双方的发送和接收是正常的：
-      1. 第一次握手能让服务端确认对方的发送和自己的接收都是正常的；
-      2. 第二次握手能让客户端确认自己的发送和接收正常且对方的发送和接收也正常的；
-      3. 第三次握手能让服务端确认自己的发送和对方的接收是正常的。
-   5. 为什么要回传SYN？接收端回传发送端发送的SYN是为了通知发送端，我接收到的确实是你发送的连接请求（SYN=1表示连接建立请求）。
-   6. 为什么要回传ACK？回传ACK确认报文是TCP可靠传输机制的一种手段，当发送方接收到接收方发送的ACK后，才能确认自己上一次是正确发送并且对方正确接收了。
+### 数据链路层（data link layer）
 
-2. 四次挥手：
+为网络中相邻节点间的数据传输提供可靠的逻辑链路服务。在两个相邻节点间传输数据时，链路层会将网络层交付下来的IP数据报组装成帧结构，并在节点间建立逻辑链路传输，并通过差错控制为数据的正确传输提供保障。
 
-   ![四次挥手](assets/aHR0cDovL2ltZy5ibG9nLmNzZG4ubmV0LzIwMTcwNjA3MjA1NzU2MjU1)
+1. 差错编码-奇偶校验码：
+2. 差错编码-汉明码：
+3. 差错编码-CRC循环冗余校验码：
+4. 信道划分MAC协议：
+5. 随机访问MAC协议：
+6. 受控接入MAC协议：
 
-   1. 第一次挥手：当客户端发送完最后一个数据段后，可以发送FIN段（FIN=1，seq=u）请求断开客户端到服务器的连接，其状态由ESTABLISHED进入FIN_WAIT_1，在该状态下只能接收服务器发送的数据但不能再发送数据了；
 
-   2. 第二次挥手：服务器收到FIN段后，向客户端发送ACK段（ACK=1，seq=v，ack_seq=u+1），服务器状态由ESTABLISHED进入CLOSE_WAIT，在该状态下服务器仍可发送数据但不能接收数据了。当客户端收到ACK段，其状态由FIN_WAIT_1进入FIN_WAIT_2，仍然可以接收服务器的数据，此时TCP连接已经关闭了客户端向服务器方向的数据传输，也称半关闭；
 
-   3. 第三次挥手：当服务器向客户端发送完最后一个数据段后，服务器向客户端发送FIN段（FIN=1，ACK=1，seq=w，ack_seq=u+1），该数据段也不携带应用层数据，此时服务器状态由CLOSE_WAIT进入LAST_ACK并不再发送数据；
+### 物理层（physical layer）
 
-   4. 第四次挥手：当客户端收到服务器发送的FIN段后，向服务器发送ACK段（ACK=1，seq=u+1，ack_seq=w+1），其状态由FIN_WAIT_2进入TIME_WAIT，再等待2MSL时间后进入CLOSED状态，最终释放连接。服务器收到该ACK后，状态由LAST_ACK进入CLOSED，最终释放连接。
-   5. 为什么要挥手四次？任何一方都可以在数据传输结束后发送连接释放的通知，待对方确认后进入半关闭状态。当另一方也没有数据需要发送的时候，则主动发送连接释放通知，接收方确认后就完全关闭了TCP连接。
+为相邻节点间的比特流传输提供屏蔽物理设备和传输介质差异的服务。从而使上层的链路层不需要考虑具体的物理介质问题，即透明传输（表示经过实际电路传送后的比特流没有发生变化，对比特流来说，这些电路好像是看不见的）。
 
-## 3.3.TCP和UDP协议区别
+1. 物理介质：
+2. 通信基础：
+3. 基带传输：
+4. 频带传输：
+
+
+
+## TCP的三次握手和四次挥手
+
+### 三次握手
+
+![三次握手](assets/aHR0cDovL2ltZy5ibG9nLmNzZG4ubmV0LzIwMTcwNjA3MjA1NzA5MzY3)
+
+1. 第一次握手：客户端发起连接建立的请求，初始序号置为x，发送（SYN=1，seq=x）的SYN段，客户端状态由CLOSE（初始）进入SYN_SEND（同步已发送）状态，等待服务器确认；
+
+2. 第二次握手：服务器收到客户发送的SYN段后，初始序号置为y，发送（SYN=1，ACK=1，seq=y，ack_seq=x+1）的SYNACK段，这时服务器的状态由LISTEN（监听）进入SYN_RCVD（同步已接收）状态；
+
+3. 第三次握手：客户端收到服务器的SYNACK段后，发送（ACK=1，seq=x+1，ack_seq=y+1）的ACK段，这时客户端进入ESTABLISHED（已建立）状态，服务器收到ACK段后也进入ESTABLISHED（已建立）状态，至此连接建立。
+4. **为什么要握手三次？**目的是为了建立可靠的通信信道，握手三次则是为了确认双方的发送和接收是正常的：
+   1. 第一次握手能让服务端确认对方的发送和自己的接收都是正常的；
+   2. 第二次握手能让客户端确认自己的发送和接收正常且对方的发送和接收也正常的；
+   3. 第三次握手能让服务端确认自己的发送和对方的接收是正常的。
+5. **为什么要回传SYN？**接收端回传发送端发送的SYN是为了通知发送端，我接收到的确实是你发送的连接请求（SYN=1表示连接建立请求）。
+6. **为什么要回传ACK？**回传ACK确认报文是TCP可靠传输机制的一种手段，当发送方接收到接收方发送的ACK后，才能确认自己上一次是正确发送并且对方正确接收了。
+
+
+
+### 四次挥手
+
+![四次挥手](assets/aHR0cDovL2ltZy5ibG9nLmNzZG4ubmV0LzIwMTcwNjA3MjA1NzU2MjU1)
+
+1. 第一次挥手：当客户端发送完最后一个数据段后，可以发送FIN段（FIN=1，seq=u）请求断开客户端到服务器的连接，其状态由ESTABLISHED进入FIN_WAIT_1，在该状态下只能接收服务器发送的数据但不能再发送数据了；
+
+2. 第二次挥手：服务器收到FIN段后，向客户端发送ACK段（ACK=1，seq=v，ack_seq=u+1），服务器状态由ESTABLISHED进入CLOSE_WAIT，在该状态下服务器仍可发送数据但不能接收数据了。当客户端收到ACK段，其状态由FIN_WAIT_1进入FIN_WAIT_2，仍然可以接收服务器的数据，此时TCP连接已经关闭了客户端向服务器方向的数据传输，也称半关闭；
+
+3. 第三次挥手：当服务器向客户端发送完最后一个数据段后，服务器向客户端发送FIN段（FIN=1，ACK=1，seq=w，ack_seq=u+1），该数据段也不携带应用层数据，此时服务器状态由CLOSE_WAIT进入LAST_ACK并不再发送数据；
+
+4. 第四次挥手：当客户端收到服务器发送的FIN段后，向服务器发送ACK段（ACK=1，seq=u+1，ack_seq=w+1），其状态由FIN_WAIT_2进入TIME_WAIT，再等待2MSL时间后进入CLOSED状态，最终释放连接。服务器收到该ACK后，状态由LAST_ACK进入CLOSED，最终释放连接。
+5. **为什么要挥手四次？**任何一方都可以在数据传输结束后发送连接释放的通知，待对方确认后进入半关闭状态。当另一方也没有数据需要发送的时候，则主动发送连接释放通知，接收方确认后就完全关闭了TCP连接。
+
+
+
+## TCP和UDP协议区别
 
 ![image-20201103142600116](assets/image-20201103142600116.png)
 
@@ -3274,7 +3677,9 @@ int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout
 2. UDP不提供可靠交付，接收主机在收到UDP报文后不需要任何确认。而TCP会提供可靠传输，所以TCP在数据传输前要三次握手建立连接，传输时通过确认、窗口、计时器、重传、拥塞控制等机制保障可靠性，传输完毕后会断开连接节约资源，也因此TCP相比UDP需要消耗更多的资源、更低的效率、更大的首部；
 3. UDP一般适用于对实时性要求号的即时通信。TCP适用于对通信数据可靠性有要求的场景。
 
-## 3.4.TCP的可靠传输
+
+
+## TCP的可靠传输
 
 1. 差错编码：即首部校验和，可以检测数据在传输过程中的任何变化，若接收方收的段校验和有差错，则会直接丢弃该报文段并且不发送确认报文；
 2. 序号：TCP会将所有数据以有序字节流的形式，依次对每个字节进行编号，并将整个应用层报文划分为若干报文段，每个报文段的序号就是该段所封装的数据的首字节序号。序号还能够保障报文段的顺序重组和防重复。
@@ -3285,27 +3690,41 @@ int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout
 7. 流量控制：用于协调发送方和接收方的数据发送和接收速度，避免发送方发送数据过快，超出了接收方的缓存和处理能力。接收方通过窗口（缓冲区）来控制发送方发送数据大小，每次在确认时都会将缓冲区的剩余尺寸一并交付给发送方，这样发送方每次发送的数据量大小都会根据接收方缓冲区的大小而适当调整。
 8. 拥塞控制：采用拥塞窗口机制，通过动态调节窗口大小来实现对发送速率的调整，避免在网络拥堵的情况下，发送数据过快而导致丢失。发送方维护一个拥塞窗口，表示在未收到确认的情况下，可以连续发送的字节数。整个拥塞控制分为慢启动和拥塞避免两个阶段，慢启动阶段窗口会成倍增加，拥塞避免阶段窗口会加性增加。
 
-## 3.5.ARQ协议
 
-## 3.7.拥塞控制
 
-## 3.8.浏览器输入URL到显示主页的过程
+## ARQ协议
 
-## 3.9.状态码
+
+
+## 拥塞控制
+
+
+
+## 浏览器输入URL到显示主页的过程
+
+
+
+## 状态码
 
 <img src="assets/image-20201103161803133.png" alt="image-20201103161803133" style="zoom:80%;" />
 
-## 3.10.各协议与HTTP协议的关系
+
+
+## 各协议与HTTP协议的关系
 
 ![image-20201103161856488](assets/image-20201103161856488.png)
 
-## 3.11.HTTP长/短连接
+
+
+## HTTP长/短连接
 
 HTTP/1.0默认使用短连接，即客户端和服务器每进行一次HTTP操作，就建立一次连接，传输任务结束后就断开连接。当浏览器访问的某个HTML或其他类型的Web页中包含其他Web资源（如JS脚本、图像、CSS文件等），每遇到这样一个Web资源，浏览器就会重新建立一个HTTP会话。
 
 HTTP/1.1开始默认使用长连接，用以保持连接特性。使用长连接的HTTP协议，会在响应头加入`Connection:keep-alive`，在使用长连接的情况下，当一个网页打开完成后，客户端和服务器之间用于传输HTTP数据的TCP的连接不会关闭，客户端再次访问这个服务器时，会继续使用这一条已经建立的连接。Keep-Alive不会永久保持连接，而是存在一个保持时间，该时间可以设置。
 
-## 3.12.HTTP如何保存用户状态
+
+
+## HTTP如何保存用户状态
 
 HTTP是无状态（stateless）协议，即HTTP协议自身不对请求和响应之间的通信状态进行保存。一般使用Session机制解决这个问题，Session的主要作业就是通过服务端记录用户的状态，典型的例子就是购物车，服务端给特定的用户创建特定的Session，之后就可以标识用户并跟踪用户。
 
@@ -3313,7 +3732,9 @@ HTTP是无状态（stateless）协议，即HTTP协议自身不对请求和响应
 
 若Cookie被禁用，最常用的方式就是通过URL携带Session ID。
 
-## 3.13.Cookie和Session的区别
+
+
+## Cookie和Session的区别
 
 Cookie一般用来保存用户标识，如Token，Session主要作用是通过服务端记录用户信息，如购物车；
 
@@ -3321,19 +3742,25 @@ Cookie的数据保存在浏览器端，Session的数据保存在服务器端；
 
 Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息，可以先加密后存储，最后在服务端解密。
 
-## 3.14.HTTP/1.0和HTTP/1.1的区别
+
+
+## HTTP/1.0和HTTP/1.1的区别
 
 1. **长/短连接**：短连接是每次请求都需要重新建立一次连接，每次都需要重新三次握手，开销大。长连接可以维持一段时间，分为流水和非流水方式，流水方式是客户端不需要等待收到响应就是继续发送新的请求，非流水方式就是客户端必须在收到响应后才能发送下一个请求；
 2. **错误状态响应码**：HTTP/1.1新增了24个错误状态响应码，如409表示请求的资源与资源的当前状态发生冲突，如410表示服务器上的某个资源被永久性删除；
 3. **缓存处理**：在HTTP/1.0中主要使⽤header⾥的`If-Modified-Since，Expires`来做为缓存判断的标准。HTTP/1.1则引⼊了更多的缓存控制策略例如`Entity tag，If-Unmodified-Since，If-Match，If-None-Match`等更多可供选择的缓存头来控制缓存策略；
 4. **带宽优化及网络连接的使用**：在HTTP/1.0中，存在一些浪费带宽的现象，例如客户端只是需要某个对象的一部分，而服务器却将整个对象送过来了，并且不支持断点续传功能。HTTP/1.1则在请求头引入了range头域，它允许只请求资源的某个部分，即返回码是206，这样方便了开发者自由选择以便充分利用带宽和连接。
 
-## 3.15.URI和URL的区别
+
+
+## URI和URL的区别
 
 1. **URI**：是统一资源标志符，可以唯一标识一个资源，类似于身份证号；
 2. **URL**：是统一资源定位符，可以提供该资源的路径，类似于家庭住址。是一种具体的URI，即URL不仅能用来标识一个资源，而且还可以通过其获取这个资源。
 
-## 3.16.HTTP和HTTPS的区别
+
+
+## HTTP和HTTPS的区别
 
 1. **端口**：HTTP的URL有``http://``起始且默认使用端口80，而HTTPS的URL由`https://`起始且默认使用端口443；
 2. **安全性和资源消耗**：HTTP协议运行在TCP之上，所有的传输内容都是明文，客户端和服务器都无法验证对方的身份。HTTPS是运行在SSL/TLS之上的HTTP协议，SSL/TLS运行在TCP之上，所有的传输内容都使用对称加密，密码使用了服务器的证书进行了非对称加密。所以HTTP安全性比HTTPS低，但消耗的资源更少。
@@ -3396,9 +3823,9 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
 
 
 
-## 4.2.Java基础特性
+## Java基础特性
 
-### 4.2.1.字符型常量和字符串常量的区别
+### 字符型常量和字符串常量的区别
 
 * 形式上：字符常量是单引号引起的一个字符。字符串常量是双引号引起的若干个字符；
 
@@ -3410,7 +3837,9 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
 
   ![image-20201111123518474](assets/image-20201111123518474.png)
 
-### 4.2.2.重载和重写的区别
+
+
+### 重载和重写的区别
 
 * 重载就是同样的一个方法能够根据输入数据的不同，做出不同的处理。在同一类中，重载的方法名必须相同，参数类型、个数、顺序、返回值和访问修饰符可以不同。重载解析就是一个类中多个同名方法根据不同的传参来执行不同的逻辑处理；
 * 重写就是当子类继承自父类的相同方法，输入数据一样，但要做出有别于父类的响应时，就要覆盖父类方法。重写发生在运气期间，是子类对父类的允许访问方法的实现过程进行重写编写：
@@ -3419,7 +3848,9 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
   * 构造方法无法被重写；
   * 总结：重写就是子类对父类方法的重新改造，外部样子不能改变，内部逻辑可以改变。
 
-### 4.2.3.封装、继承、多态
+
+
+### 封装、继承、多态
 
 * 封装：把一个对象的属性私有化，同时提供一些可以被外界访问的方法操作和获取属性，如果属性不想被外界访问，则不提供对应的方法即可。但如果一个类没有提供给外界访问的方法，那么这个类也就没有什么意义；
 * 继承：使用已存在的类定义作为基础建立新类的技术，新类的定义可以增加新的数据或新的功能，也可以使用父类的功能，但不能选择性的基础父类。通过使用继承能够非常方便的复用以前的代码；
@@ -3428,7 +3859,9 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
   * 子类可以用自己的方式实现父类的方法。
 * 多态：指程序中定义的引用变量所指向的具体类型和通过该引用变量进行的方法调用在编程时并不确定，而是在程序运行期间才会确定，即一个引用变量到底会指向哪个类的实例对象，该引用变量进行的方法调用到底是哪个类中实现的方法，必须由程序运行期间才能决定。在Java中可以使用继承（多个子类对父类同一方法的重写）和接口（多个类实现一个接口并覆盖其中的同一方法）来实现多态。
 
-### 4.2.4.String、StringBuffer和StringBuilder的区别
+
+
+### String、StringBuffer和StringBuilder的区别
 
 * **可变性**：
 
@@ -3474,7 +3907,9 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
   * 单线程操作字符串缓冲区操作大量数据使用StringBuilder；
   * 多线程操作字符串缓冲区操作大量数据使用StringBuffer。
 
-### 4.2.5.接口和抽象类的区别
+
+
+### 接口和抽象类的区别
 
 * 接口中的所有方法默认是public，所有方法在接口中不能有实现（JDK8中接口可以有默认方法和静态方法功能，JDK9中引入了私有方法和私有静态方法）。而抽象类可以有非抽象方法；
 * 接口中除了static、final变量，不能有其他变量。而抽象类中则不一定；
@@ -3482,19 +3917,25 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
 * 接口的方法默认修饰符是public，抽象方法可以有public、protected和default这些修饰符，抽象方法就是为了被重写所以不能使用private关键字修饰；
 * 从设计层面来说，抽象是对类的抽象，是一种模板设计，而接口是对行为的抽象，是一种行为的规范。
 
-### 4.2.6.成员变量和局部变量的区别
+
+
+### 成员变量和局部变量的区别
 
 * **从语法形式上来看**：成员变量是属于类的，而局部变量是在方法中定义的变量或是方法的参数。成员变量可以被public、private、static等修饰符所修饰，而局部变量不能被访问控制修饰符及static所修饰，但二者皆可被final修饰；
 * **从变量在内存中的存储方式来看**：若成员变量是使用static修饰的，那么这个成员变量就是属于类的，如果没有使用static修饰，这个成员变量就是属于实例的。对象存储在堆内存，如果局部变量类型为基本数据类型，则存储在栈内存，如果是引用类型，则在栈中存储指向堆内存对象的引用或是常量池中的地址；
 * **从变量在内存中的生存时间上来看**：成员变量是对象的一部分，随着对象创建而存在，而局部变量是随着方法的调用结束而消失的；
 * 成员变量如果没有被赋予初始值，则会自动以该类型的默认值而赋值（被final修饰的成员变量也需要显式赋值），而局部变量则不会自动赋值。
 
-### 4.2.7.静态方法和实例方法的区别
+
+
+### 静态方法和实例方法的区别
 
 * 在外部调用静态方法时，可以使用``类名.方法名``的形式，也可以使用``对象.方法名``的形式，而实例方法只有后面这种方式，也就是说，调用静态方法无需创建对象；
 * 静态方法在访问本类的成员时，只允许访问静态成员，而不允许访问实例成员和实例方法，而实例方法无此限制。
 
-### 4.2.8.hashCode()和equals()
+
+
+### hashCode()和equals()
 
 * `hashCode()`：作用是获取对象的哈希码。这个哈希码的作用是确定该对象在哈希表中的索引位置。hashCode()定义在JDK的Object.java中，意味着Java中的任何类都包含hashCode()方法；
 * **为什么需要hashCode()？**用于HashSet、HashMap中散列表结构的元素存储位置，当元素要加入时，会先计算hashCode，然后定位该元素在散列表中的存储位置，若是位置上有元素存在，则使用equals()判断是否是同一个元素，若不是则重新散列到其他位置，若是则操作失败达到了去重的目的；
@@ -3505,13 +3946,17 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
   * equals()被覆盖过，hashCode也必须被覆盖；
   * hashCode()的默认行为是对堆上的对象产生独特值，如果没有重写hashCode()，则该class的两个对象无论如何都不会相等。
 
-### 4.2.9.final关键字总结
+
+
+### final关键字总结
 
 * **当final修饰一个变量时**：如果是基本数据类型的变量，则数值一旦在初始化后便不能修改。如果是引用类型变量，则在对其初始化后便不能再让其指向另一个对象；
 * **当final修饰一个类时**：表名这个类不能被继承，类中的所有成员方法都会隐式的被指定为final修饰；
 * **当final修饰一个方法时**：第一是为了锁定方法，以防止任何继承类修改其含义。第二是效率问题，早期会通过final方法提供性能，现版本已经不需要了。类中的所有private方法都隐式的指定为final。
 
-### 4.2.10.异常处理
+
+
+### 异常处理
 
 ![image-20201111151210161](assets/image-20201111151210161.png)
 
@@ -3524,7 +3969,9 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
   * **finally块**：无论是否捕获或处理异常，finally块里的语句都会被执行。当在try块或catch块中遇到return语句时，finally语句块将在方法返回前被执行。
   * finally块不会被执行的特殊情况：finally块内部发生了异常、线程死亡、CPU被关闭、System.exit()退出程序。
 
-### 4.2.11.I/O流
+
+
+### I/O流
 
 * Java中的IO流划分：
 
@@ -3545,30 +3992,38 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
 
   ![image-20201111154153853](assets/image-20201111154153853.png)
 
-### 4.2.12.BIO、NIO、AIO
+
+
+### BIO、NIO、AIO
 
 * **BIO（Blocking I/O）**：同步阻塞I/O模型，数据的读取写入必须阻塞在一个线程内等待其完成。在活动连接数不是特别高（单机小于1000）的情况下，这种模型是比较不错的，可以让每一个连接都专注于自己的I/O，且编程模型简单，不需要过多的考虑系统的过载、限流等问题。线程池本身就是一个天然的漏斗，可以缓冲一些系统处理不了的连接或请求。但是，当面对10w甚至100w级的连接时，传统的BIO模型就无能为力了；
 * **NIO（Non-blocking/New I/O）**：同步非阻塞I/O模型，在JDK1.4中引入了NIO的框架，对应于java.nio包，提供了Channel、Selector、Buffer等抽象。其支持面向缓冲的，基于通道的I/O操作方法。NIO提供了与传统BIO模型中的Socket和ServerSocket相对应的SocketChannel和ServerSocketChannel两种不同的套接字通道实现，两种都支持阻塞和非阻塞模式。阻塞模式和传统IO一样，简单但性能欠佳，而非阻塞模式正好与之相反。对于低负载、低并发的网络应用，可以使用同步阻塞IO来提升并发速率和更好的维护性。对于高负载、高并发的网络应用，可以使用NIO的非阻塞模式来开发；
 * **AIO（Asynchronous I/O）**：JDK1.7引入的NIO2，是异步的非阻塞IO模型。其基于事件回调机制实现，即应用操作后会直接返回，不会阻塞等待，当后台处理完成，OS会通知相应的线程进行后续的操作。对于NIO来说，业务线程是在IO操作准备好时，得到通知，接着由这个线程自己进行IO操作，IO操作本身是同步的。
 
-### 4.2.13.深拷贝和浅拷贝
+
+
+### 深拷贝和浅拷贝
 
 ![image-20201111153317651](assets/image-20201111153317651.png)
 
 * 浅拷贝：对基本数据类型进行值传递，对引用数据类型进行引用传递的拷贝；
 * 深拷贝：对基本数据类型进行值传递，对引用数据类型，则创建新对象，并复制其内容。
 
-## 4.1.Java集合概述
+
+
+## Java集合概述
 
 ![image-20201109175038610](assets/image-20201109175038610.png)
 
-### 4.1.1.List、Set、Map的区别
+### List、Set、Map的区别
 
 * List（顺序）：存储一组不唯一（可以有多个元素引用相同的对象），并且有序的对象；
 * Set（唯一）：不允许重复的集合，不会有多个元素引用相同的对象；
 * Map（键值）：使用键值对存储，会维护一个与Key有关联的值，两个key可以引用相同的对象，但key不能重复。
 
-### 4.1.2.集合底层数据结构
+
+
+### 集合底层数据结构
 
 * List：
   * ArrayList：Object[]数组；
@@ -3584,22 +4039,30 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
   * HashTable：数组+链表的组合，数组是主体，链表解决哈希冲突；
   * TreeMap：红黑树，一种自平衡的排序二叉树。
 
-### 4.1.3.如何选择集合？
+
+
+### 如何选择集合？
 
 + 当需要根据键值对获取元素时，就选择Map接口下的集合。需要排序时选择TreeMap，不需要排序则使用HashMap，保证线程安全则使用ConcurrentHashMap；
 + 当只需要存放元素时，就选择Collection接口下的集合。需要保证元素唯一性就选择Set接口下的集合TreeSet和HashSet，不关心重复就选择List接口下的ArrayList和LinkedList。
 
-### 4.1.4.为什么使用集合？
+
+
+### 为什么使用集合？
 
 * 当需要保存一组类型相同的数据时，需要一个容器，但使用数组存储对象由很多弊端。在实际开发中，存储数据的类型是多种多样的，所以出现了集合；
 * 数组的缺点是一旦声明后，长度就无法改变，同时声明数组的同时也必须指定数据类型，一旦确定后就不法改变，另外，数组存储数据是不提供自定义排序和判重功能的。所以用数组存储数据功能单一不够灵活。
 
-### 4.1.5.Iterator迭代器
+
+
+### Iterator迭代器
 
 * 是什么？Java通过Iterator接口实现设计模式中的迭代器，可以对集合进行遍历，但不同集合中的数据结构可能是不相同的，所以存取方式会存在区别。迭代器就是定义了一个同一的接口，并声明了hasNext()和next()这两个用于获取数据的方法，具体的实现交由具体的集合去完成。
 * 有啥用？主要是用于遍历集合，特点是安全，因为其可以确保在遍历集合的时候元素不会被更改，一旦被修改，就会抛出异常。
 
-### 4.1.6.线程不安全和安全的集合有哪些？
+
+
+### 线程不安全和安全的集合有哪些？
 
 * 线程不安全的集合：ArrayList、LinkedList、HashMap、TreeMap、HashSet、TreeSet都不是线程安全的；
 * **JUC（java.util.concurrent）包**提供了各种并发容器：
@@ -3609,14 +4072,18 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
   * BlockingQueue：阻塞队列接口，JDK通过链表、数组等方式实现了这个接口，非常适合作为数据共享的通道；
   * ConcurrentSkipListMap：跳表的实现。底层是一个Map结构，使用跳表的数据结构实现了快速查找。
 
-## 4.2.Collection子接口——List
 
-### 4.2.1.ArrayList和Vector的区别
+
+## Collection子接口——List
+
+### ArrayList和Vector的区别
 
 * ArrayList是List的主要实现类，底层使用Object[]存储，适用于频繁的查找工作，线程不安全；
 * Vector是List的古老实现类，底层使用Object[]存储，线程安全，效率低，已经不适合使用了。
 
-### 4.2.2.ArrayList和LinkedList的区别
+
+
+### ArrayList和LinkedList的区别
 
 * **线程是否安全**：二者皆不同步，不保证线程安全；
 
@@ -3654,7 +4121,9 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
 
   ![image-20201109150227193](assets/image-20201109150227193.png)
 
-### 4.2.3.ArrayList的扩容机制源码分析
+
+
+### ArrayList的扩容机制源码分析
 
 * 构造方法源码分析：
 
@@ -3774,9 +4243,11 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
   }
   ```
 
-## 4.3.Collection子接口——Set
 
-### 4.3.1.Comparable和Comparator的区别
+
+## Collection子接口——Set
+
+### Comparable和Comparator的区别
 
 * Comparable接口存在于java.lang包下，有一个compareTo(Object obj)方法用来排序；
 * Comparator接口存在于java.util包下，有一个compare(Object obj1, Object obj2)方法用来排序。
@@ -3844,18 +4315,24 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
   }
   ```
 
-### 4.3.2.无序性和不可重复性
+
+
+### 无序性和不可重复性
 
 * **什么是无序性？**无序性不等于随机性，无序性是指存储的数据在底层数组中并非按照数组索引的顺序添加，而是根据数据的哈希值决定的。
 * **什么是不重复性？**不可重复性是指添加的元素按照equals()判断时，需要返回false，Set集合的不重复性判断需要同时重写equals()方法hashCode()。
 
-### 4.3.3.HashSet、LinkedHashSet、TreeSet的区别
+
+
+### HashSet、LinkedHashSet、TreeSet的区别
 
 * HashSet是Set接口的主要实现类，底层是基于HashMap实现的，线程不安全，可以存储null值；
 * LinkedHashSet是HashSet的子类，格外维护了链表结构，能够按照元素添加时的顺序遍历；
 * TreeSet底层使用红黑树，能够按照添加元素的顺序遍历，排序的方式有自然排序和定制排序。
 
-### 4.3.1.HashSet如何检查重复
+
+
+### HashSet如何检查重复
 
 * 判重的过程：
   * 当对象add进HashSet中时，会先计算对象的HashCode来判断对象加入的位置，同时也会与集合中已存在元素的HashCode作比较，若没有相同的，则假定对象没有重复出现；
@@ -3871,9 +4348,11 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
   * 以字符串为例，==是对内存地址的比较，equals()是对字符串内容的比较；
   * ==指引用是否相同，equals()指值是否相同。
 
-## 4.4.Map接口
 
-### 4.4.1.HashMap和HashTable的区别
+
+## Map接口
+
+### HashMap和HashTable的区别
 
 * **线程是否安全**：HashMap的非线程安全的，HashTable保证线程安全。HashTable的内部方法都经过了synchronized修饰；
 
@@ -3920,7 +4399,9 @@ Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息�
   }
   ```
 
-### 4.4.2.HashMap和HashSet的区别
+
+
+### HashMap和HashSet的区别
 
 HashSet是基于HashMap实现的，除了``clone()、writeObject()、readObject()``外都是直接调用HashMap的方法。
 
@@ -3931,7 +4412,9 @@ HashSet是基于HashMap实现的，除了``clone()、writeObject()、readObject(
 |    调⽤put()向map中添加元素    |                 调⽤add()⽅法向Set中添加元素                 |
 | HashMap使⽤键 Key计算 HashCode | HashSet使⽤成员对象来计算HashCode值，对于两个对象来说HashCode可能相同，所以equals()⽅法⽤来判断对象的相等性 |
 
-### 4.4.3.HashMap的底层实现源码分析
+
+
+### HashMap的底层实现源码分析
 
 JDK1.8之前的HashMap：
 
@@ -4297,13 +4780,21 @@ JDk1.8之后的HashMap：这个版本的HashMap在解决哈希冲突的时候变
   }
   ```
 
-### 4.4.4.HashMap的长度为什么是2的幂次方？
 
-### 4.4.5.HashMap的常见遍历方式
 
-### 4.4.6.HashMap多线程操作导致的死循环问题
+### HashMap的长度为什么是2的幂次方？
 
-### 4.4.5.ConcurrentHashMap和HashTable的区别
+
+
+### HashMap的常见遍历方式
+
+
+
+### HashMap多线程操作导致的死循环问题
+
+
+
+### ConcurrentHashMap和HashTable的区别
 
 * **底层数据结构**：JDK1.7的ConcurrentHashMap底层采用分段数组+链表实现，而JDK1.8中则采用和HashMap一样的数组+链表/红黑树的结构。HashTable底层采用数组+链表的形式存储数据，数组是本体，链表解决哈希冲突；
 
@@ -4325,7 +4816,9 @@ JDk1.8之后的HashMap：这个版本的HashMap在解决哈希冲突的时候变
 
   ![image-20201110101245983](assets/image-20201110101245983.png)
 
-### 4.4.6.ConcurrentHashMap的底层实现源码分析
+
+
+### ConcurrentHashMap的底层实现源码分析
 
 * 初始化：
 
@@ -5409,31 +5902,73 @@ JDk1.8之后的HashMap：这个版本的HashMap在解决哈希冲突的时候变
 
 ### 两阶段提交方案（XA方案）
 
+* 两阶段提交有一个事务管理器的概念，负责协调多个数据库（即资源管理器）的事务，事务管理器先询问各个数据库是否准备提交，如果每个数据库都恢复ok，则正式提交事务，在各个数据库上执行操作，如果其中任何一个数据库回答不ok，则立即回滚事务。
 
+  ![distributed-transacion-XA](assets/distributed-transaction-XA.png)
+
+* XA适用于单应用跨多个数据库的分布式事务，因为严重依赖于数据库层面来处理复杂的事物，效率很低，不适合高并发的场景。
+
+* 一个服务内部出现了跨多个库的访问操作，是不符合微服务的设计规定的，一般来说每个服务只能操作自己对应的一个数据库，如果需要操作其他数据库，必须通过调用目标数据库对应服务提供的接口来实现。
 
 
 
 ### TCC方案
 
+* TCC是其内部三个阶段首字母的组合：
+
+  * Try阶段：该阶段是对各个服务的资源做检测以及对资源进行锁定或者预留；
+  * Confirm阶段：该节点是在各个服务中执行实际的操作；
+  * Cancel阶段：如果任何一个服务的业务方法执行出错，那么就需要进行补偿，就是执行已执行成功的业务逻辑的回滚操作。
+
+  ![distributed-transacion-TCC](assets/distributed-transaction-TCC.png)
+
+* TCC的事务回滚实际上是严重依赖于代码来完成补偿操作的。如支付、交易相关的场景，会使用TCC进行严格的代码补偿，保证分布式事务要么全部成功，要么全部复原。
+
 
 
 ### Saga方案
+
+* 业务流程中每个参与者都提交本地事务，若某一个参与者失败，则补偿前面已经成功的参与者。下图中的事务流程，当执行到T3时发生错误，则开始向上依次执行补偿流程T3、T2、T1，直到将所有已修改的数据复原。
+
+![distributed-transacion-TCC](assets/distributed-transaction-saga.png)
+
+* 适用场景：业务流程多、业务流程长，使用TCC的话成本高，同时无法要求其他公司或遗留的系统也遵循TCC。
+* 优点；
+  * 一阶段提交本地事务，无锁，高性能；
+  * 参与者可异步执行，高吞吐；
+  * 补偿服务易于实现。
+* 缺点：不保证事务的隔离性。
 
 
 
 ### 本地消息表
 
+* A系统在本地事务操作的同时，插入一条数据到消息表中，接着将这个消息发送到MQ中；
+* B系统接收到消息后，在一个事务中向自己的本地消息表中插入一条数据，同时执行其他的业务操作。如果这个消息已经被处理过了，那么此时这个事务会回滚，保证不会重复处理；
+* B系统处理成功后，就会更新自己本地消息表的状态以及A系统消息表的状态；
+* 若B系统处理失败，则不会更新消息表状态。A系统会定时扫描消息表，如果有未处理的消息，会再次发送到MQ中去，让B再次处理；
+* 该方案保证了最终一致性，就算B事务失败了，A也会不断的重发消息，直到B成功为止。
+
+![distributed-transaction-local-message-table](assets/distributed-transaction-local-message-table.png)
+
 
 
 ### 可靠消息最终一致性方案
+
+* A系统发送一个prepared消息到MQ，若消息发送失败则取消操作。若发送成功则执行本地事务，如果成功则通知MQ发送确认消息，失败则通知MQ回滚消息；
+* 如果发送的是确认消息，则此时B系统会接收到确认消息，然后执行本地事务；
+* MQ会自动定时轮询所有prepared消息并回调应用程序的接口，询问这个消息是不是本地事务处理失败了，所有没发送确认的消息，是继续重试还是回滚？一般来说这里就可以通过数据库查看之前的本地事务是否执行，如果回滚了，那么这里也回滚。这样能够避免本地事务执行成功，但确认消息发送失败的情况。
+* 如果系统B的事务失败了就重试，不断重试直到成功，如果实在无法成功，则针对重要的业务（如资金类）进行回滚，如系统B本地回滚后，想办法通知系统A也回滚，或是发送报警由人工来手动回滚和补偿。
+
+![distributed-transaction-reliable-message](assets/distributed-transaction-reliable-message.png)
 
 
 
 ### 最大努力通知方案
 
-
-
-# 消息队列和搜索引擎
+* 系统A的本地事务执行完毕后，发送消息到MQ；
+* 会有一个专门消费MQ的最大努力通知服务，这个服务会消费MQ然后写入数据库中记录，然后调用系统B的接口；
+* 若系统B的事务执行失败，则最大努力通知服务就定时尝试重新调用系统B，直到成功，若超出重试次数，则放弃。
 
 
 
