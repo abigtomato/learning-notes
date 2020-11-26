@@ -4202,6 +4202,247 @@ TCP使用窗口机制进行流量控制：连接建立时，接收方分配一�
 
 
 
+## Netty的基本概念
+
+### Netty是什么？
+
+* 是一个基于NIO的C/S模式的网络通信框架，可以快速的通过它开发出高并发、高可靠的网络应用程序；
+* 极大的简化了TCP、UDP套接字服务器等网络编程的开发难度，且性能和安全性都得到了更好的保证；
+* 支持多种计算机网络应用层协议，如FTP、SMTP、HTTP以及各种二进制和基于文本的传输协议。
+
+
+
+### 为什么使用Netty？
+
+* 统一的API，支持多种传输类型（阻塞和非阻塞）；
+* 基于IO多路复用技术的简单而强大的线程模型Reactor；
+* 自带编码器解决TCP粘包和拆包问题；
+* 自带各种协议栈；
+* 真正的无连接数据包套接字支持；
+* 相对于使用JDK API具有更高的吞吐量、更低的延迟、更低的资源消耗和更少的内存复制；
+* 具有完整的SSL/TLS等安全机制的支持；
+* 社区活跃；
+* 成熟稳定，经历了各种开源项目的考验，如：Dubbo、RocketMQ、ElasticSearch、gRPC等。
+
+
+
+### Netty的应用场景
+
+* RPC框架的网络通信结构：在分布式系统中，不同的服务节点需要相互调用，需要使用RPC框架。而服务节点间可以通过Netty来通信；
+* 高并发的HTTP网络服务器：基于同步非阻塞IO和多路复用模型的HTTP服务器；
+* 可以实现即时通讯系统；
+* 可以实现消息推送系统。
+
+
+
+## Netty的核心组件
+
+### Channel
+
+Channel接口是Netty的网络操作抽象类，包含了各种基本的I/O操作。比较常用的实现类是NioServerSocketChannel和NioSocketChannel。
+
+
+
+### EventLoop
+
+EventLoop事件循环主要作用就是负责监听网络事件并调用事件处理器进行相关I/O操作的处理。EventLoop负责处理注册到其上的Channel进行I/O操作。
+
+
+
+### ChannelFuture
+
+Netty所有的I/O操作都是基于事件驱动的异步操作（宏观上的异步，操作系统基级别是基于IO多路复用的同步非阻塞）。因此，其I/O操作不能立即返回结果，可以通过注册ChannelFutureListener，当操作执行成功或失败时，监听器就会自动触发结果。
+
+```java
+public interface ChannelFuture extends Future<Void> {
+	Channel channel();
+	ChannelFuture addListener(GenericFutureListener<? extends Future<? super Voidjk var1);	// 注册监听器
+	......
+	ChannelFuture sync() throws InterruptedException;	// 修改同步或异步
+}
+```
+
+
+
+### ChannelHandler和ChannelPipeline
+
+ChannelHandler是消息的具体处理器，负责处理连接和读写操作。ChannelPipeline是一条ChannelHandler执行链，其提供了一个容器并定义了用于沿着链传播入站和出站事件流的API。每一个Channel被创建时都会自动被分配到一个专属的ChannelPipeline中。
+
+
+
+## Netty-EventLoop和EventLoopGroup
+
+EventLoopGroup包含了多个EventLoop，因为每个EventLoop对应一个线程，即Thread和EventLoop属于1:1的关系，所以EventLoopGroup构成了一个线程池。下图中Boss EventLoopGroup用于接收连接，Worker EventLoopGroup用于具体的处理。
+
+
+
+## Netty-Bootstrap和ServerBootstrap
+
+Bootstrap是Netty客户端的启动引导类：
+
+```JAVA
+EventLoopGroup group = new NioEventLoopGroup();
+try {
+	//创建客户端启动引导/辅助类： Bootstrap
+	Bootstrap b = new Bootstrap();
+	//指定线程模型
+	b.group(group).
+	......
+	// 尝试建⽴连接
+	ChannelFuture f = b.connect(host, port).sync();
+	f.channel().closeFuture().sync();
+} finally {
+	// 优雅关闭相关线程组资源
+	group.shutdownGracefully();
+}
+```
+
+ServerBootstrap是Netty服务端的启动引导类：
+
+```JAVA
+// bossGroup ⽤于接收连接， workerGroup ⽤于具体的处理
+EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+EventLoopGroup workerGroup = new NioEventLoopGroup();
+try {
+	// 创建服务端启动引导/辅助类： ServerBootstrap
+	ServerBootstrap b = new ServerBootstrap();
+	// 给引导类配置两⼤线程组,确定了线程模型
+	b.group(bossGroup, workerGroup).
+	......
+	// 绑定端⼝
+	ChannelFuture f = b.bind(port).sync();
+	// 等待连接关闭
+	f.channel().closeFuture().sync();
+} finally {
+	// 优雅关闭相关线程组资源
+	bossGroup.shutdownGracefully();
+	workerGroup.shutdownGracefully();
+}
+```
+
+
+
+## Netty-NioEventLoopGroup构造函数源码分析
+
+```JAVA
+// 若不指定线程数将从这里开始
+public NioEventLoopGroup() {
+	// 调⽤下⼀个构造⽅法
+	this(0);
+}
+
+public NioEventLoopGroup(int nThreads) {
+	// 继续调⽤下⼀个构造⽅法
+	this(nThreads, (Executor) null);
+}
+
+// ......各种重载的构造方法
+    
+public NioEventLoopGroup(int nThreads, Executor executor, final SelectorProvider selectorProvider, final SelectStrategyFactory selectStrategyFactory) {
+    // 开始调⽤⽗类的构造方法
+    super(nThreads, executor, selectorProvider, selectStrategyFactory, RejectedExecutionHandlers.reject());
+}
+
+// ......各种重载的构造方法
+    
+// 从1、系统属性和CPU核⼼数*2这三个值中取最⼤值，可以得出DEFAULT_EVENT_LOOP_THREADS的值为CPU核⼼数*2
+private static final int DEFAULT_EVENT_LOOP_THREADS = Math.max(1, SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
+
+// 被调⽤的⽗类构造函数，NioEventLoopGroup默认的构造函数会起多少线程的秘密所在，当指定的线程数nThreads为0时，使⽤默认的线程数DEFAULT_EVENT_LOOP_THREADS
+protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
+	super(nThreads == 0 ? DEFAULT_EVENT_LOOP_THREADS : nThreads, threadFactory, args);
+}
+```
+
+
+
+## Netty的线程模型
+
+### Reactor单线程模型
+
+### Reactor多线程模型
+
+### 主从Reactor多线程模型
+
+
+
+## Netty的客户端和服务端启动过程
+
+### 服务端
+
+```JAVA
+// 1.bossGroup ⽤于接收连接， workerGroup ⽤于具体的处理
+EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+EventLoopGroup workerGroup = new NioEventLoopGroup();
+try {
+    //2.创建服务端启动引导/辅助类： ServerBootstrap
+    ServerBootstrap b = new ServerBootstrap();
+    //3.给引导类配置两⼤线程组,确定了线程模型
+    b.group(bossGroup, workerGroup)
+	// (⾮必备)打印⽇志
+	.handler(new LoggingHandler(LogLevel.INFO))
+	// 4.指定 IO 模型
+	.channel(NioServerSocketChannel.class)
+	.childHandler(new ChannelInitializer<SocketChannel>() {
+    	@Override
+        public void initChannel(SocketChannel ch) {
+        	ChannelPipeline p = ch.pipeline();
+           	// 5.可以⾃定义客户端消息的业务处理逻辑
+       		p.addLast(new HelloServerHandler());
+        }
+    });
+    // 6.绑定端⼝,调⽤ sync ⽅法阻塞知道绑定完成
+    ChannelFuture f = b.bind(port).sync();
+    // 7.阻塞等待直到服务器Channel关闭(closeFuture()⽅法获取Channel 的CloseFuture对象,然后调⽤sync()⽅法)
+    f.channel().closeFuture().sync();
+} finally {
+    //8.优雅关闭相关线程组资源
+    bossGroup.shutdownGracefully();
+    workerGroup.shutdownGracefully();
+}
+```
+
+
+
+### 客户端
+
+```JAVA
+//1.创建⼀个 NioEventLoopGroup 对象实例
+EventLoopGroup group = new NioEventLoopGroup();
+try {
+    //2.创建客户端启动引导/辅助类： Bootstrap
+    Bootstrap b = new Bootstrap();
+    //3.指定线程组
+    b.group(group)
+    //4.指定 IO 模型
+    .channel(NioSocketChannel.class)
+    .handler(new ChannelInitializer<SocketChannel>() {
+        @Override
+        public void initChannel(SocketChannel ch) throws Exception {
+            ChannelPipeline p = ch.pipeline();
+            // 5.这⾥可以⾃定义消息的业务处理逻辑
+            p.addLast(new HelloClientHandler(message));
+        }
+    });
+    // 6.尝试建⽴连接
+    ChannelFuture f = b.connect(host, port).sync();
+    // 7.等待连接关闭（阻塞，直到Channel关闭）
+    f.channel().closeFuture().sync();
+} finally {
+	group.shutdownGracefully();
+}
+```
+
+
+
+## Netty-TCP的粘包/拆包问题
+
+## Netty的长连接和心跳机制
+
+## Netty的零拷贝机制
+
+
+
 # Linux操作和概念及其内核原理
 
 ## 常用操作和概念
@@ -6781,13 +7022,56 @@ AOP基于动态代理，如果要代理对象且实现了某个接口，则Sprin
 
 ### Spring中bean的作用域
 
+* singleton：单例bean；
+* prototype：每次请求创建一个新的bean实例；
+* request：每次http请求创建新的bean，但仅在该次http请求内有效；
+* session：每次http请求创建新的bean，但仅在当前http的session会话有效。
+
+
+
 ### Spring中单例bean的线程安全问题
+
+单例bean存在线程安全问题，主要i是因为当多个线程操作同一个对象时，对这个对象的非静态成员变量的写操作存在线程安全问题。
+
+解决方法就是在类中定义一个ThreadLocal的成员变量，将需要的可变成员变量保存在ThreadLocl中。
+
+
 
 ### @Component和@Bean的区别
 
+* 作用对象不同，@Component作用于类，@Bean作用于方法；
+* @Component通常是通过类路径扫描来字段侦测以及自动装配到Spring容器中，通常使用@ComponentScan来定义要扫描的路径从中找出标识了需要装配的类并自动装配到Spring的bean容器中。@Bean通常是在标有该注解的方法中手动产生一个bean，通知Spring这是某个类的创建过程，当需要时再将其执行并返回对象。
+* @Bean注解比@Component注解的自定义性更强，而且很多情况下只能通过@Bean来注册bean。如引用第三方库中的类需要装配到Spring容器中时，则只能通过@Bean来实现。
+
+
+
 ### 声明类为Spring bean的注解
 
+* @Component：通用注解，可以标注任意类为Spring组件。如果一个Bean不知道属于哪一层，可以使用@Component标注；
+* @Repository：对应持久层即Dao层，主要用于数据库相关操作；
+* @Service：对应服务层，主要涉及一些复杂的业务逻辑，需要用到Dao层；
+* @Controller：对应于Spring MVC的控制层，主要用于接受客户端的请求并调用服务层处理业务，最后返回数据给前端页面。
+
+
+
 ### Spring bean的生命周期
+
+![Sring bean 生命周期1](assets/Sring bean 生命周期1.png) 
+
+* Bean容器找到配置文件中Spring Bean的定义；
+* Bean容器使用Java Reflection API创建一个Bean的实例；
+* 如果涉及到一些属性值则使用 `set()` 方法设置；
+* 如果Bean实现了BeanNameAware接口，则调用setBeanName()方法，传入Bean的名字；
+* 如果Bean实现了BeanClassLoaderAware接口，则调用setBeanClassLoader()方法，传入ClassLoader对象的实例；
+* 如果Bean还实现了其他的 *.Aware 接口，就调用相应的方法；
+* 如果存在和加载该Bean的Spring容器相关的BeanPostProcess对象，就执行postProcessBeforeInitialization()方法，即进行前置处理；
+* 如果Bean实现了InitializingBean接口，就执行afterPropertiesSet()方法；
+* 如果Bean在配置文件中定义了包含init-method属性，就执行指定方法；
+* 如果存在和加载该Bean的Spring容器相关的BeanPostProcess对象，就执行postProcessBeforeInitialization()方法，即进行后置处理；
+* 当要销毁Bean时，如果Bean实现了DisposableBean接口，则执行destroy()方法；
+* 当要销毁Bean时，如果Bean在配置文件中的定义包含destroy-method属性，执行指定的方法。
+
+![Spring bean  生命周期2](assets/Spring bean  生命周期2.jpg)
 
 
 
@@ -6795,19 +7079,34 @@ AOP基于动态代理，如果要代理对象且实现了某个接口，则Sprin
 
 ### SpringMVC的概念
 
+MVC是一种设计模式，Spring MVC就是基于了这种设计模式的框架。可以帮助开发任意更简洁的开发Web应用，且与Spring框架天然集成。Spring MVC将后端项目分为了Service层（业务层）、Dao层（持久化层）、Entity层（实体类）和Controller层（控制层）。
+
+
+
 ### SpringMVC的工作原理
+
+* 客户端/浏览器发送请求，直接请求到前端控制器DispatcherServlet；
+* 前端控制器DispatcherServlet根据请求信息调用处理器映射器HandlerMapping，解析与请求对应的Handler；
+* 当解析到对应的Handler后（即Controller控制器），开始由处理器适配器HandlerAdapter处理；
+* 处理器适配器HandlerAdapter根据Handler来调用真正的处理器来处理请，并执行相应的业务逻辑；
+* 处理器处理完业务后，会返回一个ModelAndView对象，Model是返回的数据对象，View是逻辑上的视图；
+* 视图解析器ViewResolver会根据逻辑View查找实际的View；
+* 前端控制器DispatcherServlet会将返回的Model传给View，即渲染视图；
+* 最后将View返回给请求者。
+
+![Spring MVC工作原理](assets/Spring MVC工作原理.png)
 
 
 
 ## Spring用到的设计模式
 
-* 工厂设计模式：
-* 代理设计模式：
-* 单例设计模式：
-* 模板方法设计模式：
-* 包装器设计模式：
-* 观察者设计模式：
-* 适配器设计模式：
+* 工厂设计模式：Spring的BeanFactory、ApplicationContexttong使用工厂模式创建bean对象；
+* 代理设计模式：Spring AOP功能基于动态代理实现；
+* 单例设计模式：Spring的Bean对象默认都是单例的；
+* 模板方法设计模式：Spring的jdbTemplate、hibernateTemplate等以Template结尾的对数据库操作的类，使用了模板方法；
+* 包装器设计模式：当项目需要连接多个数据库，且不同的客户在每次访问中根据需要会去访问不同的数据库。这种包装器设计模式可以根据客户的需求动态切换不同的数据源；
+* 观察者设计模式：Spring的事件驱动模型就是观察者模式的典型应用；
+* 适配器设计模式：Spring AOP的增强或通知Advice使用了适配器模式。Spring MVC中的Controller也使用了适配器模式。
 
 
 
@@ -6815,11 +7114,48 @@ AOP基于动态代理，如果要代理对象且实现了某个接口，则Sprin
 
 ### Spring管理事务的方式
 
+* 编程式事务，即在代码中硬编码；
+* 声明式事务，即在配置文件中配置：
+  * 基于XML的声明式事务；
+  * 基于注解的声明式事务。
+
+
+
 ### Spring事务的隔离级别
 
-### Spring的事务传播行为
+* TransactionDefinition.ISOLATION_DEFAULT：即使用数据库的默认隔离级别，MySQL的默认隔离级别是REPEATABLE_READ；
+* TransactionDefinition.ISOLATION_READ_UNCOMMITTED：读未提交。最低的隔离级别，允许读取尚未提交的数据变更，可能会导致脏读、幻读和不可重复读；
+* TransactionDefinition.ISOLATION_READ_COMMITTED：读已提交。允许读取并发事务已经提交的数据，可以阻止脏读，但幻读和不可重复读仍有可能发生；
+* TransactionDefinition.ISOLATION_REPEATABLE_READ：可重复读。对同一字段的多次读取结果都是一致的，除非数据是被当前事务所修改，可以阻止脏读和不可重复读，但不能阻止幻读；
+* TransactionDefinition.ISOLATION_SERIALIZABLE：可串行化。最高的隔离级别，让所有事务依次执行，完全避免事务之间产生的相互影响，可以阻止脏读、不可重复读和幻读，但严重影响程序的性能。
 
-### @Transactional注解
+
+
+### Spring事务的传播行为
+
+支持当前事务的情况：
+
+* TransactionDefinition.PROPAGATION_REQUIRED：如果当前存在事务，则加入该事务，如果当前没有事务，则创建一个新的事务；
+* TransactionDefinition.PROPAGATION_SUPPORTS：如果当前存在事务，则加入该事务，如果当前没有事务，则以非事务的方式继续执行；
+* TransactionDefinition.PROPAGATION_MANDATORY：如果当前存在事务，则加入该事务，如果当前没有事务，则抛出异常。
+
+不支持当前事务的情况：
+
+* TransactionDefinition.PROPAGATION_REQUIRES_NEW：创建一个新事务，如果当前存在事务，则把新事务挂起；
+* TransactionDefinition.PROPAGATION_NOT_SUPPORTED：以非事务的方式运行，如果当前存在事务，则把当前事务挂起；
+* TransactionDefinition.PROPAGATION_NEVER：以非事务的方式运行，如果当前存在事务，则抛出异常。
+
+其他情况：
+
+* TransactionDefinition.PROPAGATION_NESTED：如果当前存在事务，则创建一个事务做为当前事务的嵌套事务来运行，如果当前没有事务，则等价于TransactionDefinition.PROPAGATION_REQUIRED。
+
+
+
+### @Transactional(rollback=Exception.class)注解
+
+当@Transactional注解作用于类上时，该类的所有public方法都将具有该类型的事务属性，同时也可以在方法级别使用该注解，被注解表示的类或方法一旦抛出异常，就会回滚。
+
+在@Transactional中如果不指定rollback属性，那么只有在遇到RuntimeException运行时异常时才会回滚，指定rollback=Exception.class时会让事务在遇到非运行时异常时也能回滚。
 
 
 
