@@ -3434,7 +3434,32 @@ typedef struct pollfd {
 ![img](assets/20190527231438974.png)
 
 * epoll是Linux内核对多路复用IO接口作出的改进版本，显著提高程序在大量并发连接中只有少量活跃的情况下CPU的利用率。即在监听事件就绪的过程中，不需要遍历整个被监听的描述符集，只要遍历那些被内核IO事件异步唤醒而加入Ready队列（链表）的描述符集合即可。
+
+  ```c
+  struct eventpoll{  
+      ....  
+      /* 红黑树的根节点，这颗树中存储着所有添加到epoll中的需要监控的事件 */  
+      struct rb_root  rbr;  
+      /* 双链表中则存放着将要通过epoll_wait返回给用户的满足条件的事件 */  
+      struct list_head rdlist;  
+      ....  
+  }; 
+  ```
+
 * fd进入红黑树时会注册事件和回调函数，当网络连接和数据读写等事件发生时，由网卡驱动发出中断，产生事件然后调用call_back使fd加入就绪队列。
+
+  ```c
+  struct epitem{  
+      struct rb_node  rbn;//红黑树节点  
+      struct list_head    rdllink;//双向链表节点  
+      struct epoll_filefd  ffd;  //事件句柄信息  
+      struct eventpoll *ep;    //指向其所属的eventpoll对象  
+      struct epoll_event event; //期待发生的事件类型  
+  }
+  ```
+
+![img](assets/285763-20180109161439722-2055589839.png)
+
 * epoll没有描述符个数的限制，使用一个fd管理多个fd，将用户关心的fd的事件存放到内核的一个事件表中，这样在用户空间和内核空间的copy只需要一次。
 * epoll提供了两种IO事件的触发方式：
   * **水平触发（LT，Level Trigger）**：默认工作模式，即当epoll_wait检测到某描述符事件的就绪并通知应用程序时，应用程序可以不立即处理该事件，待下次调用epoll_wait时，会再次通知此事件；
@@ -3510,373 +3535,362 @@ int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout
 
 ### 零拷贝sendfile
 
+系统调用：
+
+```c
+ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count)
+```
+
+* `out_fd`：
+* `in_fd`：
+* `offset`：
+* `count`：
+
+传统IO发送文件到Socket的步骤：
+
+* 硬盘 -> 内核buffer -> 用户buffer -> 内核Socket buffer -> 协议引擎。共经过2次陷入。
+* 硬件驱动到内核缓冲区的DMA拷贝、内核缓冲区到用户缓冲区的CPU拷贝、用户缓冲区到内核Socket缓冲区的CPU拷贝、Socket缓冲区到协议引擎的DMA拷贝。共经过4次拷贝。
+
+![img](assets/180879d0ee95d3b22f9061b46cdabb13_720w.jpg)
+
+sendfile发送文件到Socket的步骤：
+
+* 硬盘 -> 内核缓冲区 -> 内核Socket缓冲区 -> 协议引擎。不需要任何陷入，所有操作都在内核完成。
+* 硬件驱动到内核缓冲区的DMA拷贝、内核缓冲区到内核Socket缓冲区的CPU拷贝、内核Socket缓冲区到协议引擎的DMA拷贝。共经过3次拷贝。
+
+![img](assets/178a72ce66e40c8fc7743f28bdc63de9_720w.jpg)
+
+
+
+## 高性能的I/O设计模式
+
+### Reactor反应器模式
+
+**模式结构：**
+
+![img](assets/4235178-2d83a09abf0a3436.png)
+
+* **文件描述符（Handle）：**由操作系统提供，用于表示一个事件，事件既可以来自外部，也可以来自内部。外部事件如Socket描述符的客户端连接请求、客户端发送的数据等。内部事件如操作系统的定时事件等；
+* **同步事件分离器（Synchronous Event Demultiplexer）：**是一个系统调用，用于等待一个或多个事件的发生。调用方会阻塞在它之上，直到分离器上有事件产生。Linux中该角色对应的就是I/O多路复用器，Java NIO中该角色对应的就是Selector；
+* **事件处理器（Event Handler）：**由多个回调方法构成，这些回调方法构成了与应用相关的对于某事件的反馈机制。Netty中该角色对应的就是ChannelHandler用于处理事件；
+* **具体事务处理器（Concrete Event Handler）：**事件处理器的具体实现，用于实现特定的业务逻辑，本质上就是开发者编写的针对各种不同事件的处理器；
+* **初始分发器/生成器（Initiation Dispatcher/Reactor）：**是模式的核心，定义了一些用于控制事件调度方式的规范，也提供了应用进行事件处理的注册、删除等机制。初始分发器会通过同步事件分离器来等待事件的发生，一旦事件发生，初始分发器会分离出事件，然后通过事件处理器和相应的处理方法处理该事件。Netty中ChannelHandler中的回调方法都是由BossGroup或WorkGroup中的某EventLoop来调用的。
+
+**工作流程：**
+
+![img](assets/285763-20180109170700254-466571682.jpg)
+
+1. 首先初始化Reactor，由应用程序通过 `register_handle()` 将若干个具体事件处理器和其感兴趣的事件注册到Reactor中；
+2. 事件由Handle标识，Reactor会通过 `get_handle()` 获取所有事件处理器对应的描述符并关联起来；
+3. 当所有事件注册完成，应用程序会通过 `handle_events()` 触发Reactor的事件循环机制；
+4. Reactor会通过 `select()` 让同步事件分离器去执行具体的事件循环，同步阻塞的等待事件发生；
+5. 当与某个事件对应的Handle变为ready就绪状态时，同步事件分离器就会通知Reactor；
+6. Reactor会获取就绪事件对应的处理器，且通过 `handle_event()` 调用回调方法去执行相应的逻辑。
+
+**单线程Reactor模式：**
+
+* 所谓的单线程，是指所有的I/O操作和业务操作都在同一个NIO线程上完成，一个NIO线程负责管理事件和处理器关联、事件循环、接收连接、分离事件和分配相应读写请求到处理器中执行。
+* 缺点：
+  * 所有的操作都在一个线程上处理，无法同时处理大量的连接，会出现性能瓶颈，或因为单个耗时操作导致所有的请求都会受到影响，大大延迟请求的响应或处理超时；
+  * 一旦这个单线程陷入死循环或其他问题，会导致整个系统无法对外提供服务，产生单点故障问题。
+
+![img](assets/4235178-4047d3c78bb467c9.png)
+
+**多线程Reactor模式：**
+
+* 由一组NIO线程处理I/O和业务操作。有一个专门的NIO线程用于监听服务端，接收客户端的TCP连接请求。而网络读写、业务操作则交由一个NIO线程池负责。
+* Reactor多线程模型可以满足大部分场景的性能要求。但在小部分情况下，一个NIO线程负责监听和处理所有的客户端连接可能会存在性能问题，如百万级客户端并发连接，或者服务端对客户端的握手信息进行安全认证等消耗性能的操作。这些场景下一个线程处理连接就会存在性能不足的问题。
+
+![img](assets/4235178-d570de7505817605.png)
+
+**主从多线程Reactor模式：**
+
+* 服务端用一个NIO线程池接收客户端的连接，即mainReactor。
+* 当接收连接请求并处理后（可能有接入认证等），将连接交付给另一个用于处理I/O和业务操作的NIO线程池负责后续工作，即subReactor。
+
+![img](assets/4235178-929a4d5e00c5e779.png)
+
+
+
+### Proactor主动器模式
+
+![img](assets/285763-20180124094933006-703582910.png)
+
+**模式结构：**
+
+* 句柄（Handle）：
+* 异步操作处理器（Asynchronous Operation Processor）：
+* 异步操作（Asynchronous Operation）：
+* 完成事件队列（Completion Event Queue）：
+* 主动器（Proactor）：
+* 完成事件接口（Completion Handler）：
+* 完成事件处理逻辑（Concrete Completion Handler）：
+
+![img](assets/285763-20180109170707910-135245243.jpg)
+
+**工作流程：**
+
+![img](assets/285763-20180109170715004-1183147013.jpg)
+
 
 
 ## Java的I/O模型
 
 ### BIO
 
-* Java角度：
+**Java角度：**
 
-  ```JAVA
-  public class SocketBIO {
-      
-      public static void main(String[] args) {
-          ServerSocket server = new ServerSocket(9090);
-          
-          while (true) {
-              final Socket client = server.accept();
-          	
-              new Thread(() -> {
-                  InputStream in = null;
-                  try {
-                      in = client.getInputStream();
-              		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-                      while (true) {
-                          String dataline = reader.readLine();
-                          if (null != dataline) {
-                              System.out.println(dataline);
-                          } else {
-                              client.close();
-                              break;
-                          }
-                 		}
-                  } catch(Exception e) { }    
-              });
-          }
-      }
-  }
-  ```
+```JAVA
+public class SocketBIO {
+    
+    public static void main(String[] args) {
+        ServerSocket server = new ServerSocket(9090);
+        
+        while (true) {
+            final Socket client = server.accept();
+        	
+            new Thread(() -> {
+                InputStream in = null;
+                try {
+                    in = client.getInputStream();
+            		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+                    while (true) {
+                        String dataline = reader.readLine();
+                        if (null != dataline) {
+                            System.out.println(dataline);
+                        } else {
+                            client.close();
+                            break;
+                        }
+               		}
+                } catch(Exception e) { }    
+            });
+        }
+    }
+}
+```
 
-* Kernel角度：
+**Kernel角度：**
 
-  ```shell
-  /usr/java/j2sdk1.4.2_19/bin/javac SocketBIO.java
-  ```
+```shell
+/usr/java/j2sdk1.4.2_19/bin/javac SocketBIO.java
+```
 
-  ```shell
-  strace -ff -o out /usr/java/j2sdk1.4.2_19/bin/java SocketBIO	# 最终应用程序的系统调用，并重定向到以out开头的文件中，每个线程一个文件
-  ```
+```shell
+strace -ff -o out /usr/java/j2sdk1.4.2_19/bin/java SocketBIO	# 最终应用程序的系统调用，并重定向到以out开头的文件中，每个线程一个文件
+```
 
-  * 通过`socket(PF_INET6, SOCKET_STREAM, IPPROTO_IP) = 3`创建TCP的流式套接字，返回套接字的文件描述符；
-  
-  * 通过`bind(3, {sa_famliy=AF_INET6, sin6_port=htons(9090), inet_pton(AF_INET6, "::", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, 24) = 0`为套接字绑定端口；
-  
+* 通过`socket(PF_INET6, SOCKET_STREAM, IPPROTO_IP) = 3`创建TCP的流式套接字，返回套接字的文件描述符；
+
+* 通过`bind(3, {sa_famliy=AF_INET6, sin6_port=htons(9090), inet_pton(AF_INET6, "::", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, 24) = 0`为套接字绑定端口；
+
 * 通过`listen(3, 50)`将套接字置为监听状态；
-  
-    ```SHELL
-    nc localhost 9090	# 开启一个本地客户端
-  ```
-  
-  * 通过`accept(3, {sa_family=AF_INET6, sin6_port=htons(53311), inet_pton(AF_INET6. "::1", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, [28]) = 5`阻塞用户线程，等待连接请求并接收，新建套接字，返回该套接字的文件描述符；
-  * 通过`clone(child_stack=0xea2bd494, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tidptr=0xea2bdbd8, tls=0xea2bdbd8, child_tidptr=0xffb2e44c) = 2386`创建子线程去处理，每个线程处理一个连接，返回进程描述符（PID）；
-  * 在子线程中，通过`recv(5, `读取套接字输入流（阻塞等待）。
 
-* BIO的缺点：
+```SHELL
+nc localhost 9090	# 开启一个本地客户端
+```
+
+* 通过`accept(3, {sa_family=AF_INET6, sin6_port=htons(53311), inet_pton(AF_INET6. "::1", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, [28]) = 5`阻塞用户线程，等待连接请求并接收，新建套接字，返回该套接字的文件描述符；
+* 通过`clone(child_stack=0xea2bd494, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tidptr=0xea2bdbd8, tls=0xea2bdbd8, child_tidptr=0xffb2e44c) = 2386`创建子线程去处理，每个线程处理一个连接，返回进程描述符（PID）；
+* 在子线程中，通过`recv(5, `读取套接字输入流（阻塞等待）。
+
+**BIO的缺点：**
 
 
 
 ### NIO
 
-* Java角度：
+**Java角度：**
 
-  ```JAVA
-  public class SocketNIO {
-      
-      public static void main(String[] args) {
-          LinkedList<SocketChannel> clients = new LinkedList<>();
-          
-          ServerSocketChannel ss = ServerSocketChannel.open();
-          ss.bind(new InetSocketAddress(9090));
-          ss.configureBlocking(false);
-      	
-          while (true) {
-              Thread.sleep(1000);
-              SocketChannel client = ss.accept();
-              if (client != null) {
-                  client.configureBlocking(false);
-                  int port = client.socket().getPort();
-                 	clients.add(client);
-              }
-              
-              ByteBuffer buffer = ByteBuffer.allocateDirect(4096);
-              for (SocketChannel c : clients) {
-                  int num = c.read(buffer);
-                  if (num > 0) {
-                      buffer.filp();
-                      byte[] aaa = new byte[buffer.limit()];
-                      buffer.get(aaa);
-                      
-                      String b = new String(aa);
-                 		System.out.println(c.socket().getPort() + ":" + b);
-                      buffer.clear();
-                  }
-              }
-          }
-      }
-  }
+```JAVA
+public class SocketNIO {
+    
+    public static void main(String[] args) {
+        LinkedList<SocketChannel> clients = new LinkedList<>();
+        
+        ServerSocketChannel ss = ServerSocketChannel.open();
+        ss.bind(new InetSocketAddress(9090));
+        ss.configureBlocking(false);
+    	
+        while (true) {
+            Thread.sleep(1000);
+            SocketChannel client = ss.accept();
+            if (client != null) {
+                client.configureBlocking(false);
+                int port = client.socket().getPort();
+               	clients.add(client);
+            }
+            
+            ByteBuffer buffer = ByteBuffer.allocateDirect(4096);
+            for (SocketChannel c : clients) {
+                int num = c.read(buffer);
+                if (num > 0) {
+                    buffer.filp();
+                    byte[] aaa = new byte[buffer.limit()];
+                    buffer.get(aaa);
+                    
+                    String b = new String(aa);
+               		System.out.println(c.socket().getPort() + ":" + b);
+                    buffer.clear();
+                }
+            }
+        }
+    }
+}
+```
+
+**Kernel角度：**
+
+* 首先通过`socket(PF_INET6, SOCK_STREAM, IPPROTO_IP) = 4`创建TCP的流式套接字，并返回套接字的文件描述符；
+
+* 通过`bind(4, {sa_famliy=AF_INET6, sin6_port=htons(9090), inet_pton(AF_INET6, "::", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, 28) = 0`为套接字绑定端口；
+
+* 通过`listen(4, 50)`将套接字置为监听状态；
+
+* 通过`fcntl(4, F_SETFL, 0_RDWR|0_NONBLOCK) = 0`将套接字设置为非阻塞状态；
+
+* 通过`accept(4, 0x7f00580f0070, [28]) = -1`接收连接请求，但不会阻塞线程，若是当前没有连接建立，则返回-1；
+
+  ```SHELL
+  nc localhost 9090	# 开启一个本地客户端
   ```
 
-* Kernel角度：
+* 通过`accept(4, {sa_family=AF_INET6, sin6_port=htons(53311), inet_pton(AF_INET6. "::1", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, [28]) = 5`接收连接建立，新建和连接对应的套接字，返回套接字的文件描述符；
+* 通过`fcntl(5, F_SETFL, 0_RDWR|0_NONBLOCK) = 0`将新的连接套接字设置为非阻塞；
+* 通过`read(5, 0x7f0003efcc10, 4096) = -1`读取套接输入流中的数据到大小为4096的缓冲区中，但不会阻塞线程，若是当前没有数据可读，则返回-1。
 
-  * 首先通过`socket(PF_INET6, SOCK_STREAM, IPPROTO_IP) = 4`创建TCP的流式套接字，并返回套接字的文件描述符；
-  
-  * 通过`bind(4, {sa_famliy=AF_INET6, sin6_port=htons(9090), inet_pton(AF_INET6, "::", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, 28) = 0`为套接字绑定端口；
-  
-  * 通过`listen(4, 50)`将套接字置为监听状态；
+**NIO的优缺点：**
 
-  * 通过`fcntl(4, F_SETFL, 0_RDWR|0_NONBLOCK) = 0`将套接字设置为非阻塞状态；
-  
-  * 通过`accept(4, 0x7f00580f0070, [28]) = -1`接收连接请求，但不会阻塞线程，若是当前没有连接建立，则返回-1；
-
-    ```SHELL
-    nc localhost 9090	# 开启一个本地客户端
-    ```
-  
-  * 通过`accept(4, {sa_family=AF_INET6, sin6_port=htons(53311), inet_pton(AF_INET6. "::1", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, [28]) = 5`接收连接建立，新建和连接对应的套接字，返回套接字的文件描述符；
-  * 通过`fcntl(5, F_SETFL, 0_RDWR|0_NONBLOCK) = 0`将新的连接套接字设置为非阻塞；
-  * 通过`read(5, 0x7f0003efcc10, 4096) = -1`读取套接输入流中的数据到大小为4096的缓冲区中，但不会阻塞线程，若是当前没有数据可读，则返回-1。
-
-* NIO的优缺点：
-  * 优点：避免了BIO的一个连接一个线程而导致存在大量线程造成的资源消耗巨大的问题，即会把大量资源用在线程的上下文切换上；
-  * 缺点：可能会存在大量无意义的系统调用，若是有1w个连接，但只有1个连接有数据读取，但NIO机制每次循环还是会发送1w次的read系统调用，即会把大量的资源用在用户态到内核态的切换上。
+* 优点：避免了BIO的一个连接一个线程而导致存在大量线程造成的资源消耗巨大的问题，即会把大量资源用在线程的上下文切换上；
+* 缺点：可能会存在大量无意义的系统调用，若是有1w个连接，但只有1个连接有数据读取，但NIO机制每次循环还是会发送1w次的read系统调用，即会把大量的资源用在用户态到内核态的切换上。
 
 
 
-### 多路复用器
+### IO多路复用
 
-* Java角度：
+**Java角度：**
 
-  ```JAVA
-  // JDK底层使用了epoll机制
-  public class SocketMultiplexingSingleThread {
-      
-      private ServerSocketChannel server = null;
-      private Selector selector = null;
-      int port = 9090;
-      
-      public void initServer() {
-          try {
-              server = ServerSocketChannel.open();
-              server.configureBlocking(false);
-              server.bind(new InetSocketAddress(port));
-              
-              selector = Selector.open();
-              server.register(selector, SelectionKey.OP_ACCEPT);
-          } catch (IOException e) {
-              e.printStackTrace();
-          }
-      }
-      
-      public void start() {
-          initServer();
-          try {
-              while (true) {
-                  Set<SelectionKey> keys = selector.keys();
-                  while (selector.select(500) > 0) {
-                      Set<SelectionKey> selectionKeys = selector.selectedKeys();
-                      Iterator<SelectionKey> iter = selectionKeys.iterator();
-                      while (iter.hasNext()) {
-                          SelectionKey key = iter.next();
-                          iter.remove();
-                          if (key.isAcceptable()) {
-                          	// 连接处理器
-                              acceptHandler(key);
-                          } else if (key.isReadable()) {
-                              // 读处理器
-                              key.cancel();
-                              readHandler(key);
-                          } else if (key.isWritable()) {
-                              // 写处理器
-                              key.cancel();
-                              writeHandler(key);
-                          }
-                      }
-                  }
-              }
-          } catch (IOException e) {
-              e.printStackTrace();
-          }
-      }
-      
-      public void acceptHandler(SelectionKey key) {
-          try {
-              ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
-              SocketChannel client = ssc.accept();
-              client.configureBlocking(false);
-              
-              ByteBuffer buffer = ByteBuffer.allocate(8192);
-  			client.register(selector, SelectionKey.OP_READ, buffer);
-          } catch (IOException e) {
-          	e.printStackTrace(); 
-          }
-      }
-      
-      public void readHandler(SelectionKey key) {
-          SocketChannel client = (SocketChannel) key.channel();
-          ByteBuffer buffer = (ByteBuffer) key.attachment();
-          buffer.clear();
-          int read = 0;
-          try {
-              while (true) {
-                  
-              }
-          } catch (IOException e) {
-              e.printStackTrace();
-          }
-      }
-  }
+```JAVA
+// JDK底层使用了epoll机制
+public class SocketMultiplexingSingleThread {
+    
+    private ServerSocketChannel server = null;
+    private Selector selector = null;
+    int port = 9090;
+    
+    public void initServer() {
+        try {
+            server = ServerSocketChannel.open();
+            server.configureBlocking(false);
+            server.bind(new InetSocketAddress(port));
+            
+            selector = Selector.open();
+            server.register(selector, SelectionKey.OP_ACCEPT);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public void start() {
+        initServer();
+        try {
+            while (true) {
+                Set<SelectionKey> keys = selector.keys();
+                while (selector.select(500) > 0) {
+                    Set<SelectionKey> selectionKeys = selector.selectedKeys();
+                    Iterator<SelectionKey> iter = selectionKeys.iterator();
+                    while (iter.hasNext()) {
+                        SelectionKey key = iter.next();
+                        iter.remove();
+                        if (key.isAcceptable()) {
+                        	// 连接处理器
+                            acceptHandler(key);
+                        } else if (key.isReadable()) {
+                            // 读处理器
+                            key.cancel();
+                            readHandler(key);
+                        } else if (key.isWritable()) {
+                            // 写处理器
+                            key.cancel();
+                            writeHandler(key);
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public void acceptHandler(SelectionKey key) {
+        try {
+            ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
+            SocketChannel client = ssc.accept();
+            client.configureBlocking(false);
+            
+            ByteBuffer buffer = ByteBuffer.allocate(8192);
+			client.register(selector, SelectionKey.OP_READ, buffer);
+        } catch (IOException e) {
+        	e.printStackTrace(); 
+        }
+    }
+    
+    public void readHandler(SelectionKey key) {
+        SocketChannel client = (SocketChannel) key.channel();
+        ByteBuffer buffer = (ByteBuffer) key.attachment();
+        buffer.clear();
+        int read = 0;
+        try {
+            while (true) {
+                
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+**Kernel的角度看select/poll：**
+
+* 通过socket创建套接字，返回文件描述符；
+* 通过bind为套接字绑定端口；
+* 通过listen将套接字置为监听状态；
+* 通过select或poll将所有套接字的文件描述符注册给多路复用器（select对文件描述符的个数有限制，poll取消了限制），并使用户线程阻塞在select/poll这个系统调用上；
+* 当内核遍历发现有文件描述符变为可连接或可读写等状态时，select/poll会返回，然后再通过accept或read去处理相应的事件。
+
+**select/poll的优缺点：**
+
+* 优点：通过一次系统调用，将所有文件描述符传递给内核，由内核进行遍历，直到相应事件的发生，这种方式相对于NIO减少了系统调用的次数，即避免了用户态到内核态的频繁切换，节省资源；
+* 缺点：
+  * 每次调用select/poll系统调用时都需要传递文件描述符，解决方案是在内核开辟一块空间保存文件描述符避免重复传递；
+  * 每次调用select/poll系统调用时还会让内核重新遍历一遍文件描述符。
+
+**Kernel的角度看epoll：**
+
+* 通过`socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 4`创建套接字，并返回其文件描述符；
+
+* 通过`fcntl(4, F_SETFL, O_RDWR|O_NONBLOCK) = 0`将套接字设置为非阻塞；
+
+* 通过`bind(4, {sa_family=AF_INET, sin_port=htons(9090)})`为套接字绑定端口；
+
+* 通过`listen(4, 50)`将套接字设置为监听状态；
+
+* 通过``epoll_create(256) = 7``初始化多路复用器，并在内核空间建立一块用于保留套接字文件描述符的红黑树结构；
+
+* 通过`epoll_ctl(7, EPOLL_CTL_ADD, 4, {EPOLLIN, {u32=4, u64=13736798553693487108}}) = 0`将初始套接字的文件描述符加入红黑树；
+
+* 通过`epoll_wait(7, {{EPOLLIN, {u32=4, u64=13736798553693487108}}}, 4096, -1) = 1`阻塞用户线程，交由内核监听rbtree上的fd，当fd的状态发生变化时，即发生连接和读写等事件后，返回事件的数量；
+
+  ```SHELL
+  nc localhost 9090	# 开启一个本地客户端
   ```
 
-* Kernel的角度看select/poll：
+* 若发生的事件是连接请求，则通过`accept(4, {sa_family=AF_INET, sin_port=htons(53687), sin_addr=inet_addr("127.0.0.1")}, [16]) = 8`接收连接，为连接建立套接字，并返回其文件描述符； 
 
-  * 通过socket创建套接字，返回文件描述符；
-  * 通过bind为套接字绑定端口；
-  * 通过listen将套接字置为监听状态；
-  * 通过select或poll将所有套接字的文件描述符注册给多路复用器（select对文件描述符的个数有限制，poll取消了限制），并使用户线程阻塞在select/poll这个系统调用上；
-  * 当内核遍历发现有文件描述符变为可连接或可读写等状态时，select/poll会返回，然后再通过accept或read去处理相应的事件。
+* 接收连接后，接着通过`epoll_ctl(7, EPOLL_CTL_ADD, 8, {EPOLLIN, {u32=8, u64=13823012355644063752}}) = 0`将连接套接字的文件描述符添加到红黑树上；
 
-* select/poll的优缺点：
-
-  * 优点：通过一次系统调用，将所有文件描述符传递给内核，由内核进行遍历，直到相应事件的发生，这种方式相对于NIO减少了系统调用的次数，即避免了用户态到内核态的频繁切换，节省资源；
-  * 缺点：
-    * 每次调用select/poll系统调用时都需要传递文件描述符，解决方案是在内核开辟一块空间保存文件描述符避免重复传递；
-    * 每次调用select/poll系统调用时还会让内核重新遍历一遍文件描述符。
-
-* Kernel的角度看epoll：
-
-  * 通过`socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 4`创建套接字，并返回其文件描述符；
-
-  * 通过`fcntl(4, F_SETFL, O_RDWR|O_NONBLOCK) = 0`将套接字设置为非阻塞；
-
-  * 通过`bind(4, {sa_family=AF_INET, sin_port=htons(9090)})`为套接字绑定端口；
-
-  * 通过`listen(4, 50)`将套接字设置为监听状态；
-
-  * 通过``epoll_create(256) = 7``初始化多路复用器，并在内核空间建立一块用于保留套接字文件描述符的红黑树结构；
-
-  * 通过`epoll_ctl(7, EPOLL_CTL_ADD, 4, {EPOLLIN, {u32=4, u64=13736798553693487108}}) = 0`将初始套接字的文件描述符加入红黑树；
-
-  * 通过`epoll_wait(7, {{EPOLLIN, {u32=4, u64=13736798553693487108}}}, 4096, -1) = 1`阻塞用户线程，交由内核监听rbtree上的fd，当fd的状态发生变化时，即发生连接和读写等事件后，返回事件的数量；
-
-    ```SHELL
-    nc localhost 9090	# 开启一个本地客户端
-    ```
-
-  * 若发生的事件是连接请求，则通过`accept(4, {sa_family=AF_INET, sin_port=htons(53687), sin_addr=inet_addr("127.0.0.1")}, [16]) = 8`接收连接，为连接建立套接字，并返回其文件描述符； 
-
-  * 接收连接后，接着通过`epoll_ctl(7, EPOLL_CTL_ADD, 8, {EPOLLIN, {u32=8, u64=13823012355644063752}}) = 0`将连接套接字的文件描述符添加到红黑树上；
-
-  * 循环去通过epoll_wait监听事件、接收连接、添加套接字fd、处理读写请求，以此构建出使用epoll多路复用机制的服务器。
-
-* epoll和多线程结合使用：
-
-  ```JAVA
-  public class SocketMultiplexingThreads {
-      
-      private ServerSocketChannel server = null;
-      private Selector selector1 = null;
-      private Selector selector2 = null;
-      private Selector selector3 = null;
-      int port = 9090;
-      
-      public void initServer() {
-          try {
-              server = ServerSocketChannel.open();
-              server.configureBlocking(false);
-              server.bind(new InetSocketAddress(port));
-              selector1 = Selector.open();
-              selector2 = Selector.open();
-              selector3 = Selector.open();
-  			server.register(selector1, SelectionKey.OP_ACCEPT);
-          } catch (IOException e) {
-              e.printStackTrace();
-          }
-      }
-      
-      public static void main(String[] args) {
-          SocketMultiplexingThreads service = new SocketMultiplexingThreads();
-          service.initServer();
-          NioThread T1 = new NioThread(service.selector1, 2);
-          NioThread T1 = new NioThread(service.selector2);
-          NioThread T1 = new NioThread(service.selector3);
-          
-          T1.start();
-          try {
-              
-          } catch (InterruptedException e) {
-              e.printStackTrace();
-          }
-          T2.start();
-          T3.start();
-      }
-  }
-  
-  class NioThread extends Thread {
-      
-      Selector selector = null;
-      static int selectors = 0;
-      
-      int id = 0;
-      volatile static BlockingQueue<SocketChannel>[] queue;
-      static AtomicInteger idx = new AtomicInteger();
-      
-      NioThread(Selector sel, int n) {
-          this.selector = sel;
-          this.selectors = n;
-          
-          queue = new LinkedBlockingQueue[selectors];
-          for (int i = 0; i < n; i++) {
-              queue[i] = new LinkedBlockingQueue<>();
-          }
-      }
-      
-      NioThread(Selector sel) {
-          this.selector = sel;
-          id = idx.getAndIncrement() % selectors;
-      }
-      
-      @Override
-      public void run() {
-  		try {
-              while (true) {
-                  while (selector.select(10) > 0) {
-                      Set<SelectionKey> selectionKeys = selector.selectedKeys();
-                      Iterator<SelectionKey> iter = selectionKeys.iterator();
-                      while (iter.hasNext()) {
-                          SelectionKey key = iter.next();
-                          iter.remove();
-                          if (key.isAcceptable()) {
-                              acceptHandler(key);
-                          } else if (key.isReadable()) {
-                              readHandler(key);
-                          }
-                      }
-                  }
-                  if (!queue[id].isEmpty()) {
-                      ByteBuffer buffer = ByteBuffer.allocate(8192);
-                      SocketChannel client = queue[id].take();
-                      client.register(selector, SelectionKey.OP_READ, buffer);
-                  }
-              }
-          } catch (IOException e) {
-              e.printStackTrace();
-          }     
-      }
-      
-      public void acceptHandler(SelectionKey key) {
-          try {
-              ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
-              SockerChannel client = ssc.accept();
-              client.configureBlocking(false);
-              int num = idx.getAndIncrement() % selectors;
-              queue[num].add(client);
-          } catch (IOException e) {
-              e.printStackTrace();
-          }
-      }
-  }
-  ```
+* 循环去通过epoll_wait监听事件、接收连接、添加套接字fd、处理读写请求，以此构建出使用epoll多路复用机制的服务器。
 
 
 
@@ -4358,11 +4372,28 @@ protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, O
 
 ## Netty的线程模型
 
-### Reactor单线程模型
+Netty的线程模式是基于Reactor模式实现的。
 
-### Reactor多线程模型
+**结构对应：**
 
-### 主从Reactor多线程模型
+* NioEventLoop —— 初始化分发器/反应器（Initiation Dispatcher）；
+* Selector —— 同步事件分离器（Synchronous EventDemultiplexer）；
+* ChannelHandler —— 事件处理器（Event Handler）；
+* 具体的ChannelHandler实现 —— 具体的事件存储器。
+
+**模式对应：**
+
+* NioEventLoop（bossGroup） —— mainReactor；
+* NioEventLoop（workGroup）—— subReactor。
+* ServerBootstrapAcceptor —— acceptor。
+
+**工作流程：**
+
+1. 当服务端程序启动时，会配置ChannelPipeline（ChannelHandler链，事件处理器调用链）。事件的发生会触发ChannelHandler中的方法，这个事件会在ChannelPipline链上传播；
+2. 然后从bossGroup事件循环池中取出一个NioEventLoop来实现服务端的绑定操作，并将对应的ServerSockerChannel注册到该NioEventLoop的Selector上，且注册ACCEPT事件为其感兴趣的事件；
+3. NioEventLoop事件循环启动，开始监听客户端的连接请求；
+4. 当有请求发起时，bossGroup中的NioEventLoop会监听到该ACCEPT事件的发生，会通过accept()接受这个连接并创建对应的SocketChannel，然后触发ChannelRead事件，即ChannelHandler中的channelRead()方法会得到回调，该事件会在ChannelPipline中的ChannelHandler链上传播执行；
+5. ServerBootstrapAcceptor的readChannel()方法会将客户端的SocketChannel注册到workerGroup中的某个NioEventLoop的Selector上，并注册READ事件为SocketChanel所感兴趣的事件。最后启动SocketChannel所在的NioEventLoop，开始为客户端和服务器端进行通信。
 
 
 
@@ -4371,32 +4402,33 @@ protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, O
 ### 服务端
 
 ```JAVA
-// 1.bossGroup ⽤于接收连接， workerGroup ⽤于具体的处理
+// NioEventLoopGroup实例--bossGroup⽤于处理客户端的连接
 EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+// NioEventLoopGroup实例--workerGroup⽤于数据处理
 EventLoopGroup workerGroup = new NioEventLoopGroup();
 try {
-    //2.创建服务端启动引导/辅助类： ServerBootstrap
+    // 创建服务端启动引导类ServerBootstrap
     ServerBootstrap b = new ServerBootstrap();
-    //3.给引导类配置两⼤线程组,确定了线程模型
+    // 给引导类配置两⼤线程组，确定Netty的线程模型
     b.group(bossGroup, workerGroup)
-	// (⾮必备)打印⽇志
 	.handler(new LoggingHandler(LogLevel.INFO))
-	// 4.指定 IO 模型
+	// 指定NIO模型
 	.channel(NioServerSocketChannel.class)
+    // channel处理器
 	.childHandler(new ChannelInitializer<SocketChannel>() {
-    	@Override
+        @Override
         public void initChannel(SocketChannel ch) {
         	ChannelPipeline p = ch.pipeline();
-           	// 5.可以⾃定义客户端消息的业务处理逻辑
+           	// ⾃定义客户端消息的业务处理逻辑
        		p.addLast(new HelloServerHandler());
         }
     });
-    // 6.绑定端⼝,调⽤ sync ⽅法阻塞知道绑定完成
+    // 阻塞绑定端⼝
     ChannelFuture f = b.bind(port).sync();
-    // 7.阻塞等待直到服务器Channel关闭(closeFuture()⽅法获取Channel 的CloseFuture对象,然后调⽤sync()⽅法)
+    // 阻塞等待直到服务端的Channel关闭
     f.channel().closeFuture().sync();
 } finally {
-    //8.优雅关闭相关线程组资源
+    // 优雅关闭相关线程组资源
     bossGroup.shutdownGracefully();
     workerGroup.shutdownGracefully();
 }
@@ -4407,26 +4439,26 @@ try {
 ### 客户端
 
 ```JAVA
-//1.创建⼀个 NioEventLoopGroup 对象实例
+// 创建NioEventLoopGroup对象实例
 EventLoopGroup group = new NioEventLoopGroup();
 try {
-    //2.创建客户端启动引导/辅助类： Bootstrap
+    // 创建客户端启动引导类Bootstrap
     Bootstrap b = new Bootstrap();
-    //3.指定线程组
+    // 指定线程组
     b.group(group)
-    //4.指定 IO 模型
+    // 指定NIO模型
     .channel(NioSocketChannel.class)
     .handler(new ChannelInitializer<SocketChannel>() {
         @Override
         public void initChannel(SocketChannel ch) throws Exception {
             ChannelPipeline p = ch.pipeline();
-            // 5.这⾥可以⾃定义消息的业务处理逻辑
+            // ⾃定义消息的业务处理逻辑
             p.addLast(new HelloClientHandler(message));
         }
     });
-    // 6.尝试建⽴连接
+    // 阻塞建⽴连接
     ChannelFuture f = b.connect(host, port).sync();
-    // 7.等待连接关闭（阻塞，直到Channel关闭）
+    // 阻塞等待连接关闭
     f.channel().closeFuture().sync();
 } finally {
 	group.shutdownGracefully();
@@ -4435,11 +4467,36 @@ try {
 
 
 
-## Netty-TCP的粘包/拆包问题
+## Netty解决TCP的粘包/拆包问题
+
+**什么是TCP粘包/拆包？**就是基于TCP发送数据时，出现了多个字符串粘在一起或是一个字符串被拆开的情况。
+
+**使用Netty的解码器解决：**
+
+* LineBasedFrameDecoder：发送端发送数据包时，每个数据包之间以换行符做为分隔，该解码器的工作原理就是依次比哪里ByteBuf中的可读字节，判断是否有换行符，然后进行对应的截取；
+* DelimiterBasedFrameDecoder：即可自定义分隔符解码器，LineBasedFrameDecoder就是DelimiterBasedFrameDecoder的一种自定义实现；
+* FixedLengthFrameDecoder：固定长度解码器，能够按照指定的长度对消息进行相应的拆包；
+* LengthFieldBasedFrameDecoder：自定义长度解码器。
+
+
 
 ## Netty的长连接和心跳机制
 
+**Netty的长连接机制即TCP的长连接机制：**当通信双方建立连接后，就不会轻易断开连接，而是维持一段时间，在这段时间内双方的数据收发不需要事先建立连接。
+
+**Netty的心跳机制：**在TCP保持长连接的过程中，可能会出现网络异常导致连接中断，因此Netty在应用层引入了心跳机制让通信双方能够知道对方是否在线。心跳机制的原理是client与server之间若一定的时间没有数据交互时，即处于idle状态，client就会发送一个特殊的报文，当server接收到后也会回复一个，即完成了依次PING-PONG交互。所以，当一方收到对方的心跳报文后，就知道其仍然在线。
+
+
+
 ## Netty的零拷贝机制
+
+操作系统层面的零拷贝机制是指避免用户态和内核态之间来回拷贝数据，而划分出的共享空间供双方操作。
+
+Netty的零拷贝机制体现在以下几个方面：
+
+* 提供CompositeByteBuf类，可以将多个ByteBuf合并为一个逻辑上的ByteBuf，避免了各个ByteBuf间的拷贝；
+* ByteBuf支持slice分片操作，因此可以将ByteBuf分解为多个共享同一存储区域的ByteBuf，避免了内存的拷贝；
+* 通过FileRegion包装的FileChannel.tranferTo实现文件传输，可以直接将文件缓冲区的数据发送到目标Channel，避免了传统的write循环方式导致的内存拷贝问题。
 
 
 
@@ -4469,15 +4526,9 @@ try {
 
 ### 进程在Linux中的实现
 
-* Linux进程：处于执行期的程序以及相关资源（打开的文件、挂起的信号、内核内部数据、处理器状态）的总称。 
+* **Linux进程：**处于执行期的程序以及相关资源（打开的文件、挂起的信号、内核内部数据、处理器状态）的总称。 
 
-* Linux线程：是在进程中活动的对象，每个线程都拥有一个独立的程序计数器、栈空间和一组寄存器。内核调度的对象是线程，而不是进程。Linux不区分进程和线程，对它来说线程就是一种特殊的进程。
-
-* 现代操作系统的两种虚拟机制与进程的关系： 
-
-  * 虚拟处理器：给进程一种假象，让其觉得自己在独享处理器；
-  * 虚拟内存：让进程在分配和管理内存时觉得自己拥有整个系统的内存资源。
-  * 线程间共享虚拟内存，都拥有自己的虚拟处理器。
+* **Linux线程：**是在进程中活动的对象，每个线程都拥有一个独立的程序计数器、栈空间和一组寄存器。内核调度的对象是线程，而不是进程。Linux不区分进程和线程，对它来说线程就是一种特殊的进程。
 
 * **进程描述符**：内核将其管理的所有进程存放在一个叫做任务队列的双向循环链表中，链表中的每一项类型都为`task_struct`，称为进程描述符结构，描述了一个具体进程的所有信息。
 
@@ -4501,16 +4552,6 @@ try {
   ```
 
 * **分配进程描述符**：Linux通过slab分配器分配进程描述符结构，这样能够对象复用和缓存着色。每个任务的`thread_info`结构在其内核栈尾端分配，其中task域存放的是指向该任务实际的进程描述符的指针。
-
-* 进程状态：
-
-  * 进程描述符中的state域描述了进程的当前状态。 
-  * TASK_RUNNING：运行或就绪状态，此时进程是可执行的；
-  * TASK_INTERRUPTIBLE：可中断睡眠状态；
-  * TASK_UNINTERRUPTIBLE：不可中断睡眠状态；
-  * __TASK_TRACED：被其他进程更正的进程，如ptrace调试的程序；
-
-* __TASK_STOPPED：被暂停执行的任务，通常在接收到SIGSTOP、SIGTSTP、SIGTTIN、SIGTTOU等信号时。
 
 * **进程家族树**：所有的进程都是PID为1的init进程的后代，内核在系统启动的最后阶段启动init进程，该进程读取系统的初始化脚本并执行其他的相关程序，最终完成整个系统启动的过程。每个进程描述符结构都包含一个指向其父进程描述符结构的parent指针，还包含一个children列表。
 
