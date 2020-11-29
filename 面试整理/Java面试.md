@@ -1,5 +1,3 @@
-
-
 # Java多线程高并发
 
 ## 进程和线程的区别
@@ -44,11 +42,11 @@
   ```
 
   ```java
-  [5] Attach Listener 	// 添加事件
-  [4] Signal Dispatcher	// 分发处理给 JVM 信号的线程
-  [3] Finalizer			// 调⽤对象 finalize ⽅法的线程
-  [2] Reference Handler 	// 清除 reference 线程
-  [1] main 				// main 线程，即程序⼊⼝
+  [5] Attach Listener // 添加事件
+  [4] Signal Dispatcher // 分发处理给 JVM 信号的线程
+  [3] Finalizer // 调⽤对象 finalize ⽅法的线程
+  [2] Reference Handler // 清除 reference 线程
+  [1] main // main 线程，即程序⼊⼝
   ```
 
 **以JVM的角度来看：**
@@ -85,9 +83,7 @@ public class MyRunnable implements Runnable {
 		// ...        
     }
 }
-```
 
-```java
 public static void main(String[] args) {
     new Thread(new MyRunnable()).start();
 }
@@ -99,12 +95,10 @@ public static void main(String[] args) {
 public class MyCallable implements Callable<Integer> {
     
     public Integer call() {
-        return 123;
+        // ...
     }
 }
-```
 
-```java
 public static void main(String[] args) throws ExecutionException, InterruptedException {
     MyCallable mc = new MyCallable();
     FutureTask<Integer> ft = new FutureTask<>(mc);
@@ -122,9 +116,7 @@ public class MyThread extends Thread {
         // ...
     }
 }
-```
 
-```java
 public static void main(String[] args) {
     new MyThread().start();
 }
@@ -1464,9 +1456,9 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-# 2.从计算机组成到操作系统再到JVM
+# 从计算机组成到操作系统再到JVM
 
-## 计算机的冯·诺依曼体系
+## 计算机组成-冯·诺依曼体系
 
 * 计算机由**运算器、存储器、控制器、输入设备和输出设备**五大部件组成：
   * 运算器：用于完成算术运算和逻辑运算，并能够暂存中间结果；
@@ -1484,7 +1476,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## 计算机的数据与运算
+## 计算机组成-数据与运算
 
 ### 位运算
 
@@ -1772,7 +1764,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## 计算机的层次存储系统
+## 计算机组成-层次存储系统
 
 * **存储器层次**：远程文件存储 -> 磁盘 -> 主存 -> 三级缓存 -> 二级缓存 -> 一级缓存 -> CPU寄存器；
 
@@ -1798,7 +1790,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## 计算机的指令系统
+## 计算机组成-指令系统
 
 ### 指令格式
 
@@ -1829,7 +1821,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## 计算机的中央处理器
+## 计算机组成-中央处理器
 
 <img src="assets/1542615-20200430175412824-1862426202.png" alt="img" style="zoom: 67%;" />
 
@@ -1868,7 +1860,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## 计算机的I/O系统
+## 计算机组成-I/O系统
 
 ### 磁盘结构
 
@@ -1917,7 +1909,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## 操作系统及其内核
+## 操作系统-基本概念
 
 **什么是操作系统？**是一种运行在硬件系统上的特殊的软件程序，既能管理计算机的硬件和软件资源，又能为用户提供与系统交互的界面，内核就是操作系统的核心逻辑；
 
@@ -1937,7 +1929,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## 操作系统启动流程
+## 操作系统-启动流程
 
 1. 开机，首先给主板通电；
 2. 主板上有一块BIOS芯片会加电自检，检测硬件的故障问题，自检完毕后加载bootloader到内存；
@@ -1948,7 +1940,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## 操作系统的处理器管理
+## 操作系统-处理器管理
 
 * 处理器：
   * 特权指令和非特权指令：
@@ -2061,7 +2053,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## 操作系统的系统调用
+## 操作系统-系统调用
 
 **内核态和用户态**：
 
@@ -2110,7 +2102,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## 操作系统的进程管理
+## 操作系统-进程管理
 
 ### 进程和线程
 
@@ -2305,7 +2297,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## 操作系统的死锁问题
+## 操作系统-死锁问题
 
 ### 必要条件
 
@@ -2388,7 +2380,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## 操作系统的内存管理
+## 操作系统-内存管理
 
 ### 内存管理概述
 
@@ -2449,7 +2441,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## 操作系统的虚拟内存管理
+## 操作系统-虚拟内存管理
 
 ### 虚拟内存概述
 
@@ -2552,7 +2544,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## 操作系统的设备管理
+## 操作系统-设备管理
 
 ### 磁盘结构
 
@@ -2574,19 +2566,19 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
   * 寻道时间：制动手臂转动，使得磁头移动到适当的磁道上。寻道时间最长，因此磁盘调度的主要目标是使磁盘的平均寻道时间最短；
   * 实际的数据传输时间。
 
-* **先来先服务（FCFS，First Come First Served）：**按照磁盘请求的顺序进行调度。优点是公平简单，缺点是未对寻道做任何优化，使平均寻道时间较长；
+* **先来先服务（FCFS，First Come First Served）**：按照磁盘请求的顺序进行调度。优点是公平简单，缺点是未对寻道做任何优化，使平均寻道时间较长；
 
-* **最短寻道时间优先（SSTF，Shortest Seek Time First）：**优先调度与当前磁头所在磁道距离最近的磁道。虽然平均寻道时间较低，但是不够公平。如果新到达的磁道请求总是比一个在等待的磁道请求近，那么在等待的磁道请求会一直等待下去，即出现了饥饿现象；
+* **最短寻道时间优先（SSTF，Shortest Seek Time First）**：优先调度与当前磁头所在磁道距离最近的磁道。虽然平均寻道时间较低，但是不够公平。如果新到达的磁道请求总是比一个在等待的磁道请求近，那么在等待的磁道请求会一直等待下去，即出现了饥饿现象；
 
   ![磁盘调度算法1](assets/磁盘调度算法1.png)
 
-* **电梯算法（SCAN）：**电梯总是保持一个方向运行，直到该方向没有请求为止，然后改变运行方向。电梯算法又称扫描算法，其和电梯的运行过程类似，总是朝着一个方向进行磁盘调度，直到该方向上没有未完成的磁盘请求，然后改变方向。因为扫描范围更广，因此所有磁盘请求都会被满足，解决了SSFT的饥饿问题。
+* **电梯算法（SCAN）**：电梯总是保持一个方向运行，直到该方向没有请求为止，然后改变运行方向。电梯算法又称扫描算法，其和电梯的运行过程类似，总是朝着一个方向进行磁盘调度，直到该方向上没有未完成的磁盘请求，然后改变方向。因为扫描范围更广，因此所有磁盘请求都会被满足，解决了SSFT的饥饿问题。
 
   ![磁盘调度算法2](assets/磁盘调度算法2.png)
 
 
 
-## JVM的内存结构
+## JVM-内存结构
 
 ### 整体结构
 
@@ -2707,7 +2699,7 @@ JDK1.7之后，JVM已经将运行时常量池从方法区移动到堆空间的�
 
 
 
-## JVM创建对象的过程
+## JVM-对象的创建过程
 
 ![image-20201101155425804](assets/image-20201101155425804.png)
 
@@ -2752,7 +2744,7 @@ JDK1.7之后，JVM已经将运行时常量池从方法区移动到堆空间的�
 
 
 
-## JVM的垃圾回收机制
+## JVM-垃圾回收机制
 
 ### 对象的访问定位方式
 
@@ -2828,7 +2820,7 @@ public class Test {
 
 
 
-## JVM的垃圾回收算法
+## JVM-垃圾回收算法
 
 ### 标记-清除算法
 
@@ -2872,7 +2864,7 @@ public class Test {
 
 
 
-## JVM的垃圾回收器
+## JVM-垃圾回收器
 
 <div align="center"> <img src="https://cs-notes-1256109796.cos.ap-guangzhou.myqcloud.com/c625baa0-dde6-449e-93df-c3a67f2f430f.jpg" width=""/> </div><br>
 
@@ -2975,7 +2967,7 @@ CMS（Concurrent Mark Sweep）收集器是一种以获取最短停顿时间为�
 
 
 
-## JVM的内存分配和回收策略
+## JVM-内存分配和回收策略
 
 ### Minor GC和Full GC
 
@@ -3013,7 +3005,7 @@ CMS（Concurrent Mark Sweep）收集器是一种以获取最短停顿时间为�
 
 
 
-## JVM的类加载机制
+## JVM-类加载机制
 
 ### 类文件结构
 
@@ -3177,9 +3169,9 @@ protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundE
 
 
 
-# 3.从I/O模型到计算机网络再到Netty
+# 从I/O模型到计算机网络再到Netty
 
-## Linux的Socket API
+## I/O模型-Linux的Socket API
 
 网络应用进程通信时需要通过API接口请求底层协议的服务，如传输层服务，目前因特网最广泛的应用编程接口就是Socket API。Linux内核也实现了Socket API，实现了底层协议的封装。
 
@@ -3274,7 +3266,7 @@ ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
 
 
 
-## Linux的五种I/O模型
+## I/O模型-Linux的五种I/O模型
 
 ### I/O相关概念
 
@@ -3338,7 +3330,7 @@ ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
 
 ### I/O多路复用
 
-<img src="assets/20180630234720199" alt="这里写图片描述" style="zoom:67%;" />
+![img](assets/166e31ccf057bd4d)
 
 * 使用单个进程同时处理多个网络连接的IO。基本原理就是不再有应用程序自己监视连接，取而代之是由内核替应用程序监视文件描述符；
 * 以select为例，当用户进程调用了select，那么整个进程会被阻塞，而同时，kernel会监视所有select负责的socket，当任何一个socket中的数据准备好了，select就会返回，这时用户进程再通过recvfrom系统调用，触发并等待数据从内核拷贝到用户进程；
@@ -3385,7 +3377,7 @@ ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
 
 
 
-## Linux的I/O多路复用
+## I/O模型-Linux的I/O多路复用模型
 
 **文件描述符（File Descriptor）：**用于表述指向文件引用的抽象化概念。fd在形式上是一个非负整数，实际上是一个索引值，指向内核为每一个进程所维护的该进程打开文件的记录表。当程序打开一个现有文件或创建一个新文件时，内核向进程返回一个文件描述符。
 
@@ -3529,31 +3521,31 @@ int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout
 
 
 
-### 内存映射mmap
+## I/O模型-Linux的零拷贝技术
 
+### mmap
 
+### sendfile
 
-### 零拷贝sendfile
-
-系统调用：
+**系统调用：**
 
 ```c
 ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count)
 ```
 
-* `out_fd`：
-* `in_fd`：
-* `offset`：
-* `count`：
+* `out_fd`：等待读数据的fd；
+* `in_fd`：等待写数据的fd；
+* `offset`：在正式开始读取数据时向前偏移的byte数；
+* `count`：在两个fd直接移动的byte数。
 
-传统IO发送文件到Socket的步骤：
+**传统IO发送文件到Socket的步骤：**
 
 * 硬盘 -> 内核buffer -> 用户buffer -> 内核Socket buffer -> 协议引擎。共经过2次陷入。
-* 硬件驱动到内核缓冲区的DMA拷贝、内核缓冲区到用户缓冲区的CPU拷贝、用户缓冲区到内核Socket缓冲区的CPU拷贝、Socket缓冲区到协议引擎的DMA拷贝。共经过4次拷贝。
+* 硬件驱动到内核缓冲区的DMA拷贝（read()调用）-> 内核缓冲区到用户缓冲区的CPU拷贝（read()返回） -> 用户缓冲区到内核Socket缓冲区的CPU拷贝（write()调用） -> Socket缓冲区到协议引擎的DMA拷贝（write()返回）。共经过4次拷贝。
 
 ![img](assets/180879d0ee95d3b22f9061b46cdabb13_720w.jpg)
 
-sendfile发送文件到Socket的步骤：
+**sendfile发送文件到Socket的步骤：**
 
 * 硬盘 -> 内核缓冲区 -> 内核Socket缓冲区 -> 协议引擎。不需要任何陷入，所有操作都在内核完成。
 * 硬件驱动到内核缓冲区的DMA拷贝、内核缓冲区到内核Socket缓冲区的CPU拷贝、内核Socket缓冲区到协议引擎的DMA拷贝。共经过3次拷贝。
@@ -3562,19 +3554,21 @@ sendfile发送文件到Socket的步骤：
 
 
 
-## 高性能的I/O设计模式
+## I/O模型-高性能的I/O设计模式
 
 ### Reactor反应器模式
 
 **模式结构：**
 
-![img](assets/4235178-2d83a09abf0a3436.png)
+<img src="assets/4235178-2d83a09abf0a3436.png" alt="img" style="zoom:50%;" />
 
 * **文件描述符（Handle）：**由操作系统提供，用于表示一个事件，事件既可以来自外部，也可以来自内部。外部事件如Socket描述符的客户端连接请求、客户端发送的数据等。内部事件如操作系统的定时事件等；
 * **同步事件分离器（Synchronous Event Demultiplexer）：**是一个系统调用，用于等待一个或多个事件的发生。调用方会阻塞在它之上，直到分离器上有事件产生。Linux中该角色对应的就是I/O多路复用器，Java NIO中该角色对应的就是Selector；
 * **事件处理器（Event Handler）：**由多个回调方法构成，这些回调方法构成了与应用相关的对于某事件的反馈机制。Netty中该角色对应的就是ChannelHandler用于处理事件；
 * **具体事务处理器（Concrete Event Handler）：**事件处理器的具体实现，用于实现特定的业务逻辑，本质上就是开发者编写的针对各种不同事件的处理器；
 * **初始分发器/生成器（Initiation Dispatcher/Reactor）：**是模式的核心，定义了一些用于控制事件调度方式的规范，也提供了应用进行事件处理的注册、删除等机制。初始分发器会通过同步事件分离器来等待事件的发生，一旦事件发生，初始分发器会分离出事件，然后通过事件处理器和相应的处理方法处理该事件。Netty中ChannelHandler中的回调方法都是由BossGroup或WorkGroup中的某EventLoop来调用的。
+
+![img](assets/166e31ccf0289b09)
 
 **工作流程：**
 
@@ -3594,21 +3588,21 @@ sendfile发送文件到Socket的步骤：
   * 所有的操作都在一个线程上处理，无法同时处理大量的连接，会出现性能瓶颈，或因为单个耗时操作导致所有的请求都会受到影响，大大延迟请求的响应或处理超时；
   * 一旦这个单线程陷入死循环或其他问题，会导致整个系统无法对外提供服务，产生单点故障问题。
 
-![img](assets/4235178-4047d3c78bb467c9.png)
+<img src="assets/4235178-4047d3c78bb467c9.png" alt="img" style="zoom:50%;" />
 
 **多线程Reactor模式：**
 
 * 由一组NIO线程处理I/O和业务操作。有一个专门的NIO线程用于监听服务端，接收客户端的TCP连接请求。而网络读写、业务操作则交由一个NIO线程池负责。
 * Reactor多线程模型可以满足大部分场景的性能要求。但在小部分情况下，一个NIO线程负责监听和处理所有的客户端连接可能会存在性能问题，如百万级客户端并发连接，或者服务端对客户端的握手信息进行安全认证等消耗性能的操作。这些场景下一个线程处理连接就会存在性能不足的问题。
 
-![img](assets/4235178-d570de7505817605.png)
+<img src="assets/4235178-d570de7505817605.png" alt="img" style="zoom:50%;" />
 
 **主从多线程Reactor模式：**
 
 * 服务端用一个NIO线程池接收客户端的连接，即mainReactor。
 * 当接收连接请求并处理后（可能有接入认证等），将连接交付给另一个用于处理I/O和业务操作的NIO线程池负责后续工作，即subReactor。
 
-![img](assets/4235178-929a4d5e00c5e779.png)
+<img src="assets/4235178-929a4d5e00c5e779.png" alt="img" style="zoom:50%;" />
 
 
 
@@ -3634,7 +3628,7 @@ sendfile发送文件到Socket的步骤：
 
 
 
-## Java的I/O模型
+## I/O模型-Java的I/O API
 
 ### BIO
 
@@ -3700,7 +3694,18 @@ nc localhost 9090	# 开启一个本地客户端
 
 ### NIO
 
-**Java角度：**
+**Buffer**缓冲区本质是一个可以读写数据的内存块，可以理解为容器对象，除了基本的容器操作之外，还提供了记录缓冲区状态变化情况的功能。
+
+|       属性       |                             描述                             |
+| :--------------: | :----------------------------------------------------------: |
+| 容量（Capacity） |      可容纳的最大数据量，在缓冲区创建时被设定且不能改变      |
+|  Limit（范围）   | 表示缓冲区当前的终点，不能对超过极限的位置进行读写操作。 且极限 是可以修改的 |
+| 位置（Position） | 下一个要被读写的元素的索引，每次读写缓冲区中数据时都会改变该值，为下次读写准备 |
+|   标记（Mark）   |                             标记                             |
+
+**Channel**：通道类似于流，可以同时进行读写且能实现异步操作。通道以缓冲区为单位读写数据。
+
+**代码示例**：
 
 ```JAVA
 public class SocketNIO {
@@ -3739,7 +3744,7 @@ public class SocketNIO {
 }
 ```
 
-**Kernel角度：**
+**系统调用分析**：
 
 * 首先通过`socket(PF_INET6, SOCK_STREAM, IPPROTO_IP) = 4`创建TCP的流式套接字，并返回套接字的文件描述符；
 
@@ -3759,16 +3764,24 @@ public class SocketNIO {
 * 通过`fcntl(5, F_SETFL, 0_RDWR|0_NONBLOCK) = 0`将新的连接套接字设置为非阻塞；
 * 通过`read(5, 0x7f0003efcc10, 4096) = -1`读取套接输入流中的数据到大小为4096的缓冲区中，但不会阻塞线程，若是当前没有数据可读，则返回-1。
 
-**NIO的优缺点：**
+**NIO的优缺点**：
 
 * 优点：避免了BIO的一个连接一个线程而导致存在大量线程造成的资源消耗巨大的问题，即会把大量资源用在线程的上下文切换上；
 * 缺点：可能会存在大量无意义的系统调用，若是有1w个连接，但只有1个连接有数据读取，但NIO机制每次循环还是会发送1w次的read系统调用，即会把大量的资源用在用户态到内核态的切换上。
 
 
 
-### IO多路复用
+### NIO多路复用
 
-**Java角度：**
+**Selector**：选择器能够检测多个注册在其上的通道是否有事件发生，只有当真正发生事件时，才会对应的进行回调处理（连接、读/写）。
+
+**工作流程**：
+
+1. 服务端创建ServerSocketChannel并绑定端口，然后通过register()注册到Selector上和连接事件对应，最后通过Selector的select()开始轮询监听通道的状态；
+2. 当客户端连接时，会发生连接事件，Selector会回调方法给客户端建立对应的SocketChannel，然后将其注册到Selector上和读写事件对应；
+3. 当连接有读写事件发生时，返回SelectionKey（事件关系），反向获取对应的SocketChannel，最后进行相应的处理。
+
+**代码示例**：
 
 ```JAVA
 // JDK底层使用了epoll机制
@@ -3851,22 +3864,22 @@ public class SocketMultiplexingSingleThread {
 }
 ```
 
-**Kernel的角度看select/poll：**
+**select/poll系统调用分析**：
 
-* 通过socket创建套接字，返回文件描述符；
-* 通过bind为套接字绑定端口；
-* 通过listen将套接字置为监听状态；
-* 通过select或poll将所有套接字的文件描述符注册给多路复用器（select对文件描述符的个数有限制，poll取消了限制），并使用户线程阻塞在select/poll这个系统调用上；
-* 当内核遍历发现有文件描述符变为可连接或可读写等状态时，select/poll会返回，然后再通过accept或read去处理相应的事件。
+* 通过`socket`创建套接字，返回文件描述符；
+* 通过`bind`为套接字绑定端口；
+* 通过`listen`将套接字置为监听状态；
+* 通过`select/poll`将所有套接字的文件描述符注册给多路复用器（select对文件描述符的个数有限制，poll取消了限制），并使用户线程阻塞在`select/poll`这个系统调用上；
+* 当内核遍历发现有文件描述符变为可连接或可读写等状态时，`select/poll`会返回，然后再通过`accept`或`read`去处理对应的事件。
 
-**select/poll的优缺点：**
+**select/poll的优缺点**：
 
 * 优点：通过一次系统调用，将所有文件描述符传递给内核，由内核进行遍历，直到相应事件的发生，这种方式相对于NIO减少了系统调用的次数，即避免了用户态到内核态的频繁切换，节省资源；
 * 缺点：
-  * 每次调用select/poll系统调用时都需要传递文件描述符，解决方案是在内核开辟一块空间保存文件描述符避免重复传递；
-  * 每次调用select/poll系统调用时还会让内核重新遍历一遍文件描述符。
+  * 每次select/poll系统调用时都需要传递整个文件描述符集合；
+  * 每次select/poll系统调用时都会让内核遍历整个文件描述符集合。
 
-**Kernel的角度看epoll：**
+**epoll系统调用分析**：
 
 * 通过`socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 4`创建套接字，并返回其文件描述符；
 
@@ -3894,11 +3907,11 @@ public class SocketMultiplexingSingleThread {
 
 
 
-## 计算机网络的层次结构
+## 计算机网络-层次结构
 
 ![image-20201103090119536](assets/image-20201103090119536.png)
 
-### **应用层（application layer）**
+### 应用层（application layer）
 
 为用户的应用程序之间的交互提供网络服务。该层的协议是应用进程间的通信和交互的规则，对于不同的网络应用需要定义不同的应用层协议。运行在应用层的协议有很多，如域名系统DNS、支持Web应用的HTTP、支持电子邮件的SMTP协议等。应用层之间交互的数据单位称为报文。
 
@@ -4216,9 +4229,11 @@ TCP使用窗口机制进行流量控制：连接建立时，接收方分配一�
 
 
 
-## Netty的基本概念
+## Netty-基本概念
 
 ### Netty是什么？
+
+![img](assets/166e31cd2154b3f0)
 
 * 是一个基于NIO的C/S模式的网络通信框架，可以快速的通过它开发出高并发、高可靠的网络应用程序；
 * 极大的简化了TCP、UDP套接字服务器等网络编程的开发难度，且性能和安全性都得到了更好的保证；
@@ -4249,130 +4264,52 @@ TCP使用窗口机制进行流量控制：连接建立时，接收方分配一�
 
 
 
-## Netty的核心组件
+## Netty-模块组件
 
-### Channel
-
-Channel接口是Netty的网络操作抽象类，包含了各种基本的I/O操作。比较常用的实现类是NioServerSocketChannel和NioSocketChannel。
+### Bootstrap、ServerBootstrap
 
 
 
-### EventLoop
+### Future、ChannelFuture
 
-EventLoop事件循环主要作用就是负责监听网络事件并调用事件处理器进行相关I/O操作的处理。EventLoop负责处理注册到其上的Channel进行I/O操作。
-
-
-
-### ChannelFuture
-
-Netty所有的I/O操作都是基于事件驱动的异步操作（宏观上的异步，操作系统基级别是基于IO多路复用的同步非阻塞）。因此，其I/O操作不能立即返回结果，可以通过注册ChannelFutureListener，当操作执行成功或失败时，监听器就会自动触发结果。
-
-```java
+```JAVA
 public interface ChannelFuture extends Future<Void> {
 	Channel channel();
 	ChannelFuture addListener(GenericFutureListener<? extends Future<? super Voidjk var1);	// 注册监听器
-	......
+	// ...
 	ChannelFuture sync() throws InterruptedException;	// 修改同步或异步
 }
 ```
 
 
 
-### ChannelHandler和ChannelPipeline
-
-ChannelHandler是消息的具体处理器，负责处理连接和读写操作。ChannelPipeline是一条ChannelHandler执行链，其提供了一个容器并定义了用于沿着链传播入站和出站事件流的API。每一个Channel被创建时都会自动被分配到一个专属的ChannelPipeline中。
+### Channel
 
 
 
-## Netty-EventLoop和EventLoopGroup
-
-EventLoopGroup包含了多个EventLoop，因为每个EventLoop对应一个线程，即Thread和EventLoop属于1:1的关系，所以EventLoopGroup构成了一个线程池。下图中Boss EventLoopGroup用于接收连接，Worker EventLoopGroup用于具体的处理。
+### Seletcor
 
 
 
-## Netty-Bootstrap和ServerBootstrap
-
-Bootstrap是Netty客户端的启动引导类：
-
-```JAVA
-EventLoopGroup group = new NioEventLoopGroup();
-try {
-	//创建客户端启动引导/辅助类： Bootstrap
-	Bootstrap b = new Bootstrap();
-	//指定线程模型
-	b.group(group).
-	......
-	// 尝试建⽴连接
-	ChannelFuture f = b.connect(host, port).sync();
-	f.channel().closeFuture().sync();
-} finally {
-	// 优雅关闭相关线程组资源
-	group.shutdownGracefully();
-}
-```
-
-ServerBootstrap是Netty服务端的启动引导类：
-
-```JAVA
-// bossGroup ⽤于接收连接， workerGroup ⽤于具体的处理
-EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-EventLoopGroup workerGroup = new NioEventLoopGroup();
-try {
-	// 创建服务端启动引导/辅助类： ServerBootstrap
-	ServerBootstrap b = new ServerBootstrap();
-	// 给引导类配置两⼤线程组,确定了线程模型
-	b.group(bossGroup, workerGroup).
-	......
-	// 绑定端⼝
-	ChannelFuture f = b.bind(port).sync();
-	// 等待连接关闭
-	f.channel().closeFuture().sync();
-} finally {
-	// 优雅关闭相关线程组资源
-	bossGroup.shutdownGracefully();
-	workerGroup.shutdownGracefully();
-}
-```
+### NioEventLoop、NioEventLoopGroup
 
 
 
-## Netty-NioEventLoopGroup构造函数源码分析
 
-```JAVA
-// 若不指定线程数将从这里开始
-public NioEventLoopGroup() {
-	// 调⽤下⼀个构造⽅法
-	this(0);
-}
 
-public NioEventLoopGroup(int nThreads) {
-	// 继续调⽤下⼀个构造⽅法
-	this(nThreads, (Executor) null);
-}
-
-// ......各种重载的构造方法
-    
-public NioEventLoopGroup(int nThreads, Executor executor, final SelectorProvider selectorProvider, final SelectStrategyFactory selectStrategyFactory) {
-    // 开始调⽤⽗类的构造方法
-    super(nThreads, executor, selectorProvider, selectStrategyFactory, RejectedExecutionHandlers.reject());
-}
-
-// ......各种重载的构造方法
-    
-// 从1、系统属性和CPU核⼼数*2这三个值中取最⼤值，可以得出DEFAULT_EVENT_LOOP_THREADS的值为CPU核⼼数*2
-private static final int DEFAULT_EVENT_LOOP_THREADS = Math.max(1, SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
-
-// 被调⽤的⽗类构造函数，NioEventLoopGroup默认的构造函数会起多少线程的秘密所在，当指定的线程数nThreads为0时，使⽤默认的线程数DEFAULT_EVENT_LOOP_THREADS
-protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
-	super(nThreads == 0 ? DEFAULT_EVENT_LOOP_THREADS : nThreads, threadFactory, args);
-}
-```
+### ChannelHandler、ChannelHandlerContext
 
 
 
-## Netty的线程模型
+### ChannelPipline
+
+
+
+## Netty-线程模型
 
 Netty的线程模式是基于Reactor模式实现的。
+
+![img](assets/166e31cd44075dd8)
 
 **结构对应：**
 
@@ -4397,7 +4334,83 @@ Netty的线程模式是基于Reactor模式实现的。
 
 
 
-## Netty的客户端和服务端启动过程
+## Netty-编解码器
+
+
+
+## Netty-源码分析
+
+### Netty启动过程源码分析
+
+
+
+### Netty接收请求过程源码分析
+
+
+
+### Pipeline、Handler、HandlerContext创建过程源码分析
+
+
+
+### ChannelPipeline的Handler调度源码分析
+
+
+
+### EventLoop事件循环源码分析
+
+
+
+### Handler加入线程池和Context中添加线程池源码分析
+
+
+
+NioEventLoopGroup构造方法：
+
+```JAVA
+// 若不指定线程数将从这里开始
+public NioEventLoopGroup() {
+	// 调⽤下⼀个构造⽅法
+	this(0);
+}
+
+public NioEventLoopGroup(int nThreads) {
+	// 继续调⽤下⼀个构造⽅法
+	this(nThreads, (Executor) null);
+}
+
+// ......各种重载的构造方法
+    
+public NioEventLoopGroup(int nThreads, Executor executor, final SelectorProvider selectorProvider, final SelectStrategyFactory selectStrategyFactory) {
+    // 开始调⽤⽗类的构造方法
+    super(nThreads, executor, selectorProvider, selectStrategyFactory, RejectedExecutionHandlers.reject());
+}
+
+// ......各种重载的构造方法
+    
+// 从1和系统属性和CPU核⼼数*2这三个值中取最⼤值，可以得出DEFAULT_EVENT_LOOP_THREADS的值为CPU核⼼数*2
+private static final int DEFAULT_EVENT_LOOP_THREADS = Math.max(1, SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
+
+// 被调⽤的⽗类构造函数，NioEventLoopGroup默认的构造函数会起多少线程的秘密所在，当指定的线程数nThreads为0时，使⽤默认的线程数DEFAULT_EVENT_LOOP_THREADS
+protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
+	super(nThreads == 0 ? DEFAULT_EVENT_LOOP_THREADS : nThreads, threadFactory, args);
+}
+```
+
+
+
+## Netty-零拷贝机制
+
+**操作系统层面的零拷贝机制**：是指避免用户态和内核态之间来回拷贝数据，而划分出的共享空间供双方操作。
+
+**Netty的零拷贝机制体现在以下几个方面**：
+
+* 提供CompositeByteBuf类，可以将多个ByteBuf合并为一个逻辑上的ByteBuf，避免了各个ByteBuf间的拷贝；
+* ByteBuf支持slice分片操作，因此可以将ByteBuf分解为多个共享同一存储区域的ByteBuf，避免了内存的拷贝；
+* 通过FileRegion包装的FileChannel.tranferTo实现文件传输，可以直接将文件缓冲区的数据发送到目标Channel，避免了传统的write循环方式导致的内存拷贝问题。
+
+
+
+## Netty-客户端和服务端启动过程
 
 ### 服务端
 
@@ -4467,36 +4480,32 @@ try {
 
 
 
-## Netty解决TCP的粘包/拆包问题
+## Netty-解决TCP的粘包/拆包问题
 
-**什么是TCP粘包/拆包？**就是基于TCP发送数据时，出现了多个字符串粘在一起或是一个字符串被拆开的情况。
+**什么是TCP粘包/拆包？**基于TCP传输数据时，发送方为了更有效的发送数据包，使用Nagle算法来优化，将多次间隔较小且数据量小的数据合成一个大的数据块，然后进行封包。这样做虽然提高了效率，但会造成接收端对数据的边界无法分辨，因为面向流的通信是无消息边界保护的。
 
-**使用Netty的解码器解决：**
+**使用Netty的解码器解决**：
 
-* LineBasedFrameDecoder：发送端发送数据包时，每个数据包之间以换行符做为分隔，该解码器的工作原理就是依次比哪里ByteBuf中的可读字节，判断是否有换行符，然后进行对应的截取；
+* LineBasedFrameDecoder：发送端发送数据包时，每个数据包之间以换行符做为分隔，该解码器的工作原理就是依次比较ByteBuf中的可读字节，判断是否有换行符，然后进行对应的截取；
 * DelimiterBasedFrameDecoder：即可自定义分隔符解码器，LineBasedFrameDecoder就是DelimiterBasedFrameDecoder的一种自定义实现；
 * FixedLengthFrameDecoder：固定长度解码器，能够按照指定的长度对消息进行相应的拆包；
 * LengthFieldBasedFrameDecoder：自定义长度解码器。
 
 
 
-## Netty的长连接和心跳机制
+## Netty-长连接和心跳服务
 
-**Netty的长连接机制即TCP的长连接机制：**当通信双方建立连接后，就不会轻易断开连接，而是维持一段时间，在这段时间内双方的数据收发不需要事先建立连接。
+### 基本概念
 
-**Netty的心跳机制：**在TCP保持长连接的过程中，可能会出现网络异常导致连接中断，因此Netty在应用层引入了心跳机制让通信双方能够知道对方是否在线。心跳机制的原理是client与server之间若一定的时间没有数据交互时，即处于idle状态，client就会发送一个特殊的报文，当server接收到后也会回复一个，即完成了依次PING-PONG交互。所以，当一方收到对方的心跳报文后，就知道其仍然在线。
+**Netty的长连接机制即TCP的长连接机制**：当通信双方建立连接后，就不会轻易断开连接，而是维持一段时间，在这段时间内双方的数据收发不需要事先建立连接。
+
+**Netty的心跳机制**：在TCP保持长连接的过程中，可能会出现网络异常导致连接中断，因此Netty在应用层引入了心跳机制让通信双方能够知道对方是否在线。心跳机制的原理是client与server之间若一定的时间没有数据交互时，即处于idle状态，client就会发送一个特殊的报文，当server接收到后也会回复一个，即完成了依次PING-PONG交互。所以，当一方收到对方的心跳报文后，就知道其仍然在线。
 
 
 
-## Netty的零拷贝机制
+### 源码分析
 
-操作系统层面的零拷贝机制是指避免用户态和内核态之间来回拷贝数据，而划分出的共享空间供双方操作。
 
-Netty的零拷贝机制体现在以下几个方面：
-
-* 提供CompositeByteBuf类，可以将多个ByteBuf合并为一个逻辑上的ByteBuf，避免了各个ByteBuf间的拷贝；
-* ByteBuf支持slice分片操作，因此可以将ByteBuf分解为多个共享同一存储区域的ByteBuf，避免了内存的拷贝；
-* 通过FileRegion包装的FileChannel.tranferTo实现文件传输，可以直接将文件缓冲区的数据发送到目标Channel，避免了传统的write循环方式导致的内存拷贝问题。
 
 
 
@@ -4633,7 +4642,7 @@ Netty的零拷贝机制体现在以下几个方面：
 
 
 
-# 4.Java基础和容器
+# Java基础和容器
 
 ## Java基础概念
 
@@ -4646,26 +4655,26 @@ Netty的零拷贝机制体现在以下几个方面：
 
 ### JVM、JDK和JRE的区别
 
-* **JVM**：
+**JVM**：
 
-  * 概念：即Java虚拟机，是运行Java字节码的虚拟机。通过针对不同系统的特定实现来跨平台，目的是使用相同的字节码，它们都会给出相同的结果；
+* 概念：即Java虚拟机，是运行Java字节码的虚拟机。通过针对不同系统的特定实现来跨平台，目的是使用相同的字节码，它们都会给出相同的结果；
 
-  * 字节码：JVM可用理解的代码就叫做字节码（扩展名为.class的文件），不面向特定的处理器，只面向虚拟机。Java通过字节码的方式，在一定程度上解决了传统解释型语言执行效率低的问题， 同时又保留了解释型语言可移植的特点。所以Java程序运行时比较高效，而且由于字节码不针对一种特定的机器，因此Java程序无需重新编译便可在各种操作系统上运行。
+* 字节码：JVM可用理解的代码就叫做字节码（扩展名为.class的文件），不面向特定的处理器，只面向虚拟机。Java通过字节码的方式，在一定程度上解决了传统解释型语言执行效率低的问题， 同时又保留了解释型语言可移植的特点。所以Java程序运行时比较高效，而且由于字节码不针对一种特定的机器，因此Java程序无需重新编译便可在各种操作系统上运行。
 
-  * Java程序从源代码到运行：
+* Java程序从源代码到运行：
 
-    ![image-20201111110125699](assets/image-20201111110125699.png)
+  ![image-20201111110125699](assets/image-20201111110125699.png)
 
-    * 在``.class—>机器码``这一步JVM的类加载器首先加载字节码文件，然后通过解释器逐行解释执行，这种方式执行速度较慢，而且有些方法和代码块是经常需要被调用的（热点代码），所以引入了JIT编译器，而JIT属于运行时编译器；
-    * 当JIT完成第一次编译后，就会将字节码对应的机器码保存下来，下次可以直接使用，而机器码的执行效率远高于Java解释器。所以说Java是编译和解释共存的语言。
+  * 在``.class—>机器码``这一步JVM的类加载器首先加载字节码文件，然后通过解释器逐行解释执行，这种方式执行速度较慢，而且有些方法和代码块是经常需要被调用的（热点代码），所以引入了JIT编译器，而JIT属于运行时编译器；
+  * 当JIT完成第一次编译后，就会将字节码对应的机器码保存下来，下次可以直接使用，而机器码的执行效率远高于Java解释器。所以说Java是编译和解释共存的语言。
 
-    * HotSpot采用了惰性评估策略，根据二八定律，消耗大部分资源的只有那一小部分的热点代码，而这也就是JIT所要编译的部分。JVM会根据代码每次被执行的情况收集信息并相应的做出优化，因此执行的次数越多，速度就越快。JDK9引入了新的编译模式AOT，会直接将字节码编译成机器码，从而避免JIT预热等待各个方面的开销。
+  * HotSpot采用了惰性评估策略，根据二八定律，消耗大部分资源的只有那一小部分的热点代码，而这也就是JIT所要编译的部分。JVM会根据代码每次被执行的情况收集信息并相应的做出优化，因此执行的次数越多，速度就越快。JDK9引入了新的编译模式AOT，会直接将字节码编译成机器码，从而避免JIT预热等待各个方面的开销。
 
-* **JDK和JRE的区别**：
+**JDK和JRE的区别**：
 
-  * JDK是Java Development Kit，是功能齐全的Java SDK，拥有JRE所拥有的一切，还有编译工具javac和javadoc等工具，能够创建和编译程序；
-  * JRE是Java运行时环境，是运行已编译Java程序所需要的所有内容的集合，包括JVM、Java类库、Java命令和其他一些基础构件，但不能创建新程序；
-  * 若只需要在机器上运行普通Java程序的话，只需要安装JRE即可，若要进行Java源代码的编译等工作，那么就需要安装JDK了。
+* JDK是Java Development Kit，是功能齐全的Java SDK，拥有JRE所拥有的一切，还有编译工具javac和javadoc等工具，能够创建和编译程序；
+* JRE是Java运行时环境，是运行已编译Java程序所需要的所有内容的集合，包括JVM、Java类库、Java命令和其他一些基础构件，但不能创建新程序；
+* 若只需要在机器上运行普通Java程序的话，只需要安装JRE即可，若要进行Java源代码的编译等工作，那么就需要安装JDK了。
 
 
 
@@ -4729,67 +4738,67 @@ Netty的零拷贝机制体现在以下几个方面：
 
 ### String、StringBuffer和StringBuilder的区别
 
-* **可变性**：
+**可变性**：
 
-  * String类中使用final关键字修饰字符数组来保存字符串，所以String对象是不可变的。
+* String类中使用final关键字修饰字符数组来保存字符串，所以String对象是不可变的。
 
-    ```JAVA
-    public final class String
-        implements java.io.Serializable, Comparable<String>, CharSequence {
-        /** The value is used for character storage. */
-        private final char value[];
-    }
-    ```
+  ```JAVA
+  public final class String
+      implements java.io.Serializable, Comparable<String>, CharSequence {
+      /** The value is used for character storage. */
+      private final char value[];
+  }
+  ```
 
-    为什要设计成不可变的？
+  为什要设计成不可变的？
 
-    * 可以缓存hash值：如HashMap的String类型的key，需要使用hash值，不可变的特性可以使得hash值不可变，只需要进行一次计算；
+  * 可以缓存hash值：如HashMap的String类型的key，需要使用hash值，不可变的特性可以使得hash值不可变，只需要进行一次计算；
 
-    * 字符串常量池的需要：如果一个String对象已被创建过，那么就会从字String Pool中取得引用。如果String Pool没有这个字符串，那么会创建并添加到String Pool。
+  * 字符串常量池的需要：如果一个String对象已被创建过，那么就会从字String Pool中取得引用。如果String Pool没有这个字符串，那么会创建并添加到String Pool。
 
-      ![String Pool](assets/String Pool.png)
+    ![String Pool](assets/String Pool.png)
 
-    * 安全性：String经常做为参数，保证参数不可变操作更加安全；
+  * 安全性：String经常做为参数，保证参数不可变操作更加安全；
 
-    * 线程安全：使String天生支持线程安全，可以在多个线程安全使用。
+  * 线程安全：使String天生支持线程安全，可以在多个线程安全使用。
 
-  * 而StringBuilder与StringBuffer都继承自AbstractStringBuilder类。在该类中也是使用字符数组保存字符串，但没有使用final关键字修饰，所以这两个对象都是可变的；StringBuilder与StringBuffer的构造方法都是调用父类构造方法也就是``AbstractStringBuilder()``实现的。
+* 而StringBuilder与StringBuffer都继承自AbstractStringBuilder类。在该类中也是使用字符数组保存字符串，但没有使用final关键字修饰，所以这两个对象都是可变的；StringBuilder与StringBuffer的构造方法都是调用父类构造方法也就是``AbstractStringBuilder()``实现的。
 
-    ```JAVA
-    abstract class AbstractStringBuilder implements Appendable, CharSequence {
-        
-        /**
-         * The value is used for character storage.
-         */
-        char[] value;
-        
-        /**
-         * The count is the number of characters used.
-         */
-        int count;
-        
-        AbstractStringBuilder(int capacity) {
-        	value = new char[capacity];
-    	}
-    }
-    ```
+  ```JAVA
+  abstract class AbstractStringBuilder implements Appendable, CharSequence {
+      
+      /**
+       * The value is used for character storage.
+       */
+      char[] value;
+      
+      /**
+       * The count is the number of characters used.
+       */
+      int count;
+      
+      AbstractStringBuilder(int capacity) {
+      	value = new char[capacity];
+  	}
+  }
+  ```
 
-* **线程安全性**：
+**线程安全性**：
 
-  * String中的对象是不可变的，可以理解为常量，且线程安全；
-  * AbstractStringBuilder是StringBuilder和StringBuffer的公共父类，定义了一系列字符串基本操作。StringBuffer对方法加了同步锁保证了线程的安全，StringBuilder则没有，所以线程不安全但效率更高；
+* String中的对象是不可变的，可以理解为常量，且线程安全；
+* AbstractStringBuilder是StringBuilder和StringBuffer的公共父类，定义了一系列字符串基本操作。StringBuffer对方法加了同步锁保证了线程的安全，StringBuilder则没有，所以线程不安全但效率更高；
 
-* **性能**：
+**性能**：
 
-  * 每次对String类型进行改变的时候，都会生成一个新的String对象，然后将指针指向新的String对象；
-  * StringBuffer每次都会对StringBuffer对象本身进行操作，而不是生成新的对象并改变对象引用；
-  * StringBuilder虽然不存在同步锁消耗，但提高的性能有限，且线程不安全。
+* 每次对String类型进行改变的时候，都会生成一个新的String对象，然后将指针指向新的String对象；
+* StringBuffer每次都会对StringBuffer对象本身进行操作，而不是生成新的对象并改变对象引用；
+* StringBuilder虽然不存在同步锁消耗，但提高的性能有限，且线程不安全。
 
-* **总结**：
+**总结**：
 
-  * 操作少量的数据适用于String；
-  * 单线程操作字符串缓冲区操作大量数据使用StringBuilder；
-  * 多线程操作字符串缓冲区操作大量数据使用StringBuffer。
+* 操作少量的数据适用于String；
+* 单线程操作字符串缓冲区操作大量数据使用StringBuilder；
+* 多线程操作字符串缓冲区操作大量数据使用StringBuffer。
 
 
 
@@ -4821,15 +4830,15 @@ Netty的零拷贝机制体现在以下几个方面：
 
 ### hashCode()和equals()
 
-* `hashCode()`：作用是获取对象的哈希码。这个哈希码的作用是确定该对象在哈希表中的索引位置。hashCode()定义在JDK的Object.java中，意味着Java中的任何类都包含hashCode()方法；
+* **hashCode()**：作用是获取对象的哈希码。这个哈希码的作用是确定该对象在哈希表中的索引位置。hashCode()定义在JDK的Object.java中，意味着Java中的任何类都包含hashCode()方法；
 * **为什么需要hashCode()？**用于HashSet、HashMap中散列表结构的元素存储位置，当元素要加入时，会先计算hashCode，然后定位该元素在散列表中的存储位置，若是位置上有元素存在，则使用equals()判断是否是同一个元素，若不是则重新散列到其他位置，若是则操作失败达到了去重的目的；
-* `hashCode()`和`equals()`的相关规定：
+* **hashCode()和equals()的相关规定**：
   * 若两个对象相等，则hashCode一定也相同；
   * 若两个对象相等，对两个对象分别调用equals()都会返回true；
   * 若两个对象hashCode相同，但不一定是相等的；
   * equals()被覆盖过，hashCode也必须被覆盖；
   * hashCode()的默认行为是对堆上的对象产生独特值，如果没有重写hashCode()，则该class的两个对象无论如何都不会相等。
-* == 和 equals()：
+* **== 和 equals()**：
   * 对于基本类型，== 判断两个值是否相等，基本类型没有equals()；
   * 对于引用类型，== 判断两个变量是否引用同一对象，而equals()则判断引用的对象是否等价。
 
@@ -4915,14 +4924,14 @@ Netty的零拷贝机制体现在以下几个方面：
 
 ### 深拷贝和浅拷贝
 
+![image-20201111153317651](assets/image-20201111153317651.png)
+
 * **浅拷贝：**对基本数据类型进行值拷贝，对引用数据类型进行引用传递的拷贝；
 * **深拷贝：**对基本数据类型进行值拷贝，对引用数据类型，则创建新对象，并复制其内容。
 
-![image-20201111153317651](assets/image-20201111153317651.png)
 
 
-
-## Java容器概述
+## Java容器-基本概念
 
 ### Collection接口概述
 
@@ -4940,7 +4949,7 @@ Netty的零拷贝机制体现在以下几个方面：
   * LinkedList：可实现双向队列；
   * PriorityQueue：基于堆结构实现，可实现优先队列。
 
-![Java容器概述](assets/Java容器概述.png)
+<img src="assets/Java容器概述.png" alt="Java容器概述" style="zoom: 67%;" />
 
 
 
@@ -4951,7 +4960,7 @@ Netty的零拷贝机制体现在以下几个方面：
 * HashTable：可以看成是线程安全的HashMap；
 * LinkedHashMap：使用双向链表维护元素的顺序，顺序为插入顺序或最近最少使用（LRU）顺序。
 
-![Map接口](assets/Map接口.png)
+<img src="assets/Map接口.png" alt="Map接口" style="zoom:67%;" />
 
 
 
@@ -4971,8 +4980,8 @@ Netty的零拷贝机制体现在以下几个方面：
 
 ### 线程不安全和安全的集合有哪些？
 
-* 线程不安全的集合：ArrayList、LinkedList、HashMap、TreeMap、HashSet、TreeSet都不是线程安全的；
-* **JUC（java.util.concurrent）包**提供了各种并发容器：
+* **线程不安全的集合：**ArrayList、LinkedList、HashMap、TreeMap、HashSet、TreeSet都不是线程安全的；
+* **JUC（java.util.concurrent）包提供了各种并发容器**：
   * ConcurrentHashMap：线程安全的HashMap；
   * CopyOnWriteArrayList：可以看成线程安全的ArrayList，在读多写少的场合性能非常好，远胜于Vector；
   * ConcurrentLinkedQueue：使用链表实现的并发队列，可以看成是一个线程安全的LinkedList，是一个非阻塞队列；
@@ -4981,14 +4990,14 @@ Netty的零拷贝机制体现在以下几个方面：
 
 
 
-## Java容器中的设计模式
+## Java容器-设计模式
 
 ### 迭代器模式
 
 * **是什么？**Java通过Iterator接口实现设计模式中的迭代器，可以对集合进行遍历，但不同集合中的数据结构可能是不相同的，所以存取方式会存在区别。迭代器就是定义了一个统一的接口，并声明了 `hasNext()` 和 `next()` 这两个用于获取数据的方法，具体的实现交由具体的集合去完成。
 * **有啥用？**主要是用于遍历集合，特点是安全，因为其可以确保在遍历集合的时候元素不会被更改，一旦被修改，就会抛出异常。
 
-![迭代器模式](assets/迭代器模式.png)
+<img src="assets/迭代器模式.png" alt="迭代器模式" style="zoom:67%;" />
 
 
 
@@ -5004,7 +5013,7 @@ public static <T> List<T> asList(T... a)
 
 
 
-## Java容器之List接口
+## Java容器-List接口
 
 ### ArrayList和Vector的区别
 
@@ -5028,7 +5037,7 @@ public static <T> List<T> asList(T... a)
 
 * **内存空间占用**：ArrayList的空间浪费主要体现再列表的结尾会预留一定的容量空间，而LinkedList的空间花费则体现在它的每一个元素都需要消耗相对更多个空间（因为除了存放数据还需要存放前驱和后继指针）。
 
-* RandomAccess接口：只有定义没有具体内容的接口，用于标识实现这个接口的类具有随机访问功能。查看binarySearch()的源码发现，若List实现了RandomAccess接口，说明具有随机访问功能，则调用indexedBinarySearch()方法。若没实现，则调用iteratorBinarySearc()，则只能通过迭代去访问。
+* **RandomAccess接口：**只有定义没有具体内容的接口，用于标识实现这个接口的类具有随机访问功能。查看binarySearch()的源码发现，若List实现了RandomAccess接口，说明具有随机访问功能，则调用indexedBinarySearch()方法。若没实现，则调用iteratorBinarySearc()，则只能通过迭代去访问。
 
   ```JAVA
   public static <T> int binarySearch(List<? extends Comparable<? super Tjk list, T key) {
@@ -5191,7 +5200,7 @@ private static int hugeCapacity(int minCapacity) {
 
 
 
-## Java容器之Set接口
+## Java容器-Set接口
 
 ### Comparable和Comparator的区别
 
@@ -5296,7 +5305,7 @@ private static int hugeCapacity(int minCapacity) {
 
 
 
-## Java容器之Map接口
+## Java容器-Map接口
 
 ### HashMap和HashTable的区别
 
@@ -6014,7 +6023,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-# 5.MySQL+Redis
+# MySQL+Redis
 
 ## MySQL的存储引擎对比
 
@@ -6985,7 +6994,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-# 6.Spring+SpringBoot
+# Spring+SpringBoot
 
 ## Spring的概念和特性
 
@@ -7186,21 +7195,19 @@ MVC是一种设计模式，Spring MVC就是基于了这种设计模式的框架�
 * TransactionDefinition.PROPAGATION_NOT_SUPPORTED：以非事务的方式运行，如果当前存在事务，则把当前事务挂起；
 * TransactionDefinition.PROPAGATION_NEVER：以非事务的方式运行，如果当前存在事务，则抛出异常。
 
-其他情况：
-
-* TransactionDefinition.PROPAGATION_NESTED：如果当前存在事务，则创建一个事务做为当前事务的嵌套事务来运行，如果当前没有事务，则等价于TransactionDefinition.PROPAGATION_REQUIRED。
+其他情况：TransactionDefinition.PROPAGATION_NESTED：如果当前存在事务，则创建一个事务做为当前事务的嵌套事务来运行，如果当前没有事务，则等价于TransactionDefinition.PROPAGATION_REQUIRED。
 
 
 
 ### @Transactional(rollback=Exception.class)注解
 
-当@Transactional注解作用于类上时，该类的所有public方法都将具有该类型的事务属性，同时也可以在方法级别使用该注解，被注解表示的类或方法一旦抛出异常，就会回滚。
-
-在@Transactional中如果不指定rollback属性，那么只有在遇到RuntimeException运行时异常时才会回滚，指定rollback=Exception.class时会让事务在遇到非运行时异常时也能回滚。
+当@Transactional注解作用于类上时，该类的所有public方法都将具有该类型的事务属性，同时也可以在方法级别使用该注解，被注解表示的类或方法一旦抛出异常，就会回滚。在@Transactional中如果不指定rollback属性，那么只有在遇到RuntimeException运行时异常时才会回滚，指定rollback=Exception.class时会让事务在遇到非运行时异常时也能回滚。
 
 
 
-# 7.数据结构和算法
+# 数据结构和算法
+
+## 树
 
 ## 排序算法
 
@@ -7283,7 +7290,3 @@ public class InsertionSort {
     }
 }
 ```
-
-
-
-# 8.设计模式
