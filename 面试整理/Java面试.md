@@ -4268,9 +4268,42 @@ TCP使用窗口机制进行流量控制：连接建立时，接收方分配一�
 
 ### Bootstrap、ServerBootstrap
 
+Netty的客户端和服务端启动引导类，主要作用是配置整个Netty程序，串联各个组件。
+
+```JAVA
+// 客户端启动引导
+Bootstrap b = new Bootstrap();
+b.group(group)
+    .channel(NioSocketChannel.class)
+    .handler(new ChannelInitializer<SocketChannel>() {
+        @Override
+        public void initChannel(SocketChannel ch) throws Exception {
+            ChannelPipeline p = ch.pipeline();
+            p.addLast(new HelloClientHandler(message));
+        }
+    });
+```
+
+```JAVA
+// 服务端启动引导
+ServerBootstrap b = new ServerBootstrap();
+b.group(bossGroup, workerGroup)
+ 	.handler(new LoggingHandler(LogLevel.INFO))
+    .channel(NioServerSocketChannel.class)
+    .childHandler(new ChannelInitializer<SocketChannel>() {
+        @Override
+        public void initChannel(SocketChannel ch) {
+            ChannelPipeline p = ch.pipeline();
+            p.addLast(new HelloServerHandler());
+        }
+    });
+```
+
 
 
 ### Future、ChannelFuture
+
+Netty的API中所有的IO操作都是异步的，不会立即返回结果，但会通过ChannelFuture封装未来异步操作的结果。也可以注册一个监听器，当操作成功或失败后会自动触发注册的监听器回调。
 
 ```JAVA
 public interface ChannelFuture extends Future<Void> {
@@ -4281,27 +4314,76 @@ public interface ChannelFuture extends Future<Void> {
 }
 ```
 
+```JAVA
+serverBootstrap.bind(port).addListener(future -> {
+    if (future.isSuccess()) {
+        System.out.println(new Date() + ": 端口[" + port + "]绑定成功!");
+    } else {
+        System.err.println("端口[" + port + "]绑定失败!");
+    }
+});
+```
 
 
-### Channel
+
+### Channel、ChannelOption
+
+通道是Netty用于网络通信的组件，能够执行网络I/O操作，为用户提供：
+
+* 当前网络连接的状态，即通道是否打开，Socket是否建立；
+* 网络连接的参数配置，如：接收缓冲大小；
+* 异步网络I/O操作，如：连接建立、读写、端口绑定；
+* I/O操作与具体的处理逻辑对应。
+
+ChannelOption为Channel提供了参数的设置：
+
+* ChannelOption.SO_BACKLOG：用于初始化服务器可连接队列的大小。服务端处理客户端连接请求是顺序处理的，所以同时只能处理一个客户端连接。多个客户连接到来时，服务端会将请求排队。
+* ChannelOption.SO_KEEPALIVE：一直保持连接活动状态。
 
 
 
-### Seletcor
+### Selector
+
+Netty基于选择器Selector机制实现IO多路复用，通过Selector一个线程可以监听多个连接的Channel事件。当向一个Selector中注册Channel后，Selector内部的机制就可以轮询已注册的Channel是否发生事件的就绪，如读写、连接等，当有事件就绪才会真正进行处理。
 
 
 
 ### NioEventLoop、NioEventLoopGroup
 
+NioEventLoop事件循环中维护了一个Selector实例和其任务队列，支持异步提交任务，线程启动时会调用NioEventLoop的run方法，执行相应的IO或非IO任务：
 
+* IO任务：即selectionKey中就绪的事件，如accept、connect、read、write等，由processSelectedKeys方法触发；
+* 非IO任务：会添加到taskQueue中，如register、bind等任务，由runAllTasks方法触发。
+
+NioEventLoopGroup事件循环组主要管理NioEventLoop的生命周期，可以理解为线程池，内部维护了一组NioEventLoop线程，可以通过next接口按照一定规则获取一个NioEventLoop处理任务，每个NioEventLoop线程负责处理多个Channel上的事件，而一个Channel只会对应一个线程。
 
 
 
 ### ChannelHandler、ChannelHandlerContext
 
+通道处理器是一个接口，其处理IO事件或拦截IO操作，并将其转发到其ChannelPipeline链上的下一个处理程序。使用ChannelHandler时可以继承其子类或适配器类：
+
+* ChannelInboundHandler/ChannelInboundHandlerAdapter：处理入站I/O事件；
+* ChannelOutboundHandler/ChannelOutboundHandlerAdapter：处理出站I/O事件；
+* ChannelDuplexHandler：处理入站和出站事件。
+
+ChannelHandlerContext保存了Channel相关的所有上下文信息，同时关联了一个ChannelHandler对象。
+
 
 
 ### ChannelPipline
+
+通道事件处理链是一个保存了ChannelHandler的List，用多个阶段拦截或处理Channel的入站和出站操作。ChannelPipline实现了一种高级形式的拦截过滤器模式，使用户可以完全控制事件的处理方式，以及Channel对应的各个ChannelHandler如何交互。
+
+下图描述了ChannelPipeline中的ChannelHandler如果处理IO事件。入站事件由自下而上的入站处理程序处理，如图左所示。出站事件由自上而下的出站处理程序处理，如图右所示。
+
+![img](assets/166e31cd231e80d9)
+
+Netty中每个Channel都有且仅有一个ChannelPipeline与之对应。而ChannelPipeline中又维护了一个由ChannelHandlerContext组成的双向链表，且每个ChannelHandlerContext又关联一个ChannelHandler。
+
+入站事件和出站事件在一个双向链表中，入站事件会从链表head向后传递到最后一个入站的handler，出站事件会从链表tail向前传递到最前一个出站的handler，两种类型的handler互不干扰。
+
+![img](assets/166e31cd41342c12)
 
 
 
@@ -4326,21 +4408,513 @@ Netty的线程模式是基于Reactor模式实现的。
 
 **工作流程：**
 
-1. 当服务端程序启动时，会配置ChannelPipeline（ChannelHandler链，事件处理器调用链）。事件的发生会触发ChannelHandler中的方法，这个事件会在ChannelPipline链上传播；
-2. 然后从bossGroup事件循环池中取出一个NioEventLoop来实现服务端的绑定操作，并将对应的ServerSockerChannel注册到该NioEventLoop的Selector上，且注册ACCEPT事件为其感兴趣的事件；
-3. NioEventLoop事件循环启动，开始监听客户端的连接请求；
-4. 当有请求发起时，bossGroup中的NioEventLoop会监听到该ACCEPT事件的发生，会通过accept()接受这个连接并创建对应的SocketChannel，然后触发ChannelRead事件，即ChannelHandler中的channelRead()方法会得到回调，该事件会在ChannelPipline中的ChannelHandler链上传播执行；
-5. ServerBootstrapAcceptor的readChannel()方法会将客户端的SocketChannel注册到workerGroup中的某个NioEventLoop的Selector上，并注册READ事件为SocketChanel所感兴趣的事件。最后启动SocketChannel所在的NioEventLoop，开始为客户端和服务器端进行通信。
+* Boss Group轮询步骤：
+  1. select轮询Accept事件；
+  2. processSelectedKeys处理Accept I/O事件。与Client建立连接，生成对应的NioSocketChannel，并将其注册到Worker Group中的某个NioEventLoop的Selector上；
+  3. 处理任务队列中的任务runAllTasks。任务队列中的任务包括用户调用eventLoop.execute或schedule执行的任务，或者其他线程提交到该eventLoop上的任务。
+* Worker Group轮询步骤：
+  1. select轮询Read/Write事件；
+  2. processSelectedKeys处理读写I/O事件。在NioSocketChannel可读/可写事件发生时将其传入ChannelPipeline中处理；
+  3. 处理任务队列中的任务runAllTasks。
 
 
 
-## Netty-编解码器
+## Netty-编码解码器
+
+当Netty发送或接受一个消息时，就会发生一次数据转换。即入站消息会被解码（如字节转换为对象），出站消息会被编码（如对象转换为字节）。因此Netty提供了一系列编码解码器，都实现了ChannelInboundHandler或ChannelOutboundHandler接口，且channelRead方法都被重写。
+
+以入站为例，对于每个从入站Channel读取的消息，这个方法会被调用，随后将调用由解码器提供的decode()方法进行解码，并将已解码的字节转发给ChannelPipeline中的下一个ChannelInboundHandler。
+
+**ByteToMessageDecoder解码器**：
+
+![image-20201130141331931](assets/image-20201130141331931.png)
+
+由于TCP会出现粘包拆包的问题，所以不能确定发送方的数据包是一个完整的信息。该类会对入站数据进行缓存，直到它准备好被处理。
+
+```JAVA
+public class ToIntegerDecoder extends ByteToMessageDecoder {
+    
+    @Override
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        // 每次从入站的ByteBuf中读取4字节，然后编码为int类型，添加到下一个List中，当没有更多元素可以被添加时，该内容会被发送给下一个ChannelInboundHandler
+        if (in.readableBytes() >= 4) {
+            out.add(in.readInt());
+        }
+    }
+}
+```
+
+**ReplayingDecoder解码器**：
+
+```JAVA
+public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder
+```
+
+ReplayingDecoder扩展了ByteToMessageDecoder类，使用这个类时无需调用readableBytes()方法，参数S指定了用户状态管理的类型，使用Void则不需要状态管理。
+
+```JAVA
+public class MyReplayingDecoder extends ReplayingDecoder<Void> {
+    
+    @Override
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+        // 无需判断byte是否足够读取，内部会根据read的类型自动处理
+        out.add(in.readLong());
+    }
+}
+```
 
 
 
 ## Netty-源码分析
 
+io.Netty.example的源码分析案例
+
+```JAVA
+public final class EchoServer {
+
+    static final boolean SSL = System.getProperty("ssl") != null;
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8007"));
+
+    public static void main(String[] args) throws Exception {
+        final SslContext sslCtx;
+        if (SSL) {
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+        } else {
+            sslCtx = null;
+        }
+
+        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        try {
+            ServerBootstrap b = new ServerBootstrap();
+            b.group(bossGroup, workerGroup)
+             .channel(NioServerSocketChannel.class)
+             .option(ChannelOption.SO_BACKLOG, 100)
+             .handler(new LoggingHandler(LogLevel.INFO))
+             .childHandler(new ChannelInitializer<SocketChannel>() {
+                 @Override
+                 public void initChannel(SocketChannel ch) throws Exception {
+                     ChannelPipeline p = ch.pipeline();
+                     if (sslCtx != null) {
+                         p.addLast(sslCtx.newHandler(ch.alloc()));
+                     }
+                     p.addLast(new EchoServerHandler());
+                 }
+             });
+
+            ChannelFuture f = b.bind(PORT).sync();
+            f.channel().closeFuture().sync();
+        } finally {
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
+        }
+    }
+}
+```
+
+```JAVA
+@Sharable
+public class EchoServerHandler extends ChannelInboundHandlerAdapter {
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        ctx.write(msg);
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        super.handlerAdded(ctx);
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        super.handlerRemoved(ctx);
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) {
+        ctx.flush();
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        cause.printStackTrace();
+        ctx.close();
+    }
+}
+```
+
 ### Netty启动过程源码分析
+
+**NioEventLoopGroup阶段分析**：
+
+* NioEventLoopGroup构造方法：
+
+```JAVA
+// 若不指定线程数将从这里开始
+public NioEventLoopGroup() {
+	// 调⽤下⼀个构造⽅法
+	this(0);
+}
+
+public NioEventLoopGroup(int nThreads) {
+	// 继续调⽤下⼀个构造⽅法
+	this(nThreads, (Executor) null);
+}
+
+// ......各种重载的构造方法
+    
+public NioEventLoopGroup(int nThreads, Executor executor, final SelectorProvider selectorProvider, final SelectStrategyFactory selectStrategyFactory) {
+    // 开始调⽤⽗类的构造方法
+    super(nThreads, executor, selectorProvider, selectStrategyFactory, RejectedExecutionHandlers.reject());
+}
+```
+
+* MultithreadEventLoopGroup构造方法：
+
+```JAVA
+// 从1和系统属性和CPU核⼼数*2这三个值中取最⼤值，可以得出DEFAULT_EVENT_LOOP_THREADS的值为CPU核⼼数*2
+private static final int DEFAULT_EVENT_LOOP_THREADS;
+
+static {
+    DEFAULT_EVENT_LOOP_THREADS = Math.max(1, SystemPropertyUtil.getInt(
+        "io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
+}
+
+// 被调⽤的⽗类构造函数，NioEventLoopGroup默认的构造函数会起多少线程的秘密所在，当指定的线程数nThreads为0时，使⽤默认的线程数DEFAULT_EVENT_LOOP_THREADS
+protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
+	super(nThreads == 0 ? DEFAULT_EVENT_LOOP_THREADS : nThreads, threadFactory, args);
+}
+```
+
+* MultithreadEventExecutorGroup构造方法：
+
+```JAVA
+protected MultithreadEventExecutorGroup(int nThreads, Executor executor, Object... args) {
+    this(nThreads, executor, DefaultEventExecutorChooserFactory.INSTANCE, args);
+}
+
+protected MultithreadEventExecutorGroup(int nThreads, Executor executor,
+                                        EventExecutorChooserFactory chooserFactory, Object... args) {
+    if (nThreads <= 0) {
+        throw new IllegalArgumentException(String.format("nThreads: %d (expected: > 0)", nThreads));
+    }
+
+    if (executor == null) {
+        // 如果不指定执行器，就使用默认的线程工厂和默认执行器
+        executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
+    }
+	
+    // NioEventLoop实现了EventExecutor，即创建了一个线程数大小的NioEventLoop数组
+    children = new EventExecutor[nThreads];
+
+    // 循环初始化线程数组
+    for (int i = 0; i < nThreads; i ++) {
+        boolean success = false;
+        try {
+            // 创建NioEventLoop
+            children[i] = newChild(executor, args);
+            success = true;
+        } catch (Exception e) {
+            // TODO: Think about if this is a good exception type
+            throw new IllegalStateException("failed to create a child event loop", e);
+        } finally {
+            // ......
+        }
+    }
+
+    chooser = chooserFactory.newChooser(children);
+	
+    // 实例化一个终止监听器
+    final FutureListener<Object> terminationListener = new FutureListener<Object>() {
+        @Override
+        public void operationComplete(Future<Object> future) throws Exception {
+            if (terminatedChildren.incrementAndGet() == children.length) {
+                terminationFuture.setSuccess(null);
+            }
+        }
+    };
+
+    // 为每一个NioEventLoop添加一个终止监听器
+    for (EventExecutor e: children) {
+        e.terminationFuture().addListener(terminationListener);
+    }
+
+    // 将所有初始化后的NioEventLoop添加到一个LinkedHashSet中保存
+    Set<EventExecutor> childrenSet = new LinkedHashSet<EventExecutor>(children.length);
+    Collections.addAll(childrenSet, children);
+    readonlyChildren = Collections.unmodifiableSet(childrenSet);
+}
+```
+
+**ServerBootstrap阶段分析**：
+
+* ServerBootstrap构造方法分析：
+
+```java
+private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
+private final Map<AttributeKey<?>, Object> childAttrs = new LinkedHashMap<AttributeKey<?>, Object>();
+private final ServerBootstrapConfig config = new ServerBootstrapConfig(this);
+private volatile EventLoopGroup childGroup;
+private volatile ChannelHandler childHandler;
+
+public ServerBootstrap() { }
+```
+
+* ServerBootstrap的group()方法分析：
+
+```JAVA
+public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
+    super.group(parentGroup);	// bossGroup
+    if (childGroup == null) {
+        throw new NullPointerException("childGroup");
+    }
+    if (this.childGroup != null) {
+        throw new IllegalStateException("childGroup set already");
+    }
+    this.childGroup = childGroup;	// workerGroup
+    return this;
+}
+```
+
+* AbstractBootstrap的channel()方法分析：
+
+```java
+public B channel(Class<? extends C> channelClass) {
+    if (channelClass == null) {
+        throw new NullPointerException("channelClass");
+    }
+    // 创建反射工厂类，在bind阶段会将Channel反射出来
+    return channelFactory(new ReflectiveChannelFactory<C>(channelClass));
+}
+```
+
+* AbstractBootstrap的option()方法分析：
+
+```JAVA
+// 通过Map存储配置
+private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
+
+public <T> B option(ChannelOption<T> option, T value) {
+    if (option == null) {
+        throw new NullPointerException("option");
+    }
+    if (value == null) {
+        synchronized (options) {
+            options.remove(option);
+        }
+    } else {
+        synchronized (options) {
+            options.put(option, value);
+        }
+    }
+    return self();
+}
+```
+
+* AbstractBootstrap的bind()方法分析：
+
+```JAVA
+public ChannelFuture bind(int inetPort) {
+    return bind(new InetSocketAddress(inetPort));
+}
+
+public ChannelFuture bind(SocketAddress localAddress) {
+    validate();
+    if (localAddress == null) {
+        throw new NullPointerException("localAddress");
+    }
+    return doBind(localAddress);
+}
+
+private ChannelFuture doBind(final SocketAddress localAddress) {
+    final ChannelFuture regFuture = initAndRegister();
+    final Channel channel = regFuture.channel();
+    if (regFuture.cause() != null) {
+        return regFuture;
+    }
+
+    if (regFuture.isDone()) {
+        // At this point we know that the registration was complete and successful.
+        ChannelPromise promise = channel.newPromise();
+        doBind0(regFuture, channel, localAddress, promise);
+        return promise;
+    } else {
+       // ......
+    }
+}
+
+final ChannelFuture initAndRegister() {
+    Channel channel = null;
+    try {
+        // 通过反射工厂类将Channel创建出来：
+        // 1.获取JDK NIO的ServerSocketChannel；
+        // 2.创建一个唯一的ChannelId；
+        // 3.创建一个NioMessageUnsafe，用于操作消息；
+        // 4.创建一个DefaultChannelPipeline，是一个双向链表结构；
+        // 5.创建了一个NioServerSocketChannelConfig对象，用于对外展示一些配置
+        channel = channelFactory.newChannel();
+        // 初始化NioServerSocketChannel：
+        // 1.抽象方法，由ServerBootstrap实现；
+        // 2.设置NioServerSocketChannel的TCP属性；
+        // 3.对NioServerSocketChannel的ChannelPipeline添加ChannelInitializer处理器；
+        // 4.初始化DefaultChannelPipeline的head和tail节点。并通过addLast添加ChannelHandler。
+        init(channel);
+    } catch (Throwable t) {
+        // ......
+    }
+    // 注册NioServerSocketChannel到bossGroup上，并返回一个注册结果的future
+    ChannelFuture regFuture = config().group().register(channel);
+    if (regFuture.cause() != null) {
+        if (channel.isRegistered()) {
+            channel.close();
+        } else {
+            channel.unsafe().closeForcibly();
+        }
+    }
+    return regFuture;
+}
+
+private static void doBind0(
+    final ChannelFuture regFuture, final Channel channel,
+    final SocketAddress localAddress, final ChannelPromise promise) {
+
+    // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
+    // the pipeline in its channelRegistered() implementation.
+    channel.eventLoop().execute(new Runnable() {
+        @Override
+        public void run() {
+            if (regFuture.isSuccess()) {
+                // 最终会调用到NioServerSocket的doBind，说明Netty底层使用的是NIO
+                channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+            } else {
+                promise.setFailure(regFuture.cause());
+            }
+        }
+    });
+}
+```
+
+* DefaultChannelPipeline的addLast()方法分析：
+
+```JAVA
+@Override
+public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
+    final AbstractChannelHandlerContext newCtx;
+    synchronized (this) {
+        // 检查handler是否符合标准
+        checkMultiplicity(handler);
+		
+        // 创建一个AbstractChannelHandlerContext对象
+        // 每当有ChannelHandler添加到Pipeline时，都会创建对应的Context
+        newCtx = newContext(group, filterName(name, handler), handler);
+
+        // 将Context插入链表尾部，即追加到tail节点之前
+        addLast0(newCtx);
+
+        // If the registered is false it means that the channel was not registered on an eventloop yet.
+        // In this case we add the context to the pipeline and add a task that will call
+        // ChannelHandler.handlerAdded(...) once the channel is registered.
+        if (!registered) {
+            newCtx.setAddPending();
+            callHandlerCallbackLater(newCtx, true);
+            return this;
+        }
+
+        EventExecutor executor = newCtx.executor();
+        if (!executor.inEventLoop()) {
+            newCtx.setAddPending();
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    callHandlerAdded0(newCtx);
+                }
+            });
+            return this;
+        }
+    }
+    callHandlerAdded0(newCtx);
+    return this;
+}
+
+private void addLast0(AbstractChannelHandlerContext newCtx) {
+    AbstractChannelHandlerContext prev = tail.prev;
+    newCtx.prev = prev;
+    newCtx.next = tail;
+    prev.next = newCtx;
+    tail.prev = newCtx;
+}
+```
+
+* NioEventLoop的run()方法：
+
+```JAVA
+// 当bind阶段结束，就会进入NioEventLoop的run中执行
+@Override
+protected void run() {
+    for (;;) {
+        try {
+            switch (selectStrategy.calculateStrategy(selectNowSupplier, hasTasks())) {
+                case SelectStrategy.CONTINUE:
+                    continue;
+                case SelectStrategy.SELECT:
+                    // NioEventLoop轮询的第一步：监听事件
+                    select(wakenUp.getAndSet(false));
+
+                    if (wakenUp.get()) {
+                        selector.wakeup();
+                    }
+                    // fall through
+                default:
+            }
+
+            cancelledKeys = 0;
+            needsToSelectAgain = false;
+            final int ioRatio = this.ioRatio;
+            if (ioRatio == 100) {
+                try {
+                    // NioEventLoop轮询的第二步：处理发生的事件
+                    processSelectedKeys();
+                } finally {
+                    // NioEventLoop轮询的第二步：处理队列中的任务
+                    runAllTasks();
+                }
+            } else {
+                final long ioStartTime = System.nanoTime();
+                try {
+                    processSelectedKeys();
+                } finally {
+                    // Ensure we always run tasks.
+                    final long ioTime = System.nanoTime() - ioStartTime;
+                    runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
+                }
+            }
+        } catch (Throwable t) {
+            handleLoopException(t);
+        }
+        // Always handle shutdown even if the loop processing threw an exception.
+        try {
+            if (isShuttingDown()) {
+                closeAll();
+                if (confirmShutdown()) {
+                    return;
+                }
+            }
+        } catch (Throwable t) {
+            handleLoopException(t);
+        }
+    }
+}
+```
+
+**Netty服务端启动过程总结**：
+
+1. 创建两个NioEventLoopGroup线程池，其内部维护着NioEventLoop的集合，集合默认大小是本机的CPU*2；
+2. ServerBootstrap设置一些属性，然后通过bind方法完成创建NIO相关对象、初始化、注册、绑定端口、启动事件循环等操作；
+   1. initAndRegister会创建NioServerSocketChannel、Pipeline等对象，然后初始化这些对象，如Pipeline的head和tail节点的初始化；
+   2. doBind会对底层JDK NIO的Channel和端口进行绑定；
+   3. 最后调用NioEventLoop的run方法监听连接事件，表示服务器正式启动。
 
 
 
@@ -4364,40 +4938,6 @@ Netty的线程模式是基于Reactor模式实现的。
 
 
 
-NioEventLoopGroup构造方法：
-
-```JAVA
-// 若不指定线程数将从这里开始
-public NioEventLoopGroup() {
-	// 调⽤下⼀个构造⽅法
-	this(0);
-}
-
-public NioEventLoopGroup(int nThreads) {
-	// 继续调⽤下⼀个构造⽅法
-	this(nThreads, (Executor) null);
-}
-
-// ......各种重载的构造方法
-    
-public NioEventLoopGroup(int nThreads, Executor executor, final SelectorProvider selectorProvider, final SelectStrategyFactory selectStrategyFactory) {
-    // 开始调⽤⽗类的构造方法
-    super(nThreads, executor, selectorProvider, selectStrategyFactory, RejectedExecutionHandlers.reject());
-}
-
-// ......各种重载的构造方法
-    
-// 从1和系统属性和CPU核⼼数*2这三个值中取最⼤值，可以得出DEFAULT_EVENT_LOOP_THREADS的值为CPU核⼼数*2
-private static final int DEFAULT_EVENT_LOOP_THREADS = Math.max(1, SystemPropertyUtil.getInt("io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
-
-// 被调⽤的⽗类构造函数，NioEventLoopGroup默认的构造函数会起多少线程的秘密所在，当指定的线程数nThreads为0时，使⽤默认的线程数DEFAULT_EVENT_LOOP_THREADS
-protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
-	super(nThreads == 0 ? DEFAULT_EVENT_LOOP_THREADS : nThreads, threadFactory, args);
-}
-```
-
-
-
 ## Netty-零拷贝机制
 
 **操作系统层面的零拷贝机制**：是指避免用户态和内核态之间来回拷贝数据，而划分出的共享空间供双方操作。
@@ -4415,27 +4955,30 @@ protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, O
 ### 服务端
 
 ```JAVA
-// NioEventLoopGroup实例--bossGroup⽤于处理客户端的连接
+// bossGroup⽤于Accept连接建立事件并分发请求
 EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-// NioEventLoopGroup实例--workerGroup⽤于数据处理
+// workerGroup⽤于处理I/O读写事件和业务逻辑
 EventLoopGroup workerGroup = new NioEventLoopGroup();
 try {
-    // 创建服务端启动引导类ServerBootstrap
-    ServerBootstrap b = new ServerBootstrap();
-    // 给引导类配置两⼤线程组，确定Netty的线程模型
-    b.group(bossGroup, workerGroup)
-	.handler(new LoggingHandler(LogLevel.INFO))
-	// 指定NIO模型
-	.channel(NioServerSocketChannel.class)
-    // channel处理器
-	.childHandler(new ChannelInitializer<SocketChannel>() {
-        @Override
-        public void initChannel(SocketChannel ch) {
-        	ChannelPipeline p = ch.pipeline();
-           	// ⾃定义客户端消息的业务处理逻辑
-       		p.addLast(new HelloServerHandler());
-        }
-    });
+    // 服务端启动引导类
+    ServerBootstrap bootstrap = new ServerBootstrap();
+    bootstrap
+        // 给引导类配置事件循环组
+        .group(bossGroup, workerGroup)
+        // 指定Channel为NIO模型
+        .channel(NioServerSocketChannel.class)
+        // 设置连接配置参数
+        .option(ChannelOption.SO_BACKLOG, 1024)
+        .childOption(ChannelOption.SO_KEEPALIVE, true)
+        // 配置入站出站事件的处理器
+        .childHandler(new ChannelInitializer<SocketChannel>() {
+            @Override
+            public void initChannel(SocketChannel ch) {
+                ChannelPipeline p = ch.pipeline();
+                // ⾃定义客户端消息的业务处理逻辑
+                p.addLast(new HelloServerHandler());
+            }
+    	});
     // 阻塞绑定端⼝
     ChannelFuture f = b.bind(port).sync();
     // 阻塞等待直到服务端的Channel关闭
@@ -4456,19 +4999,20 @@ try {
 EventLoopGroup group = new NioEventLoopGroup();
 try {
     // 创建客户端启动引导类Bootstrap
-    Bootstrap b = new Bootstrap();
-    // 指定线程组
-    b.group(group)
-    // 指定NIO模型
-    .channel(NioSocketChannel.class)
-    .handler(new ChannelInitializer<SocketChannel>() {
-        @Override
-        public void initChannel(SocketChannel ch) throws Exception {
-            ChannelPipeline p = ch.pipeline();
-            // ⾃定义消息的业务处理逻辑
-            p.addLast(new HelloClientHandler(message));
-        }
-    });
+    Bootstrap bootstrap = new Bootstrap();
+    bootstrap
+        // 指定线程组
+        .group(group)
+        // 指定NIO模型
+        .channel(NioSocketChannel.class)
+    	.handler(new ChannelInitializer<SocketChannel>() {
+            @Override
+        	public void initChannel(SocketChannel ch) throws Exception {
+            	ChannelPipeline p = ch.pipeline();
+            	// ⾃定义消息的业务处理逻辑
+            	p.addLast(new HelloClientHandler(message));
+        	}
+    	});
     // 阻塞建⽴连接
     ChannelFuture f = b.connect(host, port).sync();
     // 阻塞等待连接关闭
@@ -4481,6 +5025,8 @@ try {
 
 
 ## Netty-解决TCP的粘包/拆包问题
+
+![image-20201130143323000](assets/image-20201130143323000.png)
 
 **什么是TCP粘包/拆包？**基于TCP传输数据时，发送方为了更有效的发送数据包，使用Nagle算法来优化，将多次间隔较小且数据量小的数据合成一个大的数据块，然后进行封包。这样做虽然提高了效率，但会造成接收端对数据的边界无法分辨，因为面向流的通信是无消息边界保护的。
 
