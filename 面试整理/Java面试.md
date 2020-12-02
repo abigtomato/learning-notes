@@ -5758,6 +5758,8 @@ protected void run() {
 }
 ```
 
+* select()方法分析：
+
 ```JAVA
 private void select(boolean oldWakenUp) throws IOException {
     Selector selector = this.selector;
@@ -5850,13 +5852,310 @@ private void select(boolean oldWakenUp) throws IOException {
 }
 ```
 
+* processSelectedKeys()方法分析：
+
+```JAVA
+private void processSelectedKeys() {
+    if (selectedKeys != null) {
+        processSelectedKeysOptimized(selectedKeys.flip());
+    } else {
+        processSelectedKeysPlain(selector.selectedKeys());
+    }
+}
+```
+
+```java
+private void processSelectedKeysOptimized(SelectionKey[] selectedKeys) {
+    for (int i = 0;; i ++) {
+        final SelectionKey k = selectedKeys[i];
+        if (k == null) {
+            break;
+        }
+        selectedKeys[i] = null;
+
+        final Object a = k.attachment();
+
+        if (a instanceof AbstractNioChannel) {
+            processSelectedKey(k, (AbstractNioChannel) a);
+        } else {
+            @SuppressWarnings("unchecked")
+            NioTask<SelectableChannel> task = (NioTask<SelectableChannel>) a;
+            processSelectedKey(k, task);
+        }
+
+        if (needsToSelectAgain) {
+            for (;;) {
+                i++;
+                if (selectedKeys[i] == null) {
+                    break;
+                }
+                selectedKeys[i] = null;
+            }
+
+            selectAgain();
+            selectedKeys = this.selectedKeys.flip();
+            i = -1;
+        }
+    }
+}
+```
+
+```java
+final AbstractNioChannel.NioUnsafe unsafe = ch.unsafe();
+if (!k.isValid()) {
+    final EventLoop eventLoop;
+    try {
+        eventLoop = ch.eventLoop();
+    } catch (Throwable ignored) {
+        return;
+    }
+    if (eventLoop != this || eventLoop == null) {
+        return;
+    }
+    // close the channel if the key is not valid anymore
+    unsafe.close(unsafe.voidPromise());
+    return;
+}
+int readyOps = k.readyOps();
+if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
+    int ops = k.interestOps();
+    ops &= ~SelectionKey.OP_CONNECT;
+    k.interestOps(ops);
+
+    unsafe.finishConnect();
+}
+
+if ((readyOps & SelectionKey.OP_WRITE) != 0) {
+    ch.unsafe().forceFlush();
+}
+
+if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
+    unsafe.read();
+    if (!ch.isOpen()) {
+        return;
+    }
+}
+```
+
+* SingleThreadEventExecutor#runAllTasks()方法分析：
+
+```JAVA
+protected boolean runAllTasks(long timeoutNanos) {
+    // 任务聚合
+    fetchFromScheduledTaskQueue();
+    // 取出一个任务
+    Runnable task = pollTask();
+    if (task == null) {
+        afterRunningAllTasks();
+        return false;
+    }
+
+    final long deadline = ScheduledFutureTask.nanoTime() + timeoutNanos;
+    long runTasks = 0;
+    long lastExecutionTime;
+    for (;;) {
+        safeExecute(task);
+
+        runTasks ++;
+
+        // Check timeout every 64 tasks because nanoTime() is relatively expensive.
+        // XXX: Hard-coded value - will make it configurable if it is really a problem.
+        if ((runTasks & 0x3F) == 0) {
+            lastExecutionTime = ScheduledFutureTask.nanoTime();
+            if (lastExecutionTime >= deadline) {
+                break;
+            }
+        }
+
+        task = pollTask();
+        if (task == null) {
+            lastExecutionTime = ScheduledFutureTask.nanoTime();
+            break;
+        }
+    }
+
+    afterRunningAllTasks();
+    this.lastExecutionTime = lastExecutionTime;
+    return true;
+}
+```
+
+```java
+private boolean fetchFromScheduledTaskQueue() {
+    long nanoTime = AbstractScheduledEventExecutor.nanoTime();
+    Runnable scheduledTask  = pollScheduledTask(nanoTime);
+    while (scheduledTask != null) {
+        if (!taskQueue.offer(scheduledTask)) {
+            // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
+            scheduledTaskQueue().add((ScheduledFutureTask<?>) scheduledTask);
+            return false;
+        }
+        scheduledTask  = pollScheduledTask(nanoTime);
+    }
+    return true;
+}
+```
 
 
 
+### 耗时任务加入异步线程池源码分析
 
-### Handler加入线程池和Context中添加线程池源码分析
+* 在Netty的NioEventLoop线程中做耗时的，不可预料的操作，如数据连接，网络请求等，会严重影响Netty对Socket的IO操作的效率。解决方法就是将耗时任务添加到异步线程池EventExecutorGroup中去执行。
+* 将耗时任务添加到线程池中的操作有两种方式，一个是在handler中添加，一个是在Context中添加。
 
+**handler中加入异步线程池**：
 
+```JAVA
+@Sharable
+public class EchoServerHandler extends ChannelInboundHandlerAdapter {
+
+    // EventExecutorGroup充当业务线程池，可以将耗时任务提交到该线程池
+    static final EventExecutorGroup group = new DefaultEventExecutorGroup(16);
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        // 任务执行方式1: 提交到当前channel所属的eventLoop线程的任务队列等待执行
+        ctx.channel().eventLoop().execute(() -> {
+            try {
+                Thread.sleep(5 * 1000);
+                ctx.writeAndFlush(Unpooled.copiedBuffer("hello, client", CharsetUtil.UTF_8));
+            } catch (Exception ex) {
+                System.out.println("exception: " + ex.getMessage());
+            }
+        });
+
+        // 任务执行方式2：提交给异步的业务线程池来执行
+        group.submit(() -> {
+            // 以下的操作异步执行
+            ByteBuf buf = (ByteBuf) msg;
+            byte[] bytes = new byte[buf.readableBytes()];
+            buf.readBytes(bytes);
+            String body = new String(bytes, StandardCharsets.UTF_8);
+            Thread.sleep(10 * 1000);
+            // 这一步会将write操作返回给eventLoop线程执行（即放入eventLoop的任务队列中）
+            ctx.writeAndFlush(Unpooled.copiedBuffer("hello, client", CharsetUtil.UTF_8));
+            return null;
+        });
+
+        // 任务执行方式3：由当前channel所属的eventLoop线程同步执行
+        ByteBuf buf = (ByteBuf) msg;
+        byte[] bytes = new byte[buf.readableBytes()];
+        buf.readBytes(bytes);
+        String body = new String(bytes, StandardCharsets.UTF_8);
+        Thread.sleep(10 * 1000);
+        ctx.writeAndFlush(Unpooled.copiedBuffer("hello, client", CharsetUtil.UTF_8));
+    }
+
+    @Override
+    public void channelReadComplete(ChannelHandlerContext ctx) {
+        ctx.flush();
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        ctx.close();
+    }
+}
+```
+
+* 任务执行方式2的write操作源码分析（分析AbstractChannelHandlerContext的write()源码）：
+
+![image-20201202172754106](assets/image-20201202172754106.png)
+
+```JAVA
+private void write(Object msg, boolean flush, ChannelPromise promise) {
+    AbstractChannelHandlerContext next = findContextOutbound();
+    final Object m = pipeline.touch(msg, next);
+    // 获取handlerContext的channel对应的EventLoop线程executor（即I/O线程）
+    EventExecutor executor = next.executor();
+    // 判断当前的线程是否是executor
+    if (executor.inEventLoop()) {
+        // 若是，则执行正常处理流程
+        if (flush) {
+            next.invokeWriteAndFlush(m, promise);
+        } else {
+            next.invokeWrite(m, promise);
+        }
+    } else {
+        // 若不是，代表当前调用write方法的是异步线程池中的线程（即业务线程），则将该write操作封装为task
+        AbstractWriteTask task;
+        if (flush) {
+            task = WriteAndFlushTask.newInstance(next, m, promise);
+        }  else {
+            task = WriteTask.newInstance(next, m, promise);
+        }
+        // 最后让task加入executor的任务队列中去执行
+        safeExecute(executor, task, promise, m);
+    }
+}
+```
+
+```JAVA
+private static void safeExecute(EventExecutor executor, Runnable runnable, ChannelPromise promise, Object msg) {
+    try {
+        // 加入任务队列
+        executor.execute(runnable);
+    } catch (Throwable cause) {
+        try {
+            promise.setFailure(cause);
+        } finally {
+            if (msg != null) {
+                ReferenceCountUtil.release(msg);
+            }
+        }
+    }
+}
+```
+
+**handlerContext中加入异步线程池**：
+
+```JAVA
+public final class EchoServer {
+
+    static final boolean SSL = System.getProperty("ssl") != null;
+    static final int PORT = Integer.parseInt(System.getProperty("port", "8008"));
+
+    // 异步的业务线程池
+    static final EventExecutorGroup group = new DefaultEventExecutorGroup(2);
+
+    public static void main(String[] args) throws Exception {
+        final SslContext sslCtx;
+        if (SSL) {
+            SelfSignedCertificate ssc = new SelfSignedCertificate();
+            sslCtx = SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build();
+        } else {
+            sslCtx = null;
+        }
+
+        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        try {
+            ServerBootstrap b = new ServerBootstrap();
+            b.group(bossGroup, workerGroup)
+             .channel(NioServerSocketChannel.class)
+             .option(ChannelOption.SO_BACKLOG, 100)
+             .handler(new LoggingHandler(LogLevel.INFO))
+             .childHandler(new ChannelInitializer<SocketChannel>() {
+                 @Override
+                 public void initChannel(SocketChannel ch) throws Exception {
+                     ChannelPipeline p = ch.pipeline();
+                     if (sslCtx != null) {
+                         p.addLast(sslCtx.newHandler(ch.alloc()));
+                     }
+                     // 指定一个异步线程池来执行handler的处理逻辑
+                     p.addLast(group, new EchoServerHandler());
+                 }
+             });
+
+            ChannelFuture f = b.bind(PORT).sync();
+            f.channel().closeFuture().sync();
+        } finally {
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
+        }
+    }
+}
+```
 
 
 
