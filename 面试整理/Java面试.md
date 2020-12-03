@@ -1,8 +1,8 @@
 # Java多线程高并发
 
-## 进程和线程的区别
+## Java多线程基本概念
 
-**以操作系统的角度来看：**
+### 以操作系统的角度来看
 
 * 程序的概念：
 
@@ -10,46 +10,17 @@
   * 从内存中读出PC（指令计数器）当前指向的指令地址和对应数据，通过总线写入CPU的寄存器中；
   * CPU的ALU（逻辑计算单元）会进行计算，并将计算结果写回到内存中；
   * 此时CPU的PC会指向下一条指令。
-
 * 进程的概念：
 
   * 是资源分配的基本单位；
   * 是程序启动后从磁盘进入到被分配到的内存的资源和代码的集合；
   * 也是CPU指令和内存数据的集合。
-
 * 线程的概念：
 
   * 程序执行的基本单位；
   * 进程中代码执行的路径（可以存在多条执行路径）；
-  * 普通Java程序启动会有哪些线程？
 
-  ```java
-  public class TestMultiThread {
-      
-      public static void main(String[] args) {
-          // 获取 Java 线程管理 MXBean
-          ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
-          
-          // 不需要获取同步的 monitor 和 synchronizer 信息，仅获取线程和线程堆栈信息
-          ThreadInfo[] threadInfos = threadMXBean.dumpAllThreads(false, false);
-          
-          // 遍历线程信息，仅打印线程 ID 和线程名称信息
-          for (ThreadInfo threadInfo : threadInfos) {
-              System.out.println("[" + threadInfo.getThreadId() + "] " + threadInfo.getThreadName());
-          }
-      }
-  }
-  ```
-
-  ```java
-  [5] Attach Listener // 添加事件
-  [4] Signal Dispatcher // 分发处理给 JVM 信号的线程
-  [3] Finalizer // 调⽤对象 finalize ⽅法的线程
-  [2] Reference Handler // 清除 reference 线程
-  [1] main // main 线程，即程序⼊⼝
-  ```
-
-**以JVM的角度来看：**
+### 以JVM的角度来看
 
 * 一个JVM进程运行时所管理的内存区域如下图，一个进程中可以存在多个线程，多个线程共享堆空间和本地方法区（元空间），每个线程有自己的虚拟机栈、本地方法栈和程序计数器。
 
@@ -69,9 +40,37 @@
   * 堆是进程被分配到的内存中最大的一块，主要用于存放新创建的对象（所有的对象都在这里被分配内存），方法区主要用于存放已被加载的类信息，如：常量、静态变量、即时编译器编译获得代码等数据；
   * 总结：因为二者存储的都是程序的资源单位，不存在执行时的独立问题，所以堆和元空间是和进程绑定的。
 
+### 并发和并行的区别
+
+* 并发：同一时间段，多个任务都在执行，但单位时间内不一定同时执行；
+* 并行：单位时间内，多个任务同时执行。
+
+### 为什么使用多线程？
+
+* 从总体来看：线程是程序执行的最小单位，切换和调度的成本远远小于进程，并且多核CPU时代意味着多线程可以并行执行，减少了线程上下文切换的开销，再者，随着互联网飞速发展，百万千万级别的并发量要求，多线程也是高并发系统的基础。
+* 从底层探讨：
+  * 单核时代：主要是为了提高CPU和IO设备的综合利用率。只有一个线程时，当CPU计算时IO设备空闲，IO操作时CPU空闲，但多个线程会让两个操作在一段时间内都执行；
+  * 多核时代：主要是为了提高CPU利用率。若CPU计算复杂的任务只使用一个线程，那只有一个核在工作，但多个线程会被分配到多个核去执行，从而提高多核CPU利用率。
+
+### 使用多线程带来的问题
+
+内存泄漏、上下文切换、死锁还有受限于硬件和软件的资源闲置问题。
+
+### Hotspot JVM 后台运行的系统线程分类
+
+|          类型          |                             功能                             |
+| :--------------------: | :----------------------------------------------------------: |
+| 虚拟机线程(VM thread） | 这个线程等待 JVM 到达安全点操作出现。这些操作必须要在独立的线程里执行，因为当堆修改无法进行时，线程都需要 JVM 位于安全点。这些操作的类型有： stop-theworld 垃圾回收、线程栈 dump、线程暂停、线程偏向锁（biased locking）解除。 |
+|     周期性任务线程     | 这线程负责定时器事件（也就是中断），用来调度周期性操作的执行。 |
+|        GC 线程         |           这些线程支持 JVM 中不同的垃圾回收活动。            |
+|       编译器线程       |   这些线程在运行时将字节码动态编译成本地平台相关的机器码。   |
+|      信号分发线程      |   这个线程接收发送到 JVM 的信号并调用适当的 JVM 方法处理。   |
 
 
-## Java创建线程的方式
+
+## Java的多线程机制和API
+
+### 创建线程
 
 **实现Runnable接口：**
 
@@ -122,31 +121,334 @@ public static void main(String[] args) {
 }
 ```
 
+### 基础机制
+
+**Exector**：线程池可以管理多个互不干扰，不需要同步操作的异步任务的执行。
+
+线程池共有如下三类：
+
+* CachedThreadPool：一个任务创建一个线程；
+* FixedThreadPool：所有任务只能用固定大小的线程；
+* SingleThreadExecutor：只有一个线程的线程池。
+
+```java
+public static void main(String[] args) {
+    ExecutorService executorService = Executors.newCachedThreadPool();
+    for (int i = 0; i < 5; i++) {
+        executorService.execute(() -> {
+            // ......
+        });
+    }
+    executorService.shutDown();
+}
+```
+
+**Daemon**：守护线程是程序运行时在后台提供服务的线程。当所有守护线程结束时，程序也就终止，同时会杀死所有守护线程。
+
+```JAVA
+public static void main(String[] args) {
+    Thread thread = new Thread(() -> {
+        // ......
+    });
+    thread.setDaemon(true);	// 将线程设置为守护线程
+}
+```
+
+**sleep()**：会休眠执行它的线程一段时间。可能会抛出InterruptedException，由于异常不能跨线程传回main()中，所以子线程处理异常只能在本地捕获处理。
+
+```JAVA
+public static void main(String[] args) {
+    new Thread(() -> {
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }).start();
+}
+```
+
+**yield()**：将调用它的线程的执行权让出，切换给其他线程执行。该方法只是对调度器的一个建议，而且也只会建议具有相同优先级的线程可以运行。
+
+```JAVA
+public static void main(String[] args) {
+    new Thread(() -> {
+        Thread.yield();
+    }).start();
+}
+```
+
+### 中断机制
+
+**InterruptedException**：中断异常，一个线程可以通过调用interrupt()来中断该线程，如果该线程处于阻塞、有限期等待或无限期等待状态，就会抛出InterruptedException，从而提前结束前程。但是不能中断I/O阻塞或synchronized锁阻塞。
+
+**interrupted()**：如果一个线程的run()方法执行了一个无限循环，且没有执行sleep等会抛出InterruptedException的操作，那么调用线程的interrupted()方法就无法使线程提前结束。但会设置一个线程的中断标记，方法调用会返回true，因此可以在run的无限循环中判断中断标记来决定是否提取结束线程。
+
+```JAVA
+public static void main(String[] args) throws InterruptedException {
+    Thread thread = new Thread(() -> {
+        while (!interrupted()) {
+            // ....
+        }
+    });
+    thread.start();
+    thread.interrupt();
+}
+```
+
+**Executor的中断操作**：调用Executor的shutdown()方法会等待池的线程都执行完毕后再关闭。若调用shutdownNow()方法，则相当于调用了池中每个线程的interrupt()方法。
+
+```JAVA
+public static void main(String[] args) {
+    ExecutorService executorService = Executors.newCachedThreadPool();
+    executorService.execute(() -> {
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    });
+    executorService.shutdownNow();
+}
+```
+
+如果只想中断Executor中的一个线程，在提交线程时可以调用submit()，它会返回一个Future对象，通过调用其cancel()方法就可以中断该线程。
+
+```JAVA
+public static void main(String[] args) {
+    ExecutorService executorService = Executors.newCachedThreadPool();
+    Future<?> future = executorService.submit(() -> {
+    	// ......
+    });
+    future.cancel(true);
+}
+```
+
+### 同步互斥机制
+
+**线程间同步的方式**：
+
+* **互斥量（Mutex）**：采用互斥对象机制，只有拥有互斥对象的线程才有访问公共资源的权限。因为互斥对象只有一个，所以可以保证公共资源不会被多个线程同时访问，如Java中的synchronized和各种Lock锁；
+* **信号量（Semphares）**：允许同一时刻多个线程访问同一资源，但是需要控制同一时刻访问此资源的最大线程数量；
+* **事件（Event）**：即 `wait/notify` 操作，通过通知操作的方式来保持多线程同步，还可以方便的实现多线程的优先级。
+
+**synchronized**：
+
+* 同步代码块-对象锁：
+
+  ```JAVA
+  public class SynchronizedExample {
+      
+      public void func1() {
+          synchronized (this) {
+              for (int i = 0; i < 10; i++) {
+                  System.out.println(i + " ");
+              }
+          }
+      }
+      
+      public static void main(String[] args) {
+          SynchronizedExample example = new SynchronizedExample();
+          ExecutorService executorService = Executors.newCachedThreadPool();
+          executorService.execute(() -> e1.func1());
+          executorService.execute(() -> e1.func1());
+      }
+  }
+  ```
+
+* 同步方法：
+
+  ```JAVA
+  public synchronized void func() {
+      // ......
+  }
+  ```
+
+* 同步代码块-类锁：
+
+  ```JAVA
+  public class SynchronizedExample {
+      
+      public void func1() {
+          synchronized (SynchronizedExample.class) {
+              for (int i = 0; i < 10; i++) {
+                  System.out.println(i + " ");
+              }
+          }
+      }
+      
+      public static void main(String[] args) {
+          SynchronizedExample example1 = new SynchronizedExample();
+          SynchronizedExample example2 = new SynchronizedExample();
+          ExecutorService executorService = Executors.newCachedThreadPool();
+          executorService.execute(() -> e1.fun1());
+          executorService.execute(() -> e2.fun1());
+      }
+  }
+  ```
+
+* 同步静态方法：
+
+  ```JAVA
+  public synchronized static void func() {
+      // ......
+  }
+  ```
+
+**ReentrantLock**：
+
+```JAVA
+public class LockExample {
+    
+    private Lock lock = new ReentrantLock();
+    
+    public void func() {
+        lock.lock();
+        try {
+            for (int i = 0; i < 10; i++) {
+                System.out.println(i + " ");
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+    
+    public static void main(String[] args) {
+        LockExample lockExample = new LockExample();
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        executorService.execute(() -> lockExample.func());
+        executorService.execute(() -> lockExample.func());
+    }
+}
+```
+
+### 线程协作机制
+
+**join()**：在一个线程中调用另一个线程的join()方法，会将当前线程挂起，直到目标线程结束，从而保证多线程解决问题的先后顺序。
+
+```JAVA
+public class JoinExample {
+
+    private class A extends Thread {
+        
+        @Override
+        public void run() {
+            System.out.println("A");
+        }
+    }
+
+    private class B extends Thread {
+
+        private A a;
+
+        B(A a) {
+            this.a = a;
+        }
+
+        @Override
+        public void run() {
+            try {
+                a.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("B");
+        }
+    }
+
+    public void test() {
+        A a = new A();
+        B b = new B(a);
+        b.start();
+        a.start();
+    }
+}
+
+public static void main(String[] args) {
+    JoinExample example = new JoinExample();
+    example.test();
+}
+```
+
+**wait()/notify()/notifyAll()**：使用wait会使线程等待某个条件满足，线程在等待时会被挂起，当其他线程的运行使得这个条件满足时，其他线程会调用notify()或notifyAll()来唤醒挂起的线程。
+
+```JAVA
+public class WaitNotifyExample {
+    
+    public synchronized void before() {
+        System.out.println("before");
+        notifyAll();
+    }
+    
+    public synchronized void after() {
+        try {
+            wait();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println("after");
+    }
+    
+    public static void main(String[] args) {
+        WaitNotifyExample example = new WaitNotifyExample();
+        ExcutorService executorService = Executors.newCachedThreadPool();
+        executorService.execute(() -> example.after());
+        executorService.execute(() -> example.before());
+    }
+}
+```
+
+**sleep()和wait()的区别**：
+
+* 最主要的区别：sleep方法不会释放锁，wait方法会释放锁；
+* 二者都可以暂停线程的执行；
+* wait通常被用于线程间交互/通信，sleep通常被用于暂停执行；
+* wait被调用后，线程不会自动苏醒，而是需要别的线程调用同一个对象上的notify()或者notifyAll()方法进行唤醒。或者可以使用wait(long timeout)超时后自动苏醒。
+
+**await()/signal()/signalAll()**：JUC提供的Condition类来实现线程间的协作，可以在Condition上调用await()方法使线程等待，其他线程调用signal()或signalAll()方法唤醒等待的线程。相对于wait/notify来说，await可以指定在哪个条件上等待，signal可以唤醒指定的条件。
+
+```JAVA
+public class AwaitSignalExample {
+    
+    private Lock lock = new ReentrantLock();
+    private Condition condition = lock.newCondition();
+    
+    public void before() {
+        lock.lock();
+        try {
+            System.out.println("before");
+            condition.signalAll();
+        } finally {
+            lock.unlock();
+        }
+    }
+    
+    public void after() {
+        lock.lock();
+        try {
+            condition.await();
+            System.out.prinln("after");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }
+    
+    public static void main(String[] args) {
+        AwaitSignalExample example = new AwaitSignalExample();
+        ExecutorService executorService = Executors.newCachedThreadPool();
+        executorService.execute(() -> example.after());
+        executorService.execute(() -> example.before());
+    }
+}
+```
 
 
-## 并发与并行有什么区别？
 
-1. 并发：同一时间段，多个任务都在执行，但单位时间内不一定同时执行；
-2. 并行：单位时间内，多个任务同时执行。
+## Java线程的状态及切换
 
-
-
-## 为什么要使用多线程?
-
-1. 从总体来看：线程是程序执行的最小单位，切换和调度的成本远远小于进程，并且多核CPU时代意味着多线程可以并行执行，减少了线程上下文切换的开销，再者，随着互联网飞速发展，百万千万级别的并发量要求，多线程也是高并发系统的基础。
-2. 从底层探讨：
-    1. 单核时代：主要是为了提高CPU和IO设备的综合利用率。只有一个线程时，当CPU计算时IO设备空闲，IO操作时CPU空闲，但多个线程会让两个操作在一段时间内都执行；
-    2. 多核时代：主要是为了提高CPU利用率。若CPU计算复杂的任务只使用一个线程，那只有一个核在工作，但多个线程会被分配到多个核去执行，从而提高多核CPU利用率。
-
-
-
-## 使用多线程可能带来的问题？
-
-内存泄漏、上下文切换、死锁还有受限于硬件和软件的资源闲置问题。
-
-
-
-## 线程的生命周期和状态
+### 线程状态
 
 ![image-20200930123828410](assets/image-20200930123828410.png)
 
@@ -162,18 +464,30 @@ public static void main(String[] args) {
 
    ![image-20201111140624405](assets/image-20201111140624405.png)
 
+### 状态切换
+
+### 锁池队列和等待队列
+
+### 影响线程状态的方法比较
 
 
-## 线程的上下文切换
+
+## Java多线程的上下文切换
 
 1. 线程数大于CPU核心数的情况下，每个CPU在同一时刻只能执行一个线程，为了让其他线程都能有效的执行，CPU采取的策略就是为每个线程分配时间片轮转，即当一个线程获取到CPU执行权时也会得到一个时间片，当时间片用完就会重新进入就绪状态给其他线程执行的机会；
 2. 从当前线程在执行完CPU时间片切换到另一个线程前会保存自己的状态，以便下次再切换回这个线程时，可以恢复之前的执行状态，**线程从保存到恢复的过程就是一次上下文切换**；
 3. 注：上下文切换通常是计算密集型，即对CPU来说需要相当可观的处理时间，每个切换都要消耗纳秒级的时间，所以频繁的切换意味着对CPU性能巨大的浪费；
 4. 从计算机系统层面解释：当CPU的核心切换到其他线程执行时，当前中断的线程相关的数据（寄存器数据，堆栈信息）会被暂存在内存中，等下次切换回来时从中断的位置继续执行。
 
+### 上下文切换的概念
+
+### 上下文切换的步骤
+
+### 减少上下文切换的方法
 
 
-## 线程死锁，如何避免死锁? 
+
+## Java线程的死锁问题
 
  * 死锁指多个线程被同时阻塞，它们中的一个或全部都在等待某资源被释放，由于线程被无限期的阻塞，因此程序不可能正常终止。如上图，线程A持有资源2，线程B持有资源1，它们都想申请对方锁住的资源，但又不能释放自己锁住的资源，所以这两个线程会因为互相等待而进入死锁状态；
 
@@ -264,22 +578,23 @@ public static void main(String[] args) {
 
 
 
-## sleep()方法和wait()方法的区别
-
- 1. 最主要的区别：sleep方法不会释放锁，wait方法会释放锁；
- 2. 二者都可以暂停线程的执行；
- 3. wait通常被用于线程间交互/通信，sleep通常被用于暂停执行；
- 4. wait被调用后，线程不会自动苏醒，而是需要别的线程调用同一个对象上的notify()或者notifyAll()方法进行唤醒。或者可以使用wait(long timeout)超时后自动苏醒。
+## Java线程和操作系统线程的关系
 
 
 
-## synchronized关键字
+
+
+## Java多线程的安全问题
+
+
+
+
+
+## synchronized关键字原理
 
 ### 概念
 
 用于解决多线程间资源访问的同步问题，保证任意时刻被其修饰的代码块或方法只能有一个线程执行。在Java早期版本，synchronized底层使用效率低下重量级锁，因为监视器锁（monitor）是依赖于OS的Mutex Lock实现的，JVM线程是1:1与OS内核线程映射的，这种方式的实现下，线程的挂起和唤醒，都需要和OS产生系统调用的全套过程，即CPU从用户态转为内核态，开销较大。
-
-
 
 ### 使用方式
 
@@ -288,8 +603,6 @@ public static void main(String[] args) {
 * **修饰代码块**：指定加锁对象，对给定对象加锁，进入同步代码库前要获得给定对象的锁；
 * 注：不要使用``synchronized(String str)``加锁，因为JVM中字符串常量池具有缓存功能。
 
-
-
 ### CAS
 
 * **CAS（Compare And Swap/Set）比较并交换**：CAS 算法的过程是这样：它包含 3 个参数CAS(V,E,N)。V 表示要更新的变量(内存值)，E 表示预期值(旧的)，N 表示新值。当且仅当 V 值等
@@ -297,11 +610,52 @@ public static void main(String[] args) {
   前线程什么都不做。最后，CAS 返回当前 V 的真实值。CAS 操作是抱着乐观的态度进行的(乐观锁)，它总是认为自己可以成功完成操作。当多个线程同时使用 CAS 操作一个变量时，只有一个会胜出，并成功更新，其余均会失败。失败的线程不会被挂起，仅是被告知失败，并且允许再次尝试，当然也允许失败的线程放弃操作。基于这样的原理，CAS 操作即使没有锁，也可以发现其他线程对当前线程的干扰，并进行恰当的处理。
 * **CAS会导致的ABA问题**：CAS 算法实现一个重要前提需要取出内存中某时刻的数据，而在下时刻比较并替换，那么在这个时间差类会导致数据的变化。比如说一个线程 one 从内存位置 V 中取出 A，这时候另一个线程 two 也从内存中取出 A，并且two 进行了一些操作变成了 B，然后 two 又将 V 位置的数据变成 A，这时候线程 one 进行 CAS 操作发现内存中仍然是 A，然后 one 操作成功。尽管线程 one 的 CAS 操作成功，但是不代表这个过程就是没有问题的。部分乐观锁的实现是通过版本号（version）的方式来解决 ABA 问题，乐观锁每次在执行数据的修改操作时，都会带上一个版本号，一旦版本号和数据的版本号一致就可以执行修改操作并对版本号执行+1 操作，否则就执行失败。因为每次操作的版本号都会随之增加，所以不会出现 ABA 问题，因为版本号只会增加不会减少。
 
-
-
 ### 锁升级原理
 
 JDK1.6之后优化了synchronized操作，锁会随着竞争的激烈而逐渐升级，主要存在4种状态：无锁（unlocked）、偏向锁（biasble）、轻量级锁（lightweight locked）、重量级锁（inflated）。
+
+**Java对象内存布局**：
+
+```JAVA
+public class T04_Hello_JOL {
+
+    // JOL：JAVA对象内存布局
+    public static void main(String[] args) {
+        /*
+            java.lang.Object object internals:
+             OFFSET  SIZE   TYPE DESCRIPTION                               VALUE
+                  0     4        (object header)                           01 00 00 00 (00000001 00000000 00000000 00000000) (1)
+                  4     4        (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
+                  8     4        (object header)                           e5 01 00 f8 (11100101 00000001 00000000 11111000) (-134217243)
+                 12     4        (loss due to the next object alignment)
+            Instance size: 16 bytes 空对象16个字节
+            Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
+
+            1.偏移量0开始的和偏移量4开始的共8个字节代表对象的MarkWord（）；
+            2.偏移量8开始的4个字节代表对象的ClassPoint（对象所属的类）；
+            3.因为没有成员变量，所有偏移量12开始的4个字节是填充字节（字节对齐），为了让整个对象的字节大小符合被8整除。
+        */
+        Object o = new Object();
+        System.out.println(ClassLayout.parseInstance(o).toPrintable());
+
+        /*
+            java.lang.Object object internals:
+             OFFSET  SIZE   TYPE DESCRIPTION                               VALUE
+                  0     4        (object header)                           28 f7 a8 02 (00101000 11110111 10101000 00000010) (44627752)
+                  4     4        (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
+                  8     4        (object header)                           e5 01 00 f8 (11100101 00000001 00000000 11111000) (-134217243)
+                 12     4        (loss due to the next object alignment)
+            Instance size: 16 bytes
+            Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
+
+            使用synchronized后，此时从偏移量4开始的4个字节发生了变化，是因为偏向锁的信息被添加到了对象的MarkWord上（说白了偏向锁就是将对象的id信息直接贴到锁上，无需争抢竞争）
+        */
+        synchronized (o) {
+            System.out.println(ClassLayout.parseInstance(o).toPrintable());
+        }
+    }
+}
+```
 
 **对象头布局：**
 
@@ -370,9 +724,7 @@ HotSpot虚拟机中的对象头布局，这些数据被称为Mark Word。其中t
 
 **轻量级锁一定比重量级锁效率更高吗？**不一定，如果锁的竞争非常激烈，有非常多的线程在自旋等待锁，则CPU的资源会大量消耗在上下文切换上面（即不断切换线程去执行循环操作）。
 
-
-
-### synchronized和ReentrantLock的区别
+### 与ReentrantLock的区别
 
 * **都是可重入锁**：所谓可重入锁就是同一个线程可以重复获取自己已经获得的锁。如一个线程获得了某个对象的锁，此时该锁还没有释放，当其想要再次获取的时候仍能成功。若该锁是不可重入的话，会发生死锁，即同一个线程获取锁时，锁的计数器会自增1，只有等到0时才能释放。
 * synchronized是依赖于JVM实现的，而ReentrantLock是依赖于JDK的API实现的（需要通过lock()和unlock()方法和try/finally配合实现）。
@@ -383,7 +735,7 @@ HotSpot虚拟机中的对象头布局，这些数据被称为Mark Word。其中t
 
 
 
-## volatile关键字
+## volatile关键字原理
 
 ### Java内存模型引出的问题
 
@@ -395,44 +747,273 @@ HotSpot虚拟机中的对象头布局，这些数据被称为Mark Word。其中t
 
 ![image-20201027193936448](assets/image-20201027193936448.png)
 
-
-
 ### 并发编程的三个重要特性
 
 1. 原子性：一个操作或多次操作，要么所有操作都执行，要么都不执行。synchronized关键字可以保证代码的原子性；
 2. 可见性：当一个变量对共享变量进行修改，那么另外的线程都可以立即看到修改后的最新值。volatile关键字可以保证共享变量的可见性；
 3. 有序性：代码在执行过程中应具有先后顺序，Java在编译器以及运行期间的优化，代码的执行顺序未必就是编写代码时候的顺序。volatile关键字可以禁止指令进行重排序优化。
 
-
-
-### volatile与synchronized的区别
+### 与synchronized的区别
 
 1. volatile是轻量级实现线程同步的机制，性能比synchronized好，但只能作用于变量，而synchronized可以修饰方法和代码块；
 2. 多线程访问volatile关键字修饰的变量不会发生阻塞，而synchronized修饰的代码会发生阻塞；
 3. volatile只能保证数据的可见性但不能保证原子性，synchronized二者都能保证；
 4. volatile关键字主要用于解决多线程间的变量可见性，synchronized关键字主要解决多线程间访问资源的同步性。
 
-
-
 ### volatile+synchronized+DCL带双重校验锁的单例模式
 
+```JAVA
+/**
+ * 饿汉式单例
+ * 类加载到内存后就实例化一个单例，JVM保证线程安全
+ */
+public class T03_Singleton {
+
+    private static final T03_Singleton INSTANCE = new T03_Singleton();
+
+    private T03_Singleton() {}
+
+    // 类加载的时候直接初始化，永远只会存在一个对象
+    public static T03_Singleton getInstance() {
+        return INSTANCE;
+    }
+
+    public void m() {
+        System.out.println("m");
+    }
+
+    public static void main(String[] args) {
+        T03_Singleton m1 = T03_Singleton.getInstance();
+        T03_Singleton m2 = T03_Singleton.getInstance();
+        System.out.println(m1 == m2);
+    }
+}
+```
+
+```JAVA
+/**
+ * 懒汉式单例
+ * 虽然达到了按需初始化的目的，但却带来了线程不安全的问题
+ */
+public class T04_Singleton {
+
+    /*
+        对象的创建过程：
+        class T {
+            int m = 8;
+        }
+        T t = new T();
+        汇编指令：
+        0 new #2 <T>
+        3 dup
+        4 invokespecial #3 <T.<init>>
+        7 astore_1
+        8 return
+    */
+    private static volatile T04_Singleton INSTANCE;
+
+    private T04_Singleton() {
+    }
+
+    /*
+        问：使用DCL单例模式下，需不需要加volatile？
+        答：需要加，因为创建对象时的汇编指令可能会发生重排序：
+            0 new #2 <T> 半初始化对象，成员变量赋予初始值
+            4 invokespecial #3 <T.<init>> 调用构造方法
+            7 astore_1  引用和对象关联
+        4和7若是发生了CPU指令重排，那会先关联引用和对象，此时INSTANCE就不为空了，此时该线程先去执行权；
+        若正好进来一个新线程，外层检索 if (INSTANCE == null) 就会失效，新线程就会使用半初始化的对象，值就是默认值；
+        加上了volatile会让该关键字修饰的内存空间在被指令操作时不存在乱序的情况。
+    */
+    /*
+        问：volatile如何阻止指令的乱序执行？
+        答：内存屏障
+        JVM内存屏障规范：
+        Hotspot虚拟机实现内存屏障：lock addl 锁总线的方式
+    */
+    public static T04_Singleton getInstance() throws InterruptedException {
+        // DCL双重检索式（Double Check Lock）
+        // 外层检索：防止大量线程直接去竞争锁带来的性能问题
+        if (INSTANCE == null) {
+            synchronized (T04_Singleton.class) {
+                // 内层检索：防止其他通过外层检索的线程又执行一遍内部逻辑
+                if (INSTANCE == null) {
+                    Thread.sleep(1);
+                    // 若不加锁则会出现多个线程创建多个对象的问题，单例则无从谈起
+                    INSTANCE = new T04_Singleton();
+                }
+            }
+        }
+        return INSTANCE;
+    }
+
+    public void m() {
+        System.out.println("m");
+    }
+
+    public static void main(String[] args) {
+        for (int i = 0; i < 100; i++) {
+            new Thread(() -> {
+                try {
+                    System.out.println(T04_Singleton.getInstance().hashCode());
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+        }
+    }
+}
+```
 
 
-## ThreadLocal类
 
-TODO
+## ThreadLocal类原理
+
+```JAVA
+public class ThreadLocal_01 {
+
+    volatile static Person p = new Person();
+
+    public static void main(String[] args) {
+        new Thread(() -> {
+            try {
+                TimeUnit.SECONDS.sleep(2);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println(p.name);
+        }).start();
+
+        new Thread(() -> {
+            try {
+                TimeUnit.SECONDS.sleep(2);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            p.name = "lisi";
+        }).start();
+    }
+
+    static class Person {
+        String name = "zhangsan";
+    }
+}
+```
+
+```JAVA
+public class ThreadLocal_02 {
+
+    // ThreadLocal.ThreadLocalMap threadLocals = null;
+    // ThreadLocal类中定义了ThreadLocalMap这个类型
+    // Thread类中维护一个ThreadLocalMap threadLocals对象，以ThreadLocal的弱引用为key
+    static ThreadLocal<Person> tl = new ThreadLocal<>();
+
+    public static void main(String[] args) {
+        new Thread(() -> {
+            try {
+                TimeUnit.SECONDS.sleep(2);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            /*
+                public T get() {
+                    Thread t = Thread.currentThread();
+                    ThreadLocalMap map = getMap(t);
+                    if (map != null) {
+                        ThreadLocalMap.Entry e = map.getEntry(this);
+                        if (e != null) {
+                            @SuppressWarnings("unchecked")
+                            T result = (T)e.value;
+                            return result;
+                        }
+                    }
+                    return setInitialValue();
+                }
+            */
+            System.out.println(tl.get());
+
+            /*
+                static class Entry extends WeakReference<ThreadLocal<?>> {
+                    Object value;
+
+                    Entry(ThreadLocal<?> k, Object v) {
+                        super(k);
+                        value = v;
+                    }
+                }
+            */
+            tl.remove();    // 防止内存泄漏
+        }).start();
+
+        new Thread(() -> {
+            try {
+                TimeUnit.SECONDS.sleep(2);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            /*
+                public void set(T value) {
+                    Thread t = Thread.currentThread();
+                    ThreadLocalMap map = getMap(t);
+                    if (map != null)
+                        map.set(this, value);
+                    else
+                        createMap(t, value);
+                }
+
+                ThreadLocalMap getMap(Thread t) {
+                    return t.threadLocals;
+                }
+             */
+            // set()其实是在当前线程的map集合中存储tl（key）和person（value）
+            Person person = new Person();
+            tl.set(person);
+        }).start();
+
+        /*
+            void createMap(Thread t, T firstValue) {
+                t.threadLocals = new ThreadLocalMap(this, firstValue);
+            }
+
+            ThreadLocalMap(ThreadLocal<?> firstKey, Object firstValue) {
+                table = new Entry[INITIAL_CAPACITY];
+                int i = firstKey.threadLocalHashCode & (INITIAL_CAPACITY - 1);
+                table[i] = new Entry(firstKey, firstValue);
+                size = 1;
+                setThreshold(INITIAL_CAPACITY);
+            }
+
+            private static final int INITIAL_CAPACITY = 16;
+
+            static class Entry extends WeakReference<ThreadLocal<?>> {
+                Object value;
+
+                Entry(ThreadLocal<?> k, Object v) {
+                    super(k);
+                    value = v;
+                }
+            }
+
+            private void setThreshold(int len) {
+                threshold = len * 2 / 3;
+            }
+        */
+    }
+
+    static class Person {
+    }
+}
+```
 
 
 
-## 线程池
+## 线程池原理
 
 ### 使用线程池带来的好处
 
 1. 降低资源消耗：通过重复利用已经创建的线程降低因为频繁创建和销毁而造成的消耗；
 2. 提供响应速度：当任务到达时，无需等待线程的创建即可立即执行；
 3. 提高线程的可管理性：线程池可以统一的分配、调优和监控线程。
-
-
 
 ### 实现Runnable接口和Callable接口的区别
 
@@ -468,8 +1049,6 @@ TODO
    }
    ```
 
-
-
 ### 执行execute()方法和submit()方法的区别
 
 1. `execute()`：用于提交不需要返回值的任务，无法判断任务是否被成功执行。
@@ -499,8 +1078,6 @@ TODO
    }
    ```
 
-
-
 ### 线程池的创建
 
 1. 为什么不推荐使用`Executors`去创建，而是通过`ThreadPoolExecutor`的方式创建？使用前者的弊端如下：
@@ -513,8 +1090,6 @@ TODO
       2. SingleThreadExecutor：通过`Executors.newSingleThreadExecutor()`创建，该方法返回一个只有一个线程的线程池，同一时间只能执行一个任务，若多余出来的任务被提交则会被暂存任务队列，待池中有线程空闲，按FIFO的原则出队任务执行。
       3. CachedThreadPool：通过`Executors.newCachedThreadPool()`创建，该方法返回一个可根据实际情况调整线程数量的线程池，其中的线程数量是不确定的，但若有空闲线程可以复用，则优先使用，反之无空闲线程，则会创建新线程处理任务。
       4. WorkStealingPool：通过`Executors.newWorkStealingPool()`创建，具有任务窃取机制的线程池。
-
-
 
 ### ThreadPoolExecutor类构造方法源码分析
 
@@ -563,8 +1138,6 @@ null)
 * `ThreadPoolExecutor.DiscardPolicy`：不处理新任务，直接丢弃；
 * `ThreadPoolExecutor.DiscardOldestPolicy`：丢弃最早的未处理的任务请求。
 
-
-
 ### 线程池代码示例
 
 ```JAVA
@@ -603,9 +1176,7 @@ public class ThreadPoolExecutorDemo {
 }
 ```
 
-
-
-### 线程池底层原理
+### 线程池任务提交源码分析
 
 `execute()` 方法源码分析：
 
@@ -653,7 +1224,7 @@ public void execute(Runnable command) {
 
 
 
-## Atomic原子类
+## Atomic原子类原理
 
 ### Atomic原子类的概念
 
@@ -698,7 +1269,46 @@ class AtomicIntegerTest {
 }
 ```
 
+```JAVA
+public class T03_AtomicInteger {
 
+    /*
+    * CAS（compare and swap比较和交换）：
+    *   1.当多线程操作共享变量时，先获取值计算结果并将此时获取的值设置为自己的期望值（记录变量的当前状态）；
+    *   2.在将结果回写之前先读取变量的最新值，若和期望值不符则读取最新值并更新期望和重新计算（被其他线程修改了）；
+    *   3.反复执行第2步操作直到符合期望，再将重新计算后的值回写（保证操作的是变量的最新状态）。
+    * ABA问题怎么解决？
+    *   1.描述：当线程将计算结果回写的时候发现最新值和期望值一样，但此时的最新值可能是其他线程修改后又再次修改回来的（A - B - A），变量可能并非该线程读取时的状态了；
+    *   2.解决：加入版本号来解决，每次操作都会有递增的概念，回写之前同时比较版本号。
+    * CAS修改时的原子性问题怎么解决？
+    *   1.描述：多核CPU在使用CAS操作数据时会有操作的原子性问题，也就是说cmpxchg这条汇编指令会有原子性问题。
+    *   2.解决：将指令修改为lock cmpxchg，相当于让CPU执行了一个锁总线的操作，本次只能有一个核心的cmpxchg指令可以被执行。
+    * */
+    // 轻量级锁，无锁，自旋锁
+    private static final AtomicInteger m = new AtomicInteger(0);
+
+    public static void main(String[] args) throws InterruptedException {
+        Thread[] threads = new Thread[100];
+        CountDownLatch latch = new CountDownLatch(threads.length);
+
+        for (int i = 0; i < threads.length; i++) {
+            threads[i] = new Thread(() -> {
+                for (int j = 0; j < 1000; j++) {
+                    // 原子性操作
+                    m.incrementAndGet();
+                }
+                latch.countDown();
+            });
+        }
+
+        Arrays.stream(threads).forEach(Thread::start);
+
+        latch.await();
+
+        System.out.println(m.get());
+    }
+}
+```
 
 ### AtomicInteger的原理
 
@@ -719,8 +1329,6 @@ static {
 
 private volatile int value;
 ```
-
-
 
 ### CAS原理
 
@@ -1370,14 +1978,6 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## 线程间的同步方式
-
-* **互斥量（Mutex）**：采用互斥对象机制，只有拥有互斥对象的线程才有访问公共资源的权限。因为互斥对象只有一个，所以可以保证公共资源不会被多个线程同时访问，如Java中的synchronized和各种Lock锁；
-* **信号量（Semphares）**：允许同一时刻多个线程访问同一资源，但是需要控制同一时刻访问此资源的最大线程数量；
-* **事件（Event）**：即 `wait/notify` 操作，通过通知操作的方式来保持多线程同步，还可以方便的实现多线程的优先级。
-
-
-
 ## Java线程的内存模型
 
 ### 主内存和工作内存
@@ -1389,8 +1989,6 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 所有的变量都存储在主存中，每个线程有自己的工作内存，一般存储在高速缓存和寄存器中，保存了该线程使用变量的主存副本。线程只能直接操作工作内存中的变量，不同线程之间的变量值传递需要通过主存完成。
 
 ![主内存和工作内存2](assets/主内存和工作内存2.png)
-
-
 
 ### 内存间的交互操作
 
@@ -1405,19 +2003,15 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 * lock：为主内存中的变量加锁；
 * unlock：释放锁。
 
-
-
 ### 线程内存模型的三大特征
 
-**原子性：**
+**原子性**：Java的内存模型保证了load、assign、store等单个操作具有原子性，但并不保证一整个系列的操作具备原子性。如下图，T1读取cnt并修改但还未将其写入主存，T2此时读取的依然是旧值。
 
-* Java的内存模型保证了load、assign、store等单个操作具有原子性，但并不保证一整个系列的操作具备原子性。如下图，T1读取cnt并修改但还未将其写入主存，T2此时读取的依然是旧值。
+![原子性1](assets/原子性1.jpg)
 
-  ![原子性1](assets/原子性1.jpg)
+使用Atomic原子类或synchronized互斥锁可以保证系列操作的完整性。
 
-* 使用Atomic原子类或synchronized互斥锁可以保证系列操作的完整性。
-
-  ![原子性2](assets/原子性2.jpg)
+![原子性2](assets/原子性2.jpg)
 
 **可见性**：
 
@@ -2810,15 +3404,120 @@ public class Test {
 
 ### 引用类型
 
-**强引用：**
+**强引用**：
 
-**软引用：**
+```JAVA
+public class T01_NormalReference {
+
+    public static void main(String[] args) throws IOException {
+        // 强引用：str就是强引用一个字符串对象，若引用指向空，则之前指向的对象会被回收
+        M m = new M();
+        m = null;
+
+        System.gc();    // DisableExplicitGC
+        System.out.println(m);
+
+        int read = System.in.read();    // 阻塞main线程，给gc线程执行时间
+    }
+}
+```
+
+**软引用**：
+
+```JAVA
+public class T02_SoftReference {
+
+    public static void main(String[] args) throws InterruptedException {
+        // 实验的前置条件：-Xmx: 20 将堆内存设置为20mb
+        // 软引用：m指向SoftReference是强引用，SoftReference对象内的成员变量指向的10mb的字节数组是软引用
+        // 适用场景：缓存，比如大文件，写入内存中后使用软引用指向，需要使用时直接从内存获取，不需要时软引用自动断开，释放内存
+        SoftReference<byte[]> m = new SoftReference<>(new byte[1024 * 1024 * 10]);
+        System.out.println(Arrays.toString(m.get()));
+
+        // 一次gc后软引用指向的对象未被回收，因为此时内存足够
+        System.gc();
+        Thread.sleep(500);
+        System.out.println(Arrays.toString(m.get()));
+
+        // 再次分配15mb的字节数组，超出堆内存，这时软引用指向的对象会被释放
+        byte[] b = new byte[1024 * 1024 * 15];
+        System.out.println(Arrays.toString(m.get()));
+    }
+}
+```
 
 **弱引用**：
 
-**虚引用：**
+```JAVA
+public class T03_WeakReference {
 
+    public static void main(String[] args) {
+        // 弱引用：可以通过引用正常访问对象，但如果一个对象只有一个弱引用，gc会直接回收
+        WeakReference<M> m = new WeakReference<>(new M());
 
+        System.out.println(m.get());
+        System.gc();
+        System.out.println(m.get());
+
+        // ThreadLocalMap中的Entry就使用弱引用，其中的key就是指向ThreadLocal对象的弱引用
+        /*
+        * ThreadLocal为什么使用弱引用——防止内存泄漏：
+        * 1.若Entry中的key使用强引用，此时外部所有的强引用断开联系，ThreadLocalMap中的key不会被gc回收，会造成内存泄漏问题；
+        * 2.使用弱引用会在外部引用都断开后允许gc回收，但会造成key为null，value无人映射，也会出现内存泄漏问题；
+        * 3.所以使用ThreadLocal后需要手动调用remove方法清除k-v对，防止内存泄漏。
+        * */
+        ThreadLocal<M> tl = new ThreadLocal<>();
+        tl.set(new M());
+        tl.remove();
+    }
+}
+```
+
+**虚引用**：
+
+```JAVA
+public class T04_PhantomReference {
+
+    private static final List<Object> LIST  = new LinkedList<>();
+    private static final ReferenceQueue<M> QUEUE = new ReferenceQueue<>();
+
+    public static void main(String[] args) throws InterruptedException {
+        // 虚引用：当一个对象需要被回收的时候，会建立该对象的虚引用并放入虚引用队列，相当于给gc线程一个通知
+        // 作用：管理直接内存（堆外内存），nio的零拷贝会在jvm堆外直接分配内存空间（jvm堆内对象管理堆外内存空间buff），当jvm堆内对象被回收时
+        // ，需要通过虚引用和虚引用队列执行特定的回收操作，即同时释放堆外的内存
+        PhantomReference<M> phantomReference = new PhantomReference<>(new M(), QUEUE);
+        // 无法通过虚引用访问其指向的对象
+        System.out.println(phantomReference.get());
+
+        // 占用内存资源
+        new Thread(() -> {
+            while (true) {
+                LIST.add(new byte[1024 * 1024]);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println(phantomReference.get());
+            }
+        }).start();
+
+        // 模拟垃圾回收线程
+        new Thread(() -> {
+            while (true) {
+                // gc线程从虚引用队列中获取到了虚引用，才会执行特定的回收操作
+                Reference<? extends M> poll = QUEUE.poll();
+                if (poll != null) {
+                    // 真正执行的回收操作
+                    System.out.println("--- 虚引用对象被jvm回收了" + poll);
+                }
+            }
+        }).start();
+
+        Thread.sleep(500);
+    }
+}
+```
 
 ## JVM-垃圾回收算法
 
@@ -4547,9 +5246,9 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
 
 ### Netty启动过程源码分析
 
-**NioEventLoopGroup阶段分析**：
+#### NioEventLoopGroup阶段分析
 
-* NioEventLoopGroup构造方法：
+**NioEventLoopGroup构造方法**：
 
 ```JAVA
 // 若不指定线程数将从这里开始
@@ -4571,7 +5270,7 @@ public NioEventLoopGroup(int nThreads, Executor executor, final SelectorProvider
 }
 ```
 
-* MultithreadEventLoopGroup构造方法：
+**MultithreadEventLoopGroup构造方法**：
 
 ```JAVA
 // 从1和系统属性和CPU核⼼数*2这三个值中取最⼤值，可以得出DEFAULT_EVENT_LOOP_THREADS的值为CPU核⼼数*2
@@ -4588,7 +5287,7 @@ protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, O
 }
 ```
 
-* MultithreadEventExecutorGroup构造方法：
+**MultithreadEventExecutorGroup构造方法**：
 
 ```JAVA
 protected MultithreadEventExecutorGroup(int nThreads, Executor executor, Object... args) {
@@ -4648,9 +5347,11 @@ protected MultithreadEventExecutorGroup(int nThreads, Executor executor,
 }
 ```
 
-**ServerBootstrap阶段分析**：
 
-* ServerBootstrap构造方法分析：
+
+#### ServerBootstrap阶段分析
+
+**ServerBootstrap构造方法**：
 
 ```java
 private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
@@ -4662,23 +5363,23 @@ private volatile ChannelHandler childHandler;
 public ServerBootstrap() { }
 ```
 
-* ServerBootstrap的group()方法分析：
+**ServerBootstrap#group**：
 
 ```JAVA
 public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
-    super.group(parentGroup);	// bossGroup
+    super.group(parentGroup);	// parentGroup即bossGroup
     if (childGroup == null) {
         throw new NullPointerException("childGroup");
     }
     if (this.childGroup != null) {
         throw new IllegalStateException("childGroup set already");
     }
-    this.childGroup = childGroup;	// workerGroup
+    this.childGroup = childGroup;	// childGroup即workerGroup
     return this;
 }
 ```
 
-* AbstractBootstrap的channel()方法分析：
+**AbstractBootstrap#channel**：
 
 ```java
 public B channel(Class<? extends C> channelClass) {
@@ -4690,7 +5391,7 @@ public B channel(Class<? extends C> channelClass) {
 }
 ```
 
-* AbstractBootstrap的option()方法分析：
+**AbstractBootstrap#option**：
 
 ```JAVA
 // 通过Map存储配置
@@ -4713,7 +5414,7 @@ public <T> B option(ChannelOption<T> option, T value) {
 }
 ```
 
-* AbstractBootstrap的bind()方法分析：
+**AbstractBootstrap#bind**：
 
 ```JAVA
 public ChannelFuture bind(int inetPort) {
@@ -4796,7 +5497,7 @@ private static void doBind0(
 }
 ```
 
-* DefaultChannelPipeline的addLast()方法分析：
+**DefaultChannelPipeline#addLast**：
 
 ```JAVA
 @Override
@@ -4847,7 +5548,7 @@ private void addLast0(AbstractChannelHandlerContext newCtx) {
 }
 ```
 
-* NioEventLoop的run()方法：
+**NioEventLoop#run**：
 
 ```JAVA
 // 当bind阶段结束，就会进入NioEventLoop的run中执行
@@ -5565,7 +6266,7 @@ private AbstractChannelHandlerContext findContextOutbound() {
 
 <img src="assets/image-20201201222047369.png" alt="image-20201201222047369" style="zoom: 80%;" />
 
-* EventLoop是通过execute()方法开启轮询和添加任务的，具体是在SingleThreadEventExecutor类中实现的：
+* EventLoop通过SingleThreadEventExecutor#execute添加普通任务，通过AbstractScheduledEventExecutor#schedule添加定时任务：
 
 ```JAVA
 @Override
@@ -5596,6 +6297,38 @@ public void execute(Runnable task) {
 }
 ```
 
+* 普通任务被存储在mpscQueue中，而定时任务则被存储在PriorityQueue\<ScheduledFutureTask\>()中。
+
+```JAVA
+@Override
+public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+    ObjectUtil.checkNotNull(callable, "callable");
+    ObjectUtil.checkNotNull(unit, "unit");
+    if (delay < 0) {
+        throw new IllegalArgumentException(
+            String.format("delay: %d (expected: >= 0)", delay));
+    }
+    return schedule(new ScheduledFutureTask<V>(
+        this, callable, ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));
+}
+
+<V> ScheduledFuture<V> schedule(final ScheduledFutureTask<V> task) {
+    if (inEventLoop()) {
+        scheduledTaskQueue().add(task);
+    } else {
+        execute(new Runnable() {
+            @Override
+            public void run() {
+                scheduledTaskQueue().add(task);
+            }
+        });
+    }
+    return task;
+}
+```
+
+* 普通任务加入taskQueue队列的源码分析：
+
 ```JAVA
 protected void addTask(Runnable task) {
     if (task == null) {
@@ -5614,6 +6347,8 @@ final boolean offerTask(Runnable task) {
     return taskQueue.offer(task);
 }
 ```
+
+* 启动EventLoop事件循环的源码分析：
 
 ```JAVA
 private void startThread() {
@@ -5700,6 +6435,8 @@ private void doStartThread() {
 }
 ```
 
+**NioEventLoop#run**：
+
 ```JAVA
 @Override
 protected void run() {
@@ -5709,13 +6446,12 @@ protected void run() {
                 case SelectStrategy.CONTINUE:
                     continue;
                 case SelectStrategy.SELECT:
-                    // 获取感兴趣的事件
+                    // 获取感兴趣的事件，在执行select前，标识一个状态，表示当前要进行select操作且处于未唤醒状态
                     select(wakenUp.getAndSet(false));
 
                     if (wakenUp.get()) {
                         selector.wakeup();
                     }
-                    // fall through
                 default:
             }
 
@@ -5724,26 +6460,28 @@ protected void run() {
             final int ioRatio = this.ioRatio;
             if (ioRatio == 100) {
                 try {
-                    // 当select返回后，通过该方法处理事件
                     processSelectedKeys();
                 } finally {
-                    // 执行队列中的所有任务
                     runAllTasks();
                 }
             } else {
+                // ioRation的值默认50，所以从这执行
+                // ioStartTime记录processSelectedKeys开始执行的时间
                 final long ioStartTime = System.nanoTime();
                 try {
+                    // 当select返回后，通过该方法处理事件
                     processSelectedKeys();
                 } finally {
-                    // 根据ioRation的比例执行runAllTasks方法，默认IO任务和非IO任务的时间是相同的
+                    // ioTime是processSelectedKeys所执行的时间
                     final long ioTime = System.nanoTime() - ioStartTime;
+                    // 根据ioRation的比例执行runAllTasks方法（执行任务队列中的所有任务），默认IO任务和非IO任务的执行时间比是1:1
                     runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                 }
             }
         } catch (Throwable t) {
             handleLoopException(t);
         }
-        // Always handle shutdown even if the loop processing threw an exception.
+        // 即使循环处理引发异常，也始终处理关闭
         try {
             if (isShuttingDown()) {
                 closeAll();
@@ -5758,17 +6496,19 @@ protected void run() {
 }
 ```
 
-* select()方法分析：
+**NioEventLoop#select**：
 
 ```JAVA
 private void select(boolean oldWakenUp) throws IOException {
     Selector selector = this.selector;
     try {
         int selectCnt = 0;
+        // select的开始执行时间和执行截止时间（也就是下一次定时任务的开始时间）
         long currentTimeNanos = System.nanoTime();
+        // delayNanos返回的就是当前时间距离下一次定时任务开始执行的时间
         long selectDeadLineNanos = currentTimeNanos + delayNanos(currentTimeNanos);
         for (;;) {
-            // select阻塞时间默认1秒，如果有定时任务，则在定时任务剩余时间的基础上再加0.5秒
+            // 当下一个定时任务开始距离当前时间小于0.5ms时，则表示即将有定时任务要执行，会调用非阻塞的selectNow()
             long timeoutMillis = (selectDeadLineNanos - currentTimeNanos + 500000L) / 1000000L;
             if (timeoutMillis <= 0) {
                 if (selectCnt == 0) {
@@ -5778,25 +6518,25 @@ private void select(boolean oldWakenUp) throws IOException {
                 break;
             }
 
-            // If a task was submitted when wakenUp value was true, the task didn't get a chance to call
-            // Selector#wakeup. So we need to check task queue again before executing select operation.
-            // If we don't, the task might be pended until select operation was timed out.
-            // It might be pended until idle timeout if IdleStateHandler existed in pipeline.
+            // 如果任务是在wakenUp状态为true时提交的，则该任务没有机会调用
+            // hasTasks判断队列中是否有任务，且通过CAS设置wakenUp唤醒状态
+            // 若队列中有任务，且唤醒状态成功设置为true，就调用非阻塞的select去执行
             if (hasTasks() && wakenUp.compareAndSet(false, true)) {
                 selector.selectNow();
                 selectCnt = 1;
                 break;
             }
 			
-            // select调用，只阻塞一定时间就返回，默认1秒
+            // 若以上条件都不满足，最后会调用阻塞的select
             int selectedKeys = selector.select(timeoutMillis);
             selectCnt ++;
 	
-            // select到了就绪事件 || select被用户唤醒 || 任务队列中有任务 || 有定时任务即将被执行
-            // 满足以上任意一种情况，跳出loop循环
+            // 若select到了就绪事件 || select被用户唤醒 || 任务队列中有任务 || 有定时任务即将被执行
+            // 满足以上任意一种情况，都会跳出循环
             if (selectedKeys != 0 || oldWakenUp || wakenUp.get() || hasTasks() || hasScheduledTasks()) {
                 break;
             }
+            // 判断线程中断
             if (Thread.interrupted()) {
                 // Thread was interrupted so reset selected keys and break so we not run into a busy loop.
                 // As this is most likely a bug in the handler of the user or it's client library we will
@@ -5852,7 +6592,7 @@ private void select(boolean oldWakenUp) throws IOException {
 }
 ```
 
-* processSelectedKeys()方法分析：
+**NioEventLoop#processSelectedKeys**：
 
 ```JAVA
 private void processSelectedKeys() {
@@ -5863,6 +6603,8 @@ private void processSelectedKeys() {
     }
 }
 ```
+
+**NioEventLoop#processSelectedKeysOptimized**：
 
 ```java
 private void processSelectedKeysOptimized(SelectionKey[] selectedKeys) {
@@ -5876,6 +6618,7 @@ private void processSelectedKeysOptimized(SelectionKey[] selectedKeys) {
         final Object a = k.attachment();
 
         if (a instanceof AbstractNioChannel) {
+            // 取出I/O事件，逐个调用processSelectedKey处理
             processSelectedKey(k, (AbstractNioChannel) a);
         } else {
             @SuppressWarnings("unchecked")
@@ -5900,6 +6643,8 @@ private void processSelectedKeysOptimized(SelectionKey[] selectedKeys) {
 }
 ```
 
+**NioEventLoop#processSelectedKey**：
+
 ```java
 final AbstractNioChannel.NioUnsafe unsafe = ch.unsafe();
 if (!k.isValid()) {
@@ -5916,6 +6661,7 @@ if (!k.isValid()) {
     unsafe.close(unsafe.voidPromise());
     return;
 }
+// 获取事件的就绪类型，执行不同的策略
 int readyOps = k.readyOps();
 if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
     int ops = k.interestOps();
@@ -5937,9 +6683,12 @@ if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOp
 }
 ```
 
-* SingleThreadEventExecutor#runAllTasks()方法分析：
+**SingleThreadEventExecutor#runAllTasks**：
 
 ```JAVA
+/**
+ * 执行队列中的任务
+ */
 protected boolean runAllTasks(long timeoutNanos) {
     // 任务聚合
     fetchFromScheduledTaskQueue();
@@ -5950,18 +6699,21 @@ protected boolean runAllTasks(long timeoutNanos) {
         return false;
     }
 
+    // 计算截止时间，即for循环执行到deadline就截止
     final long deadline = ScheduledFutureTask.nanoTime() + timeoutNanos;
+    // 任务执行计数器
     long runTasks = 0;
     long lastExecutionTime;
     for (;;) {
+        // 以串行的方式执行任务
         safeExecute(task);
 
         runTasks ++;
 
-        // Check timeout every 64 tasks because nanoTime() is relatively expensive.
-        // XXX: Hard-coded value - will make it configurable if it is really a problem.
+        // 每执行64次检查一次超时（根据经验硬编码的次数）
         if ((runTasks & 0x3F) == 0) {
             lastExecutionTime = ScheduledFutureTask.nanoTime();
+            // 若超过截止时间，则退出任务执行
             if (lastExecutionTime >= deadline) {
                 break;
             }
@@ -5974,19 +6726,28 @@ protected boolean runAllTasks(long timeoutNanos) {
         }
     }
 
+    // 执行一些收尾性质的任务
     afterRunningAllTasks();
     this.lastExecutionTime = lastExecutionTime;
     return true;
 }
 ```
 
+**SingleThreadEventExecutor#fetchFromScheduledTaskQueue**：
+
 ```java
+/**
+ * 任务聚合：即将执行的定时任务和待处理的普通任务，都会放入mpscQueue里去执行
+ */
 private boolean fetchFromScheduledTaskQueue() {
+    // 可以看做是一个截止日期
     long nanoTime = AbstractScheduledEventExecutor.nanoTime();
+    // 在定时任务队列中取出一个离截止日期事件最近的定时任务（定时任务队列是按照截止日期排队的）
     Runnable scheduledTask  = pollScheduledTask(nanoTime);
     while (scheduledTask != null) {
+        // 尝试将取出的定时任务加入普通任务队列中
         if (!taskQueue.offer(scheduledTask)) {
-            // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
+            // 若普通任务队列中没有剩余空间，会将定时任务重新加入定时任务队列
             scheduledTaskQueue().add((ScheduledFutureTask<?>) scheduledTask);
             return false;
         }
@@ -5998,7 +6759,7 @@ private boolean fetchFromScheduledTaskQueue() {
 
 
 
-### 耗时任务加入异步线程池源码分析
+### 任务加入异步线程池源码分析
 
 * 在Netty的NioEventLoop线程中做耗时的，不可预料的操作，如数据连接，网络请求等，会严重影响Netty对Socket的IO操作的效率。解决方法就是将耗时任务添加到异步线程池EventExecutorGroup中去执行。
 * 将耗时任务添加到线程池中的操作有两种方式，一个是在handler中添加，一个是在Context中添加。
