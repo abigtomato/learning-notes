@@ -1,6 +1,0 @@
-application:
-  get: hadoop
-  apps: hive
-  create: hbase
-  update: spark
-  delete: flink
