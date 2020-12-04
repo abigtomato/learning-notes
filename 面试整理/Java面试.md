@@ -1,44 +1,48 @@
 # Java多线程高并发
 
-## Java多线程基本概念
+## Java线程-基本概念
 
 ### 以操作系统的角度来看
 
-* 程序的概念：
+**程序的概念**：
 
-  * 程序的本质就是CPU可以执行的指令和内存中的数据；
-  * 从内存中读出PC（指令计数器）当前指向的指令地址和对应数据，通过总线写入CPU的寄存器中；
-  * CPU的ALU（逻辑计算单元）会进行计算，并将计算结果写回到内存中；
-  * 此时CPU的PC会指向下一条指令。
-* 进程的概念：
+* 程序的本质就是CPU可以执行的指令和内存中的数据；
+* 从内存中读出PC（指令计数器）当前指向的指令地址和对应数据，通过总线写入CPU的寄存器中；
+* CPU的ALU（逻辑计算单元）会进行计算，并将计算结果写回到内存中；
+* 此时CPU的PC会指向下一条指令。
 
-  * 是资源分配的基本单位；
-  * 是程序启动后从磁盘进入到被分配到的内存的资源和代码的集合；
-  * 也是CPU指令和内存数据的集合。
-* 线程的概念：
+**进程的概念**：
 
-  * 程序执行的基本单位；
-  * 进程中代码执行的路径（可以存在多条执行路径）；
+* 是资源分配的基本单位；
+* 是程序启动后从磁盘进入到被分配到的内存的资源和代码的集合；
+* 也是CPU指令和内存数据的集合。
+
+**线程的概念**：
+
+* 程序执行的基本单位；
+* 进程中代码执行的路径（可以存在多条执行路径）。
 
 ### 以JVM的角度来看
 
-* 一个JVM进程运行时所管理的内存区域如下图，一个进程中可以存在多个线程，多个线程共享堆空间和本地方法区（元空间），每个线程有自己的虚拟机栈、本地方法栈和程序计数器。
+一个JVM进程运行时所管理的内存区域如下图，一个进程中可以存在多个线程，多个线程共享堆空间和本地方法区（元空间），每个线程有自己的虚拟机栈、本地方法栈和程序计数器。
 
 <img src="assets/image-20200928231644475.png" alt="image-20200928231644475" style="zoom: 67%;" />
 
-* 总结：线程是进程划分出来的执行单元，最大的不同在于进程间是独立的，而线程则不一定，这是因为同一进程中各线程可能会相互影响。在JVM中，多个线程共享进程的堆和方法区，每个线程有自己的程序计数器、虚拟机栈和本地方法栈。
-* PC计数器为什么私有（**简单概括：各线程的代码执行位置独立**）？
-  * 在JVM中，字节码解释器通过改变PC计数器的指向依次读取指令，从而实现代码的流程控制；
-  * 在多线程情况下，PC计数器用于记录所属线程暂停执行时的位置，从而当线程被切换回来后能恢复之前的执行状态；
-  * 总结：因为PC计数器是针对各线程内字节码指令进行控制的，即针对程序的执行单位做控制。
+总结：线程是进程划分出来的执行单元，最大的不同在于进程间是独立的，而线程则不一定，这是因为同一进程中各线程可能会相互影响。在JVM中，多个线程共享进程的堆和方法区，每个线程有自己的程序计数器、虚拟机栈和本地方法栈。
 
-* VM栈和NM栈为什么私有（**简单概括：各线程的局部资源独立**）？
-  * 虚拟机栈：每个java方法在执行时都会在VM栈中创建一个栈帧用于存储局部变量表、操作数栈、常量池等信息。从方法调用直至执行完成的过程，就对应一个栈帧在虚拟机栈中压栈和弹栈的过程；
-  * 本地方法栈：和虚拟机栈相似，区别是VM栈为虚拟机执行java方法（即字节码）服务，而NM栈则为虚拟机使用的native方法服务（在HotSpot虚拟机中，虚拟机栈和本地方法栈合二为一了）；
-  * 总结：所以，为了保证线程中的局部变量不能被其他线程所访问，虚拟机栈和本地方法栈都是线程私有的，其实也就是针对程序的各条执行路径做控制。
-* 堆和元空间为什么共享（**简单概括：代码执行中的共享资源**）？
-  * 堆是进程被分配到的内存中最大的一块，主要用于存放新创建的对象（所有的对象都在这里被分配内存），方法区主要用于存放已被加载的类信息，如：常量、静态变量、即时编译器编译获得代码等数据；
-  * 总结：因为二者存储的都是程序的资源单位，不存在执行时的独立问题，所以堆和元空间是和进程绑定的。
+PC计数器为什么私有（**简单概括：各线程的代码执行位置独立**）？
+* 在JVM中，字节码解释器通过改变PC计数器的指向依次读取指令，从而实现代码的流程控制；
+* 在多线程情况下，PC计数器用于记录所属线程暂停执行时的位置，从而当线程被切换回来后能恢复之前的执行状态；
+* 总结：因为PC计数器是针对各线程内字节码指令进行控制的，即针对程序的执行单位做控制。
+
+VM栈和NM栈为什么私有（**简单概括：各线程的局部资源独立**）？
+* 虚拟机栈：每个java方法在执行时都会在VM栈中创建一个栈帧用于存储局部变量表、操作数栈、常量池等信息。从方法调用直至执行完成的过程，就对应一个栈帧在虚拟机栈中压栈和弹栈的过程；
+* 本地方法栈：和虚拟机栈相似，区别是VM栈为虚拟机执行java方法（即字节码）服务，而NM栈则为虚拟机使用的native方法服务（在HotSpot虚拟机中，虚拟机栈和本地方法栈合二为一了）；
+* 总结：所以，为了保证线程中的局部变量不能被其他线程所访问，虚拟机栈和本地方法栈都是线程私有的，其实也就是针对程序的各条执行路径做控制。
+
+堆和元空间为什么共享（**简单概括：代码执行中的共享资源**）？
+* 堆是进程被分配到的内存中最大的一块，主要用于存放新创建的对象（所有的对象都在这里被分配内存），方法区主要用于存放已被加载的类信息，如：常量、静态变量、即时编译器编译获得代码等数据；
+* 总结：因为二者存储的都是程序的资源单位，不存在执行时的独立问题，所以堆和元空间是和进程绑定的。
 
 ### 并发和并行的区别
 
@@ -68,7 +72,7 @@
 
 
 
-## Java的多线程机制和API
+## Java线程-API和机制
 
 ### 创建线程
 
@@ -446,151 +450,235 @@ public class AwaitSignalExample {
 
 
 
-## Java线程的状态及切换
+## Java线程-状态及切换
 
 ### 线程状态
 
-![image-20200930123828410](assets/image-20200930123828410.png)
+* **初始（NEW）**：新创建了一个线程对象，但还没有调用start()方法；
+* **运行（RUNNABLE）**：
+  * 就绪（READY）：线程对象创建后，其他线程如main调用了该对象的start()方法，线程会位于就绪状态的队列中，等待被调度器选中，获取CPU的使用权；
+  * 运行中（RUNNING）：就绪状态的线程在获得CPU的时间片后变为运行中的状态。
+* **阻塞（BLOCKED）**：表示线程阻塞于锁；
+* **等待（WAITING）**：进入该状态的线程需要无限期的等待其他线程做出一些特定动作（如唤醒或中断）；
+* **超时等待（TIMED_WAITING）**：与WAITING相似，但可以在指定时间返回；
+* **终止（TERMINATED）**：表示该线程已经执行完毕。
 
-1. 线程创建后处于**NEW（初始）**状态，调用``Thread.start()``方法后开始运行，进入**READY（就绪）**状态，这时可运行状态的线程若是获得了CPU时间片（timeslice）就会进入**RUNNING（运行）**状态；
-
-2. 当线程执行``Object.wait()、Object.join()、LockSupport.park()``方法后，进入**WAITING（等待）**状态，处于等待状态的线程需要依靠其他线程的通知才能取消等待，如通过``Object.notify()、Object.notifyAll()、LockSupport.unpark(Thread)``方法通知唤醒等待的线程；
-
-3. **TIME_WAITING（超时等待）**状态相当于在等待状态的基础上增加了超时限制，如通过``Thread.sleep(long)、Object.wait(long)、Thread.join(long)、LockSupport.parkNanos()、LockSupport.parkUntil()``方法可以将线程置于超时等待状态，当超时时间到达后线程会返回到运行状态（也可以像唤醒等待线程一样直接通知）；
-
-4. 当线程调用同步方法，但没有获取到锁的时候，会进入**BLOCKED（阻塞）**状态，直到获取锁；
-
-5. 线程在执行完Runnable的``run()``方法之后会进入**TERMINATED（终止状态）**。
-
-   ![image-20201111140624405](assets/image-20201111140624405.png)
+![线程状态图](assets/20181120173640764.jpeg)
 
 ### 状态切换
 
-### 锁池队列和等待队列
+* **初始 ——> 运行**：线程对象被创建后处于NEW状态，调用 ``Thread#start()`` 后进入RUNNABLE状态（准确的说是进入READY状态）；
+* **运行中 <——> 就绪**：READY状态的线程若是被调度器选中获得了CPU时间片（timeslice）就会进入RUNNING状态。RUNNING状态的线程若是时间片耗尽或是调用 `Thread#yield()` 方法后会重新进入READY状态；
+* **运行 <——> 等待**：当线程执行 ``Object.wait()/Thread.join()/LockSupport.park()`` 方法后，进入等待队列中且处于WAITING状态，处于等待状态的线程需要依靠其他线程的通知或其他线程执行完毕后才能取消等待返回READY状态，如通过 ``Object.notify()/Object.notifyAll()/LockSupport.unpark(Thread)`` 方法唤醒等待的线程；
+* **运行 <——> 超时等待**：TIME_WAITING状态相当于在等待状态的基础上增加了超时限制，如通过  ``Thread.sleep(long)/Object.wait(long)/Thread.join(long)/LockSupport.parkNanos()/LockSupport.parkUntil()`` 方法可以将线程置于超时等待状态，当超时时间到达后或被其他线程唤醒后会返回到READY状态；
+* **运行 <——> 阻塞：**当线程执行同步代码，且没有获取到锁的情况下，会进入同步队列且处于BLOCKED状态，直到其获取到锁，才会回到READY状态；
+* **运行 ——> 终止**：线程执行完后会进入TERMINATED状态。
+
+
+
+### 同步队列和等待队列
+
+处于同步队列中的BLOCKED线程和处于等待队列中的WAITING线程都不会获得CPU时间片，只有满足状态切换的条件时进入就绪队列才能参与调度。调用Object的wait()和notify()方法前，必须先获得对象锁，也就是需要写在同步代码中。下图是同步锁和wait/notify机制之间的关系图。
+
+![img](assets/20180701221233161)
+
+1. 线程1持有对象锁，正在使用对象A。此时4、3、2线程在对象A的等待队列中等待唤醒，6、5线程在锁的同步队列中准备获取锁；
+2. 线程1调用对象A的wait()方法，会先释放对象锁，然后进入等待队列中等待；
+3. 此时对象锁的同步队列中的线程开始竞争对象锁，最后被线程5获取到，线程5会出队然后持有锁，使用对象A；  
+4. 线程5调用对象A的notifyAll()方法，给所有在A的等待队列中等待的线程发送唤醒通知，进入A的同步对象等待获取锁；
+5. 线程5执行完毕后释放锁，同步队列中的线程竞争锁。
+
+
 
 ### 影响线程状态的方法比较
 
-
-
-## Java多线程的上下文切换
-
-1. 线程数大于CPU核心数的情况下，每个CPU在同一时刻只能执行一个线程，为了让其他线程都能有效的执行，CPU采取的策略就是为每个线程分配时间片轮转，即当一个线程获取到CPU执行权时也会得到一个时间片，当时间片用完就会重新进入就绪状态给其他线程执行的机会；
-2. 从当前线程在执行完CPU时间片切换到另一个线程前会保存自己的状态，以便下次再切换回这个线程时，可以恢复之前的执行状态，**线程从保存到恢复的过程就是一次上下文切换**；
-3. 注：上下文切换通常是计算密集型，即对CPU来说需要相当可观的处理时间，每个切换都要消耗纳秒级的时间，所以频繁的切换意味着对CPU性能巨大的浪费；
-4. 从计算机系统层面解释：当CPU的核心切换到其他线程执行时，当前中断的线程相关的数据（寄存器数据，堆栈信息）会被暂存在内存中，等下次切换回来时从中断的位置继续执行。
-
-### 上下文切换的概念
-
-### 上下文切换的步骤
-
-### 减少上下文切换的方法
+* `Thread.sleep(long millis)`：当前线程调用此方法进入TIMED_WAITING状态，但不会释放对象锁，millis时间后线程会自动苏醒进入READY状态。是给其他线程执行机会的最佳方式；
+* `Thread.yield()`：当前线程调用此方法让出CPU执行权，由运行状态切换为就绪状态，让调度器重新调度，但不会释放已经持有的对象锁。可以让相同优先级的线程轮流执行，但并不保证一定会让其他线程执行，因为让步的线程还有可能再次被调度器选中；
+* `Thread.join()/Thread.join(long millis)`：当前线程调用其他线程的join方法会让当前线程进入WAITING/TIMED_WAITING状态，但不会释放已经持有的对象锁，当被调用join方法的线程执行完毕或者millis时间到时，当前线程会进入RUNNALBE或BLOCKED状态（因为join是基于wait实现的）；
+* `Object.wait()/Object.wait(long timeout)`：当前线程调用此方法，会释放对象锁，进入对象的等待队列中，依赖于notify/notifyAll唤醒或timeout时间到后自动唤醒；
+* `Object.notify()/Object.notify()`：调用此方法会唤醒在对象上等待的单个或全部线程，若是notify则唤醒的是等待队列的头节点，即等待时间最长的线程（JDK1.8）；
+* `LockSupport.park()/LockSupport.parkUntil(long deadlines)`：当前线程调用park/parkUntil会进入WAITING/TIMED_WAITING状态，相对于wait方法，可以不用获取锁就进入等待状态，依赖于unpark唤醒或自动唤醒。
 
 
 
-## Java线程的死锁问题
+## Java线程-上下文切换
 
- * 死锁指多个线程被同时阻塞，它们中的一个或全部都在等待某资源被释放，由于线程被无限期的阻塞，因此程序不可能正常终止。如上图，线程A持有资源2，线程B持有资源1，它们都想申请对方锁住的资源，但又不能释放自己锁住的资源，所以这两个线程会因为互相等待而进入死锁状态；
+### 进程上下文切换
 
-   ![image-20200930182226098](assets/image-20200930182226098.png)
+由于Java的JVM线程和操作系统的内核线程是1:1的映射关系，所以在发生上下文切换时，需要通过操作系统完成。以Linux为例，在切换过程中，正在执行的进程现场会被保存起来，为了保证未来能被恢复，这里的现场包括所有有关的寄存器，和一些操作系统的必要数据。
 
- * Java代码实现上图的死锁：
+操作系统中用于保存进程信息的数据结构被称为进程控制块（PCB，process control block）。PCB通常是系统内存占用区中的一个连续内存，其存放着操作系统用于描述进程情况及控制进程运行所需的全部信息，可以使一个在多道程序环境下不能独立运行的程序成为一个能独立运行的基本单位或一个能与其他进程并发执行的进程。
 
-   ```JAVA
-   public class DeadLockDemo {
-       
-       private static Object resource1 = new Object();
-       private static Object resource2 = new Object();
-       
-       public static void main(String[] args) {
-           new Thread(() -> {
-               synchronized (resource1) {
-                   System.out.println(Thread.currentThread() + "get resource1");
-                   try {
-                   	Thread.sleep(1000);
-                   } catch (InterruptedException e) {
-                   	e.printStackTrace();
-                   }
-                   System.out.println(Thread.currentThread() + "waiting get resource2");
-                   synchronized (resource2) {
-                       System.out.println(Thread.currentThread() + "get resource2");
-                   }
-               }
-           }, "线程1").start();
-           
-           new Thread(() -> {
-               synchronized (resource2) {
-                   System.out.println(Thread.currentThread() + "get resource1");
-                   try {
-                   	Thread.sleep(1000);
-                   } catch (InterruptedException e) {
-                   	e.printStackTrace();
-                   }
-                   System.out.println(Thread.currentThread() + "waiting get resource2");
-            		synchronized (resource1) {
-                       System.out.println(Thread.currentThread() + "get resource1");
-                   } 
-               }
-           }, "线程2").start();
-       }
-   }
-   ```
+**以进程A切换到进程B为例看上下文切换的步骤：**
 
-   ```
-   Thread[线程 1,5,main] get resource1
-   Thread[线程 2,5,main] get resource2
-   Thread[线程 1,5,main] waiting get resource2
-   Thread[线程 2,5,main] waiting get resource1
-   ```
-
- * 代码分析：线程1首先获resource1锁，线程2获取resource2锁。当两个线程休眠结束后，线程1内部阻塞等待resource2锁但没有释放resource1锁，线程2内部阻塞等待resource1锁但没有释放resource2锁，于是两个线程就陷入了等待对方释放锁自己又不能释放锁的尴尬境地，就产生了死锁。
-
- * 修改上述线程2的代码以解决死锁问题：
-
-   ```java
-   new Thread(() -> {
-       synchronized (resource1) {
-           System.out.println(Thread.currentThread() + "get resource1");
-           try {
-               Thread.sleep(1000);
-           } catch (InterruptedException e) {
-               e.printStackTrace();
-           }
-           System.out.println(Thread.currentThread() + "waiting get resource2");
-           synchronized (resource2) {
-               System.out.println(Thread.currentThread() + "get resource1");
-           } 
-       }
-   }, "线程2").start();
-   ```
-
-   ```
-   Thread[线程 1,5,main]get resource1
-   Thread[线程 1,5,main]waiting get resource2
-   Thread[线程 1,5,main]get resource2
-   Thread[线程 2,5,main]get resource1
-   Thread[线程 2,5,main]waiting get resource2
-   Thread[线程 2,5,main]get resource2
-   
-   Process finished with exit code 0
-   ```
-
- * 代码分析：两个线程竞争锁的顺序置为相同，线程1先后获得锁1和锁2，线程2无法获取锁1而阻塞，等线程1执行完毕释放锁1和锁2时，线程2就能够获取锁了（这样是破坏了产生死锁的循环等待条件）。
+1. 保存进程A的CPU环境（各种寄存器的数据）到私有堆栈中；
+2. 更新PCB中的信息，对进程A的状态做出切换；
+3. 将进程A的PCB放入相关状态的队列；
+4. 将进程B的PCB信息切换为运行态，并执行进程B；
+5. 之后若是调度器选择了进程A，会从队列中取出A的PCB，根据里面的信息恢复A被切换时的现场，继续执行。
 
 
 
-## Java线程和操作系统线程的关系
+### 引起进程上下文切换的原因
+
+* 进程持有的CPU时间片耗尽，操作系统正常调度下一个任务；
+* 进程的CPU执行权被其他优先级更高的任务抢占；
+* 因为CPU发生中断，切换到中断服务程序去执行。中断包括硬件中断和软中断，常见的软中断导致的上下文切换有IO阻塞和未抢到资源等；
+* 用户代码主动让出CPU的执行权，导致调度器重新调度。
 
 
 
+### 进程上下文切换带来的性能问题
+
+每次上下文切换都是纳秒甚至微秒级的CPU时间消耗，若是在进程上下文频繁切换的场景下，很容易导致CPU将大量的时间耗费在寄存器、内核栈和虚拟内存等资源的保存和恢复上，进而大大缩短了真正运行进程的时间。
+
+另外，Linux通过TLB来管理虚拟内存到物理内存的映射关系，当进程切换导致虚拟内存更新后，TLB也会随之刷新，内存的访问也会随之变慢。特别是在多处理器系统上，高速缓存是被多个核心共享的，刷新缓存不仅会影响当前处理器的进程，还会影响共享缓存的其他处理器的进程。
 
 
-## Java多线程的安全问题
+
+### 系统调用上下文切换
+
+一次系统调用的过程中，其实是发生了两次CPU的上下文切换，即用户态-内核态-用户态。但在系统调用过程中，并不会涉及到虚拟内存等进程用户态的资源，也不会切换进程，也就是系统调用是在同一个进程完成的。
+
+Linux在进行系统调用时，会从用户态到内核态进行切换，每个进程都有一个关联内核模式的堆栈，专门给系统调用时使用。在执行系统调用之前，尚处于用户态进程的寄存器信息会保存在用户模式堆栈中。当进程处于内核态时，调用相同模式的函数不需要上下文切换，当结束调用后才会恢复用户态继续执行。
+
+**系统调用情况下CPU的上下文切换步骤**：
+
+1. 保存CPU寄存器中用户态的指令和数据；
+2. 为了执行内核态指令，PC需要更新为内核态指令的位置；
+3. 跳转到内核态运行系统调用的指令；
+4. 系统调用结束后，寄存器恢复保存的用户态指令和数据，然后切换回用户态，继续运行进程。
 
 
 
+### 线程上下文切换
+
+所谓内核中的任务调度，就是线程的调度，进程是给线程提供了虚拟内存、全局变量等资源。
+
+在Linux中，线程就是和其他进程共享某些资源的进程，共享的资源包括虚拟内存和全局变量等，这些资源在线程上下文切换时不需要被修改。需要修改的是线程的私有数据，如栈和寄存器等。
+
+线程上下文切换的场景：
+
+1. 前后两个线程属于不同进程：由于资源不共享，和进程切换是一样的；
+2. 前后两个线程属于同一进程：因为虚拟内存共享，所以切换时只需要切换寄存器等私有数据即可。
 
 
-## synchronized关键字原理
+
+### 减少进程/线程上下文切换的方式
+
+* **无锁并发编程**：多线程竞争锁时，会引起上下文的切换，所以多线程处理数据时，可以使用其他方法规避锁的使用。如将数据的id按照Hash算法取模分段，不同的线程处理不同段的数据；
+* **CAS算法**：CAS会用先比较后替换的方式去操作共享资源，无需加锁；
+* **减少线程数量**：使用线程池来控制最大线程数，并且可以重复利用线程，避免了线程创建和销毁的开销；
+* **协程/用户级线程**：与操作系统内核线程1:N或M:N创建用户级线程，在一个内核线程内控制多个任务的执行，任务的调度和切换都在用户空间完成，无需操作系统参与。
+
+
+
+## Java线程-死锁问题
+
+### 死锁代码示例
+
+死锁指多个线程被同时阻塞，它们中的一个或全部都在等待某资源被释放，由于线程被无限期的阻塞，因此程序不可能正常终止。如上图，线程A持有资源2，线程B持有资源1，它们都想申请对方锁住的资源，但又不能释放自己锁住的资源，所以这两个线程会因为互相等待而进入死锁状态；
+
+![image-20200930182226098](assets/image-20200930182226098.png)
+
+```JAVA
+/**
+ * 产生死锁的原因：
+ * 	1.锁资源是互斥的；
+ * 	2.线程阻塞时不会释放自己持有的资源；
+ * 	3.线程持有的资源不可被剥夺；
+ * 	4.两个线程形成了互相等待对方释放而自己又不释放的环形结构。
+ */
+public class DeadLockExample {
+    
+    private static Object resource1 = new Object();
+    private static Object resource2 = new Object();
+    
+    public static void main(String[] args) {
+        new Thread(() -> {
+            // 线程1首先获resource1锁
+            synchronized (resource1) {
+                System.out.println(Thread.currentThread() + "get resource1");
+                try {
+                	Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                	e.printStackTrace();
+                }
+                System.out.println(Thread.currentThread() + "waiting get resource2");
+                // 线程1继续阻塞等待resource2锁但没有释放自己持有的resource1锁，但是线程2又阻塞在resourse1锁上
+                synchronized (resource2) {
+                    System.out.println(Thread.currentThread() + "get resource2");
+                }
+            }
+        }, "线程1").start();
+        
+        new Thread(() -> {
+            // 线程2获取resource2锁
+            synchronized (resource2) {
+                System.out.println(Thread.currentThread() + "get resource1");
+                try {
+                	Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                	e.printStackTrace();
+                }
+                System.out.println(Thread.currentThread() + "waiting get resource2");
+                // 线程2继续阻塞等待resource1锁但没有释放自己持有的resource2锁，但是线程1又阻塞在resource2上
+         		synchronized (resource1) {
+                    System.out.println(Thread.currentThread() + "get resource1");
+                } 
+            }
+        }, "线程2").start();
+    }
+}
+```
+
+```
+Thread[线程 1,5,main] get resource1
+Thread[线程 2,5,main] get resource2
+Thread[线程 1,5,main] waiting get resource2
+Thread[线程 2,5,main] waiting get resource1
+```
+
+**代码分析**：线程1首先获resource1锁，线程2获取resource2锁。当两个线程休眠结束后，线程1内部阻塞等待resource2锁但没有释放resource1锁，线程2内部阻塞等待resource1锁但没有释放resource2锁，
+
+
+
+### 解决死锁问题
+
+```java
+// 修改线程2获取锁的顺序，通过破除环形结构，从而解决死锁问题
+new Thread(() -> {
+    // 让线程2在resource1就与线程1发生竞争，最终达到一方持有一方阻塞的状态
+    synchronized (resource1) {
+        System.out.println(Thread.currentThread() + "get resource1");
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println(Thread.currentThread() + "waiting get resource2");
+        // 获取锁的顺序和线程1一致
+        synchronized (resource2) {
+            System.out.println(Thread.currentThread() + "get resource1");
+        }
+    }
+}, "线程2").start();
+```
+
+```
+Thread[线程 1,5,main]get resource1
+Thread[线程 1,5,main]waiting get resource2
+Thread[线程 1,5,main]get resource2
+Thread[线程 2,5,main]get resource1
+Thread[线程 2,5,main]waiting get resource2
+Thread[线程 2,5,main]get resource2
+
+Process finished with exit code 0
+```
+
+
+
+## Java线程-synchronized
 
 ### 概念
 
@@ -735,7 +823,7 @@ HotSpot虚拟机中的对象头布局，这些数据被称为Mark Word。其中t
 
 
 
-## volatile关键字原理
+## Java线程-volatile
 
 ### Java内存模型引出的问题
 
@@ -867,147 +955,108 @@ public class T04_Singleton {
 
 
 
-## ThreadLocal类原理
+## Java线程-ThreadLocal
+
+### 使用示例
 
 ```JAVA
-public class ThreadLocal_01 {
-
-    volatile static Person p = new Person();
-
+public class ThreadLockExample {
+    
     public static void main(String[] args) {
+        ThreadLocal threadLocal1 = new ThreadLocal();
+        ThreadLocal threadLocal2 = new ThreadLocal();
+        
         new Thread(() -> {
-            try {
-                TimeUnit.SECONDS.sleep(2);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            System.out.println(p.name);
+            threadLocal1.set(1);
+            threadLocal2.set(1);
         }).start();
-
+        
         new Thread(() -> {
-            try {
-                TimeUnit.SECONDS.sleep(2);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            p.name = "lisi";
+            threadLocal1.set(2);
+            threadLocal2.set(2);
         }).start();
-    }
-
-    static class Person {
-        String name = "zhangsan";
     }
 }
 ```
 
+![threadLocal](assets/threadLocal.png)
+
+
+
+### 源码分析
+
+每个Thread类都维护一个ThreadLocal.ThreadLocalMap对象：
+
 ```JAVA
-public class ThreadLocal_02 {
+/* ThreadLocal values pertaining to this thread. This map is maintained
+ * by the ThreadLocal class. */
+ThreadLocal.ThreadLocalMap threadLocals = null;
+```
 
-    // ThreadLocal.ThreadLocalMap threadLocals = null;
-    // ThreadLocal类中定义了ThreadLocalMap这个类型
-    // Thread类中维护一个ThreadLocalMap threadLocals对象，以ThreadLocal的弱引用为key
-    static ThreadLocal<Person> tl = new ThreadLocal<>();
+当调用一个ThreadLocal的set(T value)方法时，会先获取当前线程的ThreadLocalMap对象，然后将当前ThreadLocal对象的引用和value做为键值对插入Map中：
 
-    public static void main(String[] args) {
-        new Thread(() -> {
-            try {
-                TimeUnit.SECONDS.sleep(2);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            /*
-                public T get() {
-                    Thread t = Thread.currentThread();
-                    ThreadLocalMap map = getMap(t);
-                    if (map != null) {
-                        ThreadLocalMap.Entry e = map.getEntry(this);
-                        if (e != null) {
-                            @SuppressWarnings("unchecked")
-                            T result = (T)e.value;
-                            return result;
-                        }
-                    }
-                    return setInitialValue();
-                }
-            */
-            System.out.println(tl.get());
+```JAVA
+public void set(T value) {
+    Thread t = Thread.currentThread();
+    ThreadLocalMap map = getMap(t);
+    if (map != null)
+        map.set(this, value);
+    else
+        createMap(t, value);
+}
+```
 
-            /*
-                static class Entry extends WeakReference<ThreadLocal<?>> {
-                    Object value;
+而调用ThreadLocal的get()方法则是通过当前ThreadLocal对象的引用做为key获取到对应的value：
 
-                    Entry(ThreadLocal<?> k, Object v) {
-                        super(k);
-                        value = v;
-                    }
-                }
-            */
-            tl.remove();    // 防止内存泄漏
-        }).start();
-
-        new Thread(() -> {
-            try {
-                TimeUnit.SECONDS.sleep(2);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            /*
-                public void set(T value) {
-                    Thread t = Thread.currentThread();
-                    ThreadLocalMap map = getMap(t);
-                    if (map != null)
-                        map.set(this, value);
-                    else
-                        createMap(t, value);
-                }
-
-                ThreadLocalMap getMap(Thread t) {
-                    return t.threadLocals;
-                }
-             */
-            // set()其实是在当前线程的map集合中存储tl（key）和person（value）
-            Person person = new Person();
-            tl.set(person);
-        }).start();
-
-        /*
-            void createMap(Thread t, T firstValue) {
-                t.threadLocals = new ThreadLocalMap(this, firstValue);
-            }
-
-            ThreadLocalMap(ThreadLocal<?> firstKey, Object firstValue) {
-                table = new Entry[INITIAL_CAPACITY];
-                int i = firstKey.threadLocalHashCode & (INITIAL_CAPACITY - 1);
-                table[i] = new Entry(firstKey, firstValue);
-                size = 1;
-                setThreshold(INITIAL_CAPACITY);
-            }
-
-            private static final int INITIAL_CAPACITY = 16;
-
-            static class Entry extends WeakReference<ThreadLocal<?>> {
-                Object value;
-
-                Entry(ThreadLocal<?> k, Object v) {
-                    super(k);
-                    value = v;
-                }
-            }
-
-            private void setThreshold(int len) {
-                threshold = len * 2 / 3;
-            }
-        */
+```JAVA
+public T get() {
+    Thread t = Thread.currentThread();
+    ThreadLocalMap map = getMap(t);
+    if (map != null) {
+        ThreadLocalMap.Entry e = map.getEntry(this);
+        if (e != null) {
+            @SuppressWarnings("unchecked")
+            T result = (T)e.value;
+            return result;
+        }
     }
+    return setInitialValue();
+}
+```
 
-    static class Person {
+
+
+### 内存泄漏问题
+
+ThreadLocal使用弱引用来防止内存泄漏：
+
+* 若Entry中的key使用强引用，此时外部所有的强引用断开联系，ThreadLocalMap中的key不会被GC回收，key积累过多会造成内存泄漏问题的发生；
+* 使用弱引用会在外部引用都断开后允许GC回收，但会造成key为null，value无key映射导致无法删除，也可能会出现内存泄漏问题；
+* 所以使用ThreadLocal后需要手动调用remove方法清除k-v对，防止内存泄漏。
+
+```JAVA
+ThreadLocalMap(ThreadLocal<?> firstKey, Object firstValue) {
+    table = new Entry[INITIAL_CAPACITY];
+    int i = firstKey.threadLocalHashCode & (INITIAL_CAPACITY - 1);
+    table[i] = new Entry(firstKey, firstValue);
+    size = 1;
+    setThreshold(INITIAL_CAPACITY);
+}
+
+// ThreadLocalMap中的元素类型Entry，其中的key就是指向ThreadLocal对象的弱引用
+static class Entry extends WeakReference<ThreadLocal<?>> {
+    Object value;
+
+    Entry(ThreadLocal<?> k, Object v) {
+        super(k);
+        value = v;
     }
 }
 ```
 
 
 
-## 线程池原理
+## Java线程-线程池原理
 
 ### 使用线程池带来的好处
 
@@ -1224,7 +1273,7 @@ public void execute(Runnable command) {
 
 
 
-## Atomic原子类原理
+## Java线程-Atomic原子类
 
 ### Atomic原子类的概念
 
@@ -1336,7 +1385,7 @@ private volatile int value;
 
 
 
-## AQS
+## Java线程-AQS
 
 ### AQS概念
 
@@ -1848,7 +1897,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 
 
 
-## JUC
+## Java线程-JUC
 
 ### FutureTask
 
@@ -1978,7 +2027,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-## Java线程的内存模型
+## Java线程-内存模型
 
 ### 主内存和工作内存
 
@@ -2029,26 +2078,6 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 * 使用synchronized关键字可以通过添加互斥锁的方式保证每一个时刻只有一个线程执行同步代码，相当于让多个线程顺序执行同步代码。
 
  
-
-## 协程
-
- 1. 即线程中的多条执行路径，使用了操作系统的用户线程模型（即用户空间线程和内核空间线程多对一）；
- 2. JVM的线程和OS内核线程是1:1的关系，每启动一个线程就需要和OS交互，开销大。而协程就是在用户态模拟内核级别线程的调度，在用户态的内存空间维护寄存器信息和堆信息等，这样用户级别的线程（即协程）无需和OS交互就能撑起并发执行；
- 3. 应用场景：用户空间的异步编程和回调函数。
-4. 什么是用户级别线程？什么是内核级别线程？
-       1. 从Java的角度来看，JVM的用户线程和操作系统的内核线程是1:1的关系；
-   
-   2. 从Golang的角度来看，用户线程和内核线程是M:N的关系，而且M远远大于N。
-5. Golang的GPM：
-
-      1. 自动创建一个线程池，维护一批内核线程，go关键字会将指定的任务存入任务队列中，由预先创建好的内核线程执行；
-
-       2. 比起Java，Golang可以用更小的上下文切换的开销换取更大量任务的并发执行，Golang的任务就相当于用户线程；
-       3. 类似于Java的线程池的概念，ForkJoinPool线程池，区别在于java线程池中的任务无法同步通信，而Golang可以通过channel来进行任务间的同步和通信。
-
- 6. 有没有遇到过OOM的场景？重写了Object类的finalize()方法，该方法能自定义对象回收策略；  不断有新的对象涌入堆内存，重写的对象回收机制相当耗时，很快内存就报OOM。
-
-
 
 # 从计算机组成到操作系统再到JVM
 
@@ -2653,9 +2682,10 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 * 内核态也称管态，用户态也称目态；
 * CPU指令级别：Intel的CPU将指令级别划分为ring0、ring1、ring2和ring3四个级别，用于区分不同优先级的指令操作；
-* 其中OS发出的都是0级指令，用户发出的都是3级指令，通过指令级别的划分，将CPU划分为拥有不同权限等级的两个状态，即用户级别的指令操作无法访问OS的内核资源，提高了OS的安全性；
+* 其中内核发出的都是0级指令，用户发出的都是3级指令，通过指令级别的划分，将CPU划分为拥有不同权限等级的两个状态，即用户级别的指令操作无法访问OS的内核资源，提高了OS的安全性；
 * 用户态（user mode）和内核态（kernel mode）是根据访问资源的特点，把进程在系统上的运行分为两个级别；
-* 处于用户态的进程只能操作用户程序相关的数据，处于内核态的进程能够操作计算机的任何资源。
+* 处于用户态的进程只能操作用户程序相关的数据，处于内核态的进程能够操作计算机的任何资源；
+* Linux按照特权等级，将进程的运行空间分为内核空间和用户空间，分别对应着CPU特权等级的Ring0和Ring3。
 
 **系统调用**：在运行用户程序的过程中，凡是与内核态级别的资源有关的操作（如：文件管理、进程控制、内存管理），都必须通过系统调用的方式向内核提出服务请求，并陷入内核由OS代为完成。
 
@@ -7184,7 +7214,7 @@ Netty提供了IdleStateHandler，ReadTimeoutHandler，WriteTimeoutHandler三个H
 
 # Java基础和容器
 
-## Java基础概念
+## Java基础-概念
 
 ### 面向过程和面向对象
 
@@ -7238,7 +7268,7 @@ Netty提供了IdleStateHandler，ReadTimeoutHandler，WriteTimeoutHandler三个H
 
 
 
-## Java基础特性
+## Java基础-特性
 
 ### 字符型常量和字符串常量的区别
 
@@ -8565,7 +8595,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 # MySQL+Redis
 
-## MySQL的存储引擎对比
+## MySQL-存储引擎对比
 
 |              |   MylSAM   |           InnoDB           |
 | :----------: | :--------: | :------------------------: |
@@ -8584,7 +8614,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-## MySQL的索引原理
+## MySQL-索引原理
 
 ### MySQL的基本存储结构
 
@@ -8757,7 +8787,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-## MySQL的事务
+## MySQL-事务
 
 ### 事务的四大特性
 
@@ -8786,7 +8816,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-## MySQL的锁原理
+## MySQL-锁原理
 
 ### 锁机制概述
 
@@ -8867,17 +8897,17 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-## MySQL执行SQL语句的流程
+## MySQL-执行SQL语句的流程
 
-## MySQL的高性能优化规范
+## MySQL-高性能优化规范
 
-## 一条SQL执行很慢的原因有哪些？
+## MySQL-一条SQL执行很慢的原因有哪些？
 
-## 书写高质量SQL的30条建议
+## MySQL-书写高质量SQL的30条建议
 
 
 
-## Redis的线程模型
+## Redis-线程模型
 
 ### 文件事件处理器概述
 
@@ -8907,7 +8937,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-## Redis的数据结构和使用场景
+## Redis-数据结构和使用场景
 
 ### String
 
@@ -8991,7 +9021,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
   
   
 
-## Redis的持久化机制
+## Redis-持久化机制
 
 所谓的持久化就是将内存中的数据写入磁盘中，大部分原因是为了之后重用数据（如重启机器或机器故障之后恢复数据），或者是为了防止系统故障而将数据备份到一个远程位置。
 
@@ -9029,7 +9059,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-## Redis的缓存雪崩、穿透和击穿问题
+## Redis-缓存雪崩/穿透/击穿问题
 
 ### 缓存雪崩
 
@@ -9147,18 +9177,18 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-## Redis的并发竞争的问题
+## Redis-并发竞争的问题
 
 * 所谓的并发竞争指的是多个用户同时对一个key进行操作，造成最后执行的顺序和期望的顺序不同，导致结果不同。
 * 分布式锁解决方法：推荐使用Zookeeper实现的分布式锁来解决，当客户端需要对操作加锁时，在zk上与该操作对应的节点的目录下，生成一个唯一的瞬时有序节点，判断是否获取锁的方式就是去判断有序节点中序号最小的一个，当释放锁时，只需要将这个瞬时节点删除即可。
 
 
 
-## 如何保证缓存和数据库双写时的一致性？
+## Redis-如何保证缓存和数据库双写时的一致性？
 
-## Redis的主从架构
+## Redis-主从架构
 
-## Redis的哨兵集群
+## Redis-哨兵集群
 
 
 
@@ -9536,7 +9566,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 # Spring+SpringBoot
 
-## Spring的概念和特性
+## Spring-概念和特性
 
 **什么是Spring框架？**即Spring Framework，是一种轻量级的开发框架，是很多模块的集合，使用这些模块可以提高开发人员的开发效率以及系统的维护性。
 
@@ -9551,7 +9581,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-## Spring的重要模块
+## Spring-重要模块
 
 * Spring Core：基础模块，Spring的其他所有功能都基于该模块，其主要提供IOC依赖注入功能；
 * Spring Aspects：为AspectJ的集成提供支持；
@@ -9566,7 +9596,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-## Spring的@RestController和@Controller注解
+## Spring-@RestController和@Controller注解
 
 **@Controller返回一个页面：**单独使用的话一般适用于需要返回视图的场景，属于传统的Spring MVC应用。
 
@@ -9582,7 +9612,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-## Spring IOC & AOP
+## Spring-IOC&AOP
 
 ### IOC
 
@@ -9688,7 +9718,7 @@ MVC是一种设计模式，Spring MVC就是基于了这种设计模式的框架�
 
 
 
-## Spring用到的设计模式
+## Spring-用到的设计模式
 
 * 工厂设计模式：Spring的BeanFactory、ApplicationContexttong使用工厂模式创建bean对象；
 * 代理设计模式：Spring AOP功能基于动态代理实现；
@@ -9700,7 +9730,7 @@ MVC是一种设计模式，Spring MVC就是基于了这种设计模式的框架�
 
 
 
-## Spring事务
+## Spring-事务
 
 ### Spring管理事务的方式
 
@@ -9747,7 +9777,7 @@ MVC是一种设计模式，Spring MVC就是基于了这种设计模式的框架�
 
 # 数据结构和算法
 
-## 树
+## 数据结构-树
 
 ## 排序算法
 
