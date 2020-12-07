@@ -24,11 +24,9 @@
 
 ### 以JVM的角度来看
 
-一个JVM进程运行时所管理的内存区域如下图，一个进程中可以存在多个线程，多个线程共享堆空间和本地方法区（元空间），每个线程有自己的虚拟机栈、本地方法栈和程序计数器。
+一个JVM进程运行时所管理的内存区域如下图，一个进程中可以存在多个线程，多个线程共享堆空间和本地方法区（元空间），每个线程有自己的虚拟机栈、本地方法栈和程序计数器。线程是进程划分出来的执行单元，最大的不同在于进程间是独立的，而线程则不一定，这是因为同一进程中各线程可能会相互影响。在JVM中，多个线程共享进程的堆和方法区，每个线程有自己的程序计数器、虚拟机栈和本地方法栈。
 
-<img src="assets/image-20200928231644475.png" alt="image-20200928231644475" style="zoom: 67%;" />
-
-总结：线程是进程划分出来的执行单元，最大的不同在于进程间是独立的，而线程则不一定，这是因为同一进程中各线程可能会相互影响。在JVM中，多个线程共享进程的堆和方法区，每个线程有自己的程序计数器、虚拟机栈和本地方法栈。
+![image-20201205213740402](assets/image-20201205213740402.png)
 
 PC计数器为什么私有（**简单概括：各线程的代码执行位置独立**）？
 * 在JVM中，字节码解释器通过改变PC计数器的指向依次读取指令，从而实现代码的流程控制；
@@ -7073,33 +7071,7 @@ Netty提供了IdleStateHandler，ReadTimeoutHandler，WriteTimeoutHandler三个H
 
 
 
-### 源码分析
-
-
-
-
-
 # Linux操作和概念及其内核原理
-
-## 常用操作和概念
-
-## Linux的磁盘操作
-
-## Linux的分区操作
-
-## Linux的文件系统操作
-
-## Linux的文件操作
-
-## Linux的压缩和打包
-
-## Linux的Bash
-
-## Linux的管道指令
-
-## Linux的正则表达式
-
-## Linux的进程管理操作
 
 ## Linux内核的进程管理
 
@@ -7140,11 +7112,54 @@ Netty提供了IdleStateHandler，ReadTimeoutHandler，WriteTimeoutHandler三个H
 
 
 
+### 进程创建操作fork
+
+父进程通过调用fork函数创建子进程：
+
+* 为子进程分配一个空闲的proc结构，即进程描述符；
+* 赋予子进程唯一的标识PID；
+* 以一次一页的方式复制父进程的用户地址空间；
+* 获得子进程继承的共享资源的指针，如打开的文件和当前工作目录等；
+* 子进程就绪，加入调度队列；
+* 对子进程返回标识符0，向父进程返回子进程的PID。
+
+fork函数复制了一个自己，但是创建子进程并非要运行另一个与父进程一模一样的进程，绝大部分的子进程需要运行不同的程序，这时需要调用exec函数来替换原父进程的代码：
+
+* 在原进程空间装入新程序的代码、数据、堆和栈；
+* 保持进程ID和父进程ID等；
+* 继承控制终端；
+* 保留所有文件信息，如目录、文件模式和文件锁等。
+
+信号（Signal）函数是Linux/Unix处理异步事件的经典方法，信号可以说是进程控制的一部分：
+
+* 当用户触发某些终端键时；
+* 硬件异常产生信号，如除数为0、无效的存储访问等；
+* 进程用kill函数可将信号发送给另一个进程或进程组；
+* 用户可用kill函数将信号发送给其他进程；
+* 当检测到某种事件已经发生，并将信号通知有关进程。
+
+
+
 ### 线程在Linux中的实现
 
 * 从内核的角度来看，Linux将所有的线程当作进程来实现。线程仅仅被视为一个与其他进程共享某些资源的进程，拥有属于自己的`task_struct`描述符。 
 * **创建线程**：和创建普通进程类似，在调用clone()时传递参数指明共享资源：`clone(CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND, 0)`。调用结果和fork()差不多，只是父子进程共享地址空间、文件系统资源、打开的文件描述符和信号处理程序。
 * **内核线程**：用于内核在后台执行一些任务，是独立运行在内核空间的标准进程。和普通进程的区别是内核线程没有独立的地址空间，只在内核空间运行，不切换到用户空间。如软中断ksoftirqd和flush都是内核线程的例子。
+
+
+
+### Pthread线程包
+
+|       线程调用       |              描述              |
+| :------------------: | :----------------------------: |
+|    Pthread_create    |         创建一个新线程         |
+|     Pthread_exit     |         结束调用的线程         |
+|     Pthread_join     |     等待一个特定的线程退出     |
+|    Pthread_yield     |  释放处理器来运行另外一个线程  |
+|  Pthread_attr_init   | 创建并初始化一个线程的属性结构 |
+| Pthread_attr_destroy |     删除一个线程的属性结构     |
+
+
 
 
 
@@ -8595,7 +8610,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 # MySQL+Redis
 
-## MySQL-存储引擎对比
+## MySQL-存储引擎
 
 |              |   MylSAM   |           InnoDB           |
 | :----------: | :--------: | :------------------------: |
@@ -8610,7 +8625,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 * 是否支持行级锁：MyISAM只支持表级锁，而InnoDB支持行级锁和表级锁；
 * 是否支持事务和崩溃后的安全恢复：MyISAM更强调性能，每次查询都具有原子性，执行速度相对于InnoDB更快，但不提供事务的支持。InnoDB则提供事务，且具有提交、回滚和崩溃修复能力的事务安全性表；
 * 是否支持外键：MyISAM不支持，InnoDB支持；
-* 是否支持MVCC：只有InnoDB支持，用于应对高并发的事务，MVCC比单纯的加锁更高效，MVCC只在`READ COMMITIED`和`REPEATABLE READ`两个隔离级别下工作，且可以使用乐观锁和悲观锁来实现。
+* 是否支持MVCC：只有InnoDB支持，用于应对高并发的事务，MVCC比单纯的加锁更高效，MVCC只在 `READ COMMITIED` 和 `REPEATABLE READ` 两个隔离级别下工作，且可以使用乐观锁和悲观锁来实现。
 
 
 
@@ -8635,7 +8650,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 ### 局部性原理
 
-* 程序信息在不全部装入主存的情况下就可以保证正常的运行；
+* **概念**：程序信息在不全部装入主存的情况下就可以保证正常的运行；
 * **空间局部性**：程序和数据的访问都有聚集成群的倾向，在一个时间段内，仅使用部分（如数组）；
 * **时间局部性**：最近被访问过的程序代码和数据，很快又再次被访问的可能性很大（如循环操作）。
 
@@ -8686,67 +8701,77 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 ### 为什么MySQL使用B+树作为索引的数据结构？
 
-* **为什么不使用哈希表？**
+**为什么不使用哈希表？**
 
-  <img src="assets/164c6d7a55fd52b3" alt="img" style="zoom: 80%;" />
-  
+<img src="assets/164c6d7a55fd52b3" alt="img" style="zoom: 80%;" />
+
 * 需要将数据文件添加到内存中，耗费内存空间；
-  
 * 如果所有的查询都是等值查询，哈希表的性能会很高，但实际生产环境下范围查询的情况非常多，这时哈希表就不太合适了。
+
+**为什么不使用二叉树/红黑树？**
+
+<img src="assets/164c6d7a56110d4d" alt="img" style="zoom: 50%;" />
+
+* 一棵树结构在极端的情况下，会退化成为链表，导致树的查询优势不复存在；
+
+<img src="assets/image-20201117205044305.png" alt="image-20201117205044305" style="zoom:80%;" />
+
+* 树的深度过深会导致IO的次数过多，影响数据的读取效率。
+
+**为什么不使用B树？**
+
+* B树的特点：
+
+  * 所有键值分布在整棵树中；
+* 搜索有可能在非叶子节点结束，在关键字全集内做一次查找，性能接近二分查找；
   
-* **为什么不使用二叉树/红黑树？**
+  * 每个节点最多拥有m棵子树；
+* 根节点至少拥有2棵子树；
+  * 分支节点至少拥有m/2棵子树（分支节点就是除根节点和叶子节点外的节点）；
+  * 所有叶子节点都在同一层，每个节点最多可以拥有m-1个key，并且以升序排序。
+  
+* B树索引原理：每个节点占用一个页（InnoDB是16kb），一个节点上有2个升序排序的关键字+对应记录和3个指向子树根节点的指针，指针存储的是子节点所在页的地址。2个关键字划分成的3个范围域对应3个指针指向的子树的数据范围域。以根节点为例，关键字为16和34，P1指针指向的子树数据范围小于16，P2指针值指向的子树数据范围为16~34，P3指针指向的子树的数据范围大于34。
 
-  <img src="assets/164c6d7a56110d4d" alt="img" style="zoom: 50%;" />
+  ![image-20201205223048242](assets/image-20201205223048242.png)
 
-  * 一棵树结构在极端的情况下，会退化成为链表，导致树的查询优势不复存在；
-
-  <img src="assets/image-20201117205044305.png" alt="image-20201117205044305" style="zoom:80%;" />
-
-  * 树的深度过深会导致IO的次数过多，影响数据的读取效率。
-
-* **为什么不使用B树？**
-
-  * B树索引原理：每个节点占用一个页（InnoDB是16kb），一个节点上有2个升序排序的关键字+对应记录和3个指向子树根节点的指针，指针存储的是子节点所在页的地址。2个关键字划分成的3个范围域对应3个指针指向的子树的数据范围域。以根节点为例，关键字为16和34，P1指针指向的子树数据范围小于16，P2指针值指向的子树数据范围为16~34，P3指针指向的子树的数据范围大于34。
-
-  ![image-20201117210010759](assets/image-20201117210010759.png)
-
-  * 根据关键字28查找记录的过程：
-    1. 根据根节点找到磁盘块1，读入内存（磁盘IO第1次）；
-    2. 比较出关键字28在（16，34）区间内，获取磁盘块1的P2指针；
-    3. 根据P2指针找到磁盘块3，读入内存（磁盘IO第2次）；
-    4. 比较出关键字28在（27，29）区间内，获取磁盘块3的P2指针；
-    5. 根据P2指针找到磁盘块8，读入内存（磁盘IO第3次）；
-    6. 在磁盘块8中的关键字列表中找到关键字28，并读取其对应的记录。
-  * 缺点：每个节点都有关键字和其对应的记录，但每个页存储空间是有限的，如果记录比较大的话会导致每个节点存储的关键字数量变小。当节点存储的数据量很大时会导致树的深度加深，即会增大查询时磁盘IO的次数，进而影响查询性能。
+* B树索引根据关键字28查找记录的过程：
+  1. 根据根节点找到磁盘块1，读入内存（磁盘IO第1次）；
+  2. 比较出关键字28在（16，34）区间内，获取磁盘块1的P2指针；
+  3. 根据P2指针找到磁盘块3，读入内存（磁盘IO第2次）；
+  4. 比较出关键字28在（27，29）区间内，获取磁盘块3的P2指针；
+  5. 根据P2指针找到磁盘块8，读入内存（磁盘IO第3次）；
+  6. 在磁盘块8中的关键字列表中找到关键字28，并读取其对应的记录。
+* 缺点：每个节点都有关键字和其对应的记录，但每个页存储空间是有限的，如果记录比较大的话会导致每个节点存储的关键字数量变小。当节点存储的数据量很大时会导致树的深度加深，即会增大查询时磁盘IO的次数，进而影响查询性能。
 
 
 
 ### B+树索引的原理
 
-* **B+树索引结构：**
-  * B+Tree的非叶子节点不会再包含记录而是包含更多的关键字和指针，这样做是为了降低树的高度减少磁盘的IO次数，同时也能将数据的范围变成更多的区间，区间越多，检索数据越快；
-  * B+Tree结构的索引只有叶子节点包含记录，非叶子节点只包含关键字和指针；
-  * 叶子节点之间通过指针相互连接（符合磁盘预读的特性），顺序查询性能更高。
-  * 注：B+Tree上有两个头指针，一个指向根节点，另一个指向最小关键字的节点，且所有叶子节点构成了一个环形链表结构。因此可以对B+Tree进行两种查找操作，一种是根据主键进行范围查找和分页查找，另一种就是从根节点开始进行随机查找。
+**B+树索引结构：**
+
+* B+Tree的非叶子节点不会再包含记录而是包含更多的关键字和指针，这样做是为了降低树的高度减少磁盘的IO次数，同时也能将数据的范围变成更多的区间，区间越多，检索数据越快；
+* B+Tree结构的索引只有叶子节点包含记录，非叶子节点只包含关键字和指针；
+* 叶子节点之间通过指针相互连接（符合磁盘预读的特性），顺序查询性能更高。
+* 注：B+Tree上有两个头指针，一个指向根节点，另一个指向最小关键字的节点，且所有叶子节点构成了一个环形链表结构。因此可以对B+Tree进行两种查找操作，一种是根据主键进行范围查找和分页查找，另一种就是从根节点开始进行随机查找。
 
 ![image-20201117204328625](assets/image-20201117204328625.png)
 
-* **InnoDB引擎实现的B+树索引：**
+**InnoDB引擎实现的B+树索引：**
 
-  * 聚簇索引：InnoDB的文件存储方式是索引和数据存放在一个文件中，所以叶子节点中之间包含数据记录（只有通过主键建立的索引才是聚簇索引）；
-  * InnoDB是通过B+Tree结构对主键创建索引，然后叶子节点中存储记录，如果不存在主键，则会选择唯一键，如果没有唯一键，那么会生成一个6位的row_id来作为索引；
+* 聚簇索引：InnoDB的文件存储方式是索引和数据存放在一个文件中，所以叶子节点中之间包含数据记录（只有通过主键建立的索引才是聚簇索引）；
+* InnoDB是通过B+Tree结构对主键创建索引，然后叶子节点中存储记录，如果不存在主键，则会选择唯一键，如果没有唯一键，那么会生成一个6位的row_id来作为索引；
 
-  ![image-20201117182731505](assets/image-20201117182731505.png)
+![image-20201117182731505](assets/image-20201117182731505.png)
 
-  * 如果是由其他字段创建的索引，那么在叶子节点中存储的是其对应记录的主键，之后再根据主键去主键索引中获取记录，这个步骤称为回表（这种通过其他字段创建的索引是非聚簇索引）。
+* 如果是由其他字段创建的索引，那么在叶子节点中存储的是其对应记录的主键，之后再根据主键去主键索引中获取记录，这个步骤称为回表（这种通过其他字段创建的索引是非聚簇索引）。
 
-  ![image-20201117213120161](assets/image-20201117213120161.png)
+![image-20201117213120161](assets/image-20201117213120161.png)
 
-* **MyISAM引擎实现的B+树索引：**
+**MyISAM引擎实现的B+树索引：**
 
-  * 非聚簇索引：MyISAM的文件存储方式是索引和数据分开存放为两个文件，叶子节点中包含的是数据记录的地址。
+* 非聚簇索引：MyISAM的文件存储方式是索引和数据分开存放为两个文件，叶子节点中包含的是数据记录的地址。
 
-  ![image-20201117183608686](assets/image-20201117183608686.png)
+![image-20201117183608686](assets/image-20201117183608686.png)
 
 
 
@@ -8787,7 +8812,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-## MySQL-事务
+## MySQL-事务原理
 
 ### 事务的四大特性
 
@@ -8800,19 +8825,22 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 ### 事务并发带来的问题
 
-* **脏读（Dirty Read）**：
+* **脏读（Dirty Read）**：一个事务读取到了另一个事务未提交的数据。事务B在执行过程中修改了数据X，在未提交之前，事务A读取了X，而事务B却回滚了，这时事务A读取的X就是脏数据，就形成了脏读的现象。即当前事务读到的是其他事务想要修改但没有修改成功的数据。脏读的本质就是因为操作完数据后就立即释放了锁，导致读数据的一方可能读取的是无用或错误的数据。
 * **丢失更新（Lost to modify）**：
-* **不可重复读（Unrepeatableread）**：
-* **幻读（Phantom Read）**：
+* **不可重复读（Unrepeatableread）**：一个事务读取到另一个事务修改（update操作）成功的数据。事务A首先读取数据X，在执行接下来的逻辑前，事务B将数据X修改并提交了，然后事务A再次读取时发现前后两次读到的数据不匹配，这种情况就是不可重复读。即当前事务前后两次读取存在一次数据已被其他事务修改的情况，导致前后不匹配。
+* **幻读（Phantom Read）**：一个事务读取到另一个事务插入或删除（insert或delete操作）成功的数据。事务A首先根据条件获得了N条数据，然后事务B增加或删除了M条符合A查询条件的数据，从而导致事务A再次查询发现有N+M或N-M条数据，就产生了幻读。即事务前后两次读取存在前一次和后一次读出的数据条目不一致的情况，导致前后不匹配。
 
 
 
 ### 事务的隔离级别
 
-* **读未提交（Read uncommitted）**：
-* **读已提交（Read committed）**：
-* **可重复读（Repeatable read）**：
-* **可串行化（Serializable）**：
+* **读未提交（Read uncommitted）**：会出现脏读、不可重复读、幻读。
+* **读已提交（Read committed）**：会出现不可重复读、幻读。
+  * 避免脏读：将释放锁的位置调整到事务提交之后，在事务提交之前，其他任何用户都无法对数据进行操作。
+* **可重复读（Repeatable read）**：会出现幻读。
+  * 避免不可重复读：Read committed是语句级别的快照，每次读取的都是当前最新的版本，所以会出现被其他事务影响的情况。Repeatable read则通过事务级别的快照，每次读取的都是当前事务的版本，即使数据被修改了，本次操作也只会读取当前快照的版本。
+  * 避免幻读：MySQL的Repeatable read隔离级别加上GAP间隔锁处理了幻读。
+* **可串行化（Serializable）**：事务串行化，避免所有并发的问题。
 
 
 
@@ -8842,28 +8870,16 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 ### 什么是行锁？
 
-* MySQL的行锁分为共享锁（S锁）和排他锁（X锁）；
-* 共享锁允许一个事务去读取一行，阻止其他事务获得相同数据集的排他锁，但依然可以获得共享锁。共享锁也叫做读锁，指多个用户可以同时读取同一个资源，但不允许其他用户修改；
-* 排他锁只允许获得锁的事务操作数据，会阻止任何其他事务获取相同数据集的共享锁和排他锁。排他锁也叫做写锁，会阻塞其他的写锁和读锁。
+* **分类**：MySQL的行锁分为共享锁（S锁）和排他锁（X锁）；
+* **共享锁**：允许一个事务去读取一行，阻止其他事务获得相同数据集的排他锁，但依然可以获得共享锁。共享锁也叫做读锁，指多个用户可以同时读取同一个资源，但不允许其他用户修改；
+* **排他锁**：只允许获得锁的事务操作数据，会阻止任何其他事务获取相同数据集的共享锁和排他锁。排他锁也叫做写锁，会阻塞其他的写锁和读锁。
 
 
 
-### MVCC和事务的隔离级别
+### MVCC
 
-* MVCC（Multi-Version Concurrency Control）多版本并发控制。可以简单的任务是行锁的一个升级，事务的隔离就是通过锁机制来实现的。
+* **MVCC（Multi-Version Concurrency Control）多版本并发控制**。可以简单的认为是行锁的一个升级，事务的隔离就是通过锁机制来实现的。
 * 表锁中读写操作是阻塞的，基于提升并发性能的考虑，MVCC一般读写是非阻塞的。即通过一定机制生成一个数据请求时间点的一致性数据快照（Snapshot），并用这个快照来提供一定级别（语句级或事务级）的一致性读取。从用户的角度来看，就像是数据库可以提供同一数据的多个版本。
-* 事务的隔离级别：
-  * **读未提交（Read uncommitted）**：会出现脏读、不可重复读、幻读。
-    * 脏读：一个事务读取到了另一个事务未提交的数据。事务B在执行过程中修改了数据X，在未提交之前，事务A读取了X，而事务B却回滚了，这时事务A读取的X就是脏数据，就形成了脏读的现象。即当前事务读到的是其他事务想要修改但没有修改成功的数据。
-    * 脏读的本质就是因为操作完数据后就立即释放了锁，导致读数据的一方可能读取的是无用或错误的数据。
-  * **读已提交（Read committed）**：会出现不可重复读、幻读。
-    * 避免脏读：将释放锁的位置调整到事务提交之后，在事务提交之前，其他任何用户都无法对数据进行任何的操作。
-    * 不可重复读：一个事务读取到另一个事务修改（update操作）成功的数据。事务A首先读取数据X，在执行接下来的逻辑前，事务B将数据X修改并提交了，然后事务A再次读取时发现前后两次读到的数据不匹配，这种情况就是不可重复读。即当前事务前后两次读取存在一次数据已被其他事务修改的情况，导致前后不匹配。
-  * **可重复读（Repeatable read）**：会出现幻读。
-    * 避免不可重复读：Read committed是语句级别的快照，每次读取的都是当前最新的版本，所以会出现被其他事务影响的情况。Repeatable read则通过事务级别的快照，每次读取的都是当前事务的版本，即使数据被修改了，本次操作也只会读取当前快照的版本。
-    * 幻读（虚读）：一个事务读取到另一个事务插入或删除（insert或delete操作）成功的数据。事务A首先根据条件获得了N条数据，然后事务B增加或删除了M条符合A查询条件的数据，从而导致事务A再次查询发现有N+M或N-M条数据，就产生了幻读。即事务前后两次读取存在前一次和后一次读出的数据条目不一致的情况，导致前后不匹配。
-    * 避免幻读：MySQL的Repeatable read隔离级别加上GAP间隔锁处理了幻读。
-  * **可串行化（Serializable）**：事务串行化，避免所有并发的问题。
 
 
 
@@ -8876,14 +8892,16 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 ### 间隔锁GAP
 
-* 当通过范围条件检索数据而不是相等条件检索数据，并请求共享或排他锁时，InnoDB会给符合范围条件的已有数据记录的索引项加锁。对于未来可能存在的符合条件范围的但此时并不存在的记录（被称为间隙GAP），InnoDB也会对个间隙加锁，这种锁机制就是间隙锁（间隙锁只会在可重复读这种隔离级别下使用）。
+* **概念**：当通过范围条件检索数据而不是相等条件检索数据，并请求共享或排他锁时，InnoDB会给符合范围条件的已有数据记录的索引项加锁。对于未来可能存在的符合条件范围的但此时并不存在的记录（被称为间隙GAP），InnoDB也会对个间隙加锁，这种锁机制就是间隙锁（间隙锁只会在可重复读这种隔离级别下使用）。
 
-* 例子：在索引记录之间、之前和之后的区间加上GAP锁。
+* **例子**：
 
+  在索引记录之间、之前和之后的区间加上GAP锁。
+  
   ```SQL
-  SELECT c1 FROM t WHERE c1 BETWEEN 10 and 20 FOR UPDATE;
+SELECT c1 FROM t WHERE c1 BETWEEN 10 and 20 FOR UPDATE;
   ```
-
+  
   间隙锁GAP对c1<10、c1=10~20和c1>20这3种情况都会加锁，在当前事务持有锁的过程中，任何其他事务都不能针对以上3种情况做操作，保证了当前事务多个范围查询时前后结果的一致，即解决了幻读问题。
 
 
@@ -9008,18 +9026,17 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 ### 内存淘汰机制
 
-* 当内存不足以容纳新写入的数据时，Redis的数据淘汰策略：
-  * **volatile-lru**：在设置了过期时间的键空间中选择最近最少使用的key淘汰；
-  * **volatile-ttl**：在设置了过期时间的键空间中选择将要过期的key淘汰；
-  * **volatile-random**：在设置了过期时间的键空间中随机选择key淘汰；
-  * **allkeys-lru**：在键空间内选择最近最少使用的key淘汰；
-  * **allkeys-random**：在键空间内随机选择key淘汰；
-  * **no-eviction**：使写入操作报错。
-  * **volatile-lfu**：在设置了过期时间的键空间中选择最不经常使用的key淘汰（4.0版本新增）；
-  * **allkeys-lfu**：在键空间中选择最不经常使用的key淘汰（4.0版本新增）。
+当内存不足以容纳新写入的数据时，Redis的数据淘汰策略：
+* **volatile-lru**：在设置了过期时间的键空间中选择最近最少使用的key淘汰；
+* **volatile-ttl**：在设置了过期时间的键空间中选择将要过期的key淘汰；
+* **volatile-random**：在设置了过期时间的键空间中随机选择key淘汰；
+* **allkeys-lru**：在键空间内选择最近最少使用的key淘汰；
+* **allkeys-random**：在键空间内随机选择key淘汰；
+* **no-eviction**：使写入操作报错。
+* **volatile-lfu**：在设置了过期时间的键空间中选择最不经常使用的key淘汰（4.0版本新增）；
+* **allkeys-lfu**：在键空间中选择最不经常使用的key淘汰（4.0版本新增）。
 
-  
-  
+
 
 ## Redis-持久化机制
 
@@ -9099,7 +9116,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 ### 布隆过滤器
 
-* 布隆过滤器（Bloom Filter），是由二进制向量（位数组）和一系列随机映射函数（哈希散列）两部分组成的数据结构。优点是其占用空间和效率方面相对更高，缺点是返回结果是概率性的（与元素越多，误报的可能性就越大），而不是非常准确的，且存放在其中的数据不容易删除。
+* **布隆过滤器（Bloom Filter）**，是由二进制向量（位数组）和一系列随机映射函数（哈希散列）两部分组成的数据结构。优点是其占用空间和效率方面相对更高，缺点是返回结果是概率性的（与元素越多，误报的可能性就越大），而不是非常准确的，且存放在其中的数据不容易删除。
 * 其中位数组中的每个元素都只占用1bit，且每个元素只能是0或1。以这种方式申请一个100w元素的位数组只会占用 `1000000bit/8 = 125000byte = 125000/1024kb ≈ 122kb` 的空间。
 * 使用原理：
   * 在使用布隆过滤器之前，位数组会初始化，即所有元素都置为0。当要将一个字符串存入其中时，先通过多个哈希函数对字符串生成多个哈希值，然后将数组对应位置的元素置为1。
@@ -9184,7 +9201,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-## Redis-如何保证缓存和数据库双写时的一致性？
+## Redis-保证缓存和数据库的双写时一致性
 
 ## Redis-主从架构
 
@@ -9196,294 +9213,299 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 ### Redis分布式锁
 
-* 普通实现：使用 `SET key value [EX seconds] [PX milliseconds] NX` 创建一个key，做为互斥锁：
+* 普通实现，即使用 `SET key value [EX seconds] [PX milliseconds] NX` 创建一个key，做为互斥锁：
   * `NX`：表示只有key不存在时才会设置成功，如果此时redis中存在这个key，那么设置失败，返回nil；
+  
   * `EX seconds`：设置key的过期时间，精确到秒级，即seconds秒后自动释放锁；
+
   * `PX milliseconds`：设置key的过期时间，精确到毫秒级。
-
-  * 加锁：`SET resource_name my_random_value PX 30000 NX`；
+  
+* 加锁：`SET resource_name my_random_value PX 30000 NX`；
+  
   * 释放锁：
-
-  ```lua
-  -- 删除key之前先判断释放是自己创建的，即释放自己持有的锁
-  if redis.call('get', KEYS[1]) == ARGV[1] then
-      return redis.call('del', KEYS[1])
-  else
+  
+    ```lua
+    -- 删除key之前先判断释放是自己创建的，即释放自己持有的锁
+    if redis.call('get', KEYS[1]) == ARGV[1] then
+        return redis.call('del', KEYS[1])
+    else
       return 0
-  end
+    end
+    ```
   ```
-
+  
   * 缺点：如果是普通的Redis单实例，会存在单点故障问题。若是Redis主从异步复制，主节点宕机导致还未失效的key丢失，但key还没有同步到从节点，此时切换到从节点，其他用户就可以创建key从而获取锁。
-
-* RedLock算法：
+  ```
+  
+* RedLock算法实现：TODO
 
 
 
 ### Zookeeper分布式锁
 
-* 临时znode：加锁的时候由某个节点尝试创建临时的znode，若创建成功就获取到锁，这时其他客户端再创建znode时就会失败，只能注册监听器监听这个锁。释放锁就是删除这个znode，一旦释放就会通知客户端，然后有一个等待着的客户端就可以再次重新加锁。
+**临时znode**：加锁的时候由某个节点尝试创建临时的znode，若创建成功就获取到锁，这时其他客户端再创建znode时就会失败，只能注册监听器监听这个锁。释放锁就是删除这个znode，一旦释放就会通知客户端，然后有一个等待着的客户端就可以再次重新加锁。
 
-  ```JAVA
-  public class ZookeeperSession {
-      
-      // 闭锁
-      private static CountDownLatch connectedSemaphore = new CountDownLatch(1);
-      // zk客户端
-      private Zookeeper zookeeper;
-      private CountDownLatch latch;
-      
-      public ZookeeperSession() {
-          try {
-              // zk客户端
-              this.zookeeper = new Zookeeper("192.168.56.10:2181,192.168.56.10", 50000, new ZookeeperWatcher());
-              try {
-          	    connectedSemaphore .await();
-              } catch (InterruptedException e) {
-                  e.printStackTrace();
-              }
-              // zk会话连接成功
-              System.out.println("ZooKeeper session established......");
-          } catch (Exception e) {
-              e.printStackTrace();
-          }
-      }
-      
-      /**
-       * 获取分布式锁
-       */
-      public Boolean acquireDistributedLock(Long productId) {
-          // zk锁节点目录
-          String path = "/product-lock-" + productId;
-          try {
-              // 创建znode，即获取锁
-              zookeeper.create(path, "".getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHMERAL);
-              return true;
-          } catch (Exception e) {
-              // 若创建失败，即证明获取失败，锁已被其他人创建，接着自旋等待获取锁节点的创建权
-              while (true) {
-                  try {
-                     // 给znode注册一个监听器，判断监听器是否存在
-                     Stat stat = zk.exists(path, true);
-                     if (stat != null) {
-                         // 在闭锁上阻塞，直到超时或被唤醒（持有锁的用户countDown一次）
-                         this.latch = new CountDownLatch();
-                         this.latch.await(waitTime, TimeUnit.MILLISECOND);
-                         this.latch = null;
-                     }
-                     // 尝试获取锁
-                     zookeeper.create(path, "".getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
-                     return true;
-                  } catch (Exception e) {
-                      // 抢锁失败，自旋
-                      continue; 
-                  }
-              }
-          }
-          return true;
-      }
-      
-      /**
-       * 释放分布式锁
-       */
-      public void releaseDistributedLock(Long productId) {
-          // zk锁节点目录
-          String path = "/product-lock-" + productId;
-      	try {
-              // 删除临时znode，即释放锁
-              zookeeper.delete(path, -1);
-              System.out.println("release the lock for product[id=" + productId + "]......");
-          } catch (Exception e) {
-              e.printStackTrace();
-          }
-      }
-      
-      /**
-       * 实现zk的监听器
-       */
-      private class ZookeeperWatcher implements Watcher {
-          
-          private void process(WatchedEvent event) {
-              System.out.println("Receive watched event: " + event.getState());
-              if (KeeperState.SyncConnected == event.getState()) {
-                  connectedSemphore.countDown();
-              }
-              // 若监听器发现节点已被删除，就立即解除闭锁的阻塞，让等待自旋等待的线程去抢锁
-              if (this.latch != null) {
-                  this.latch.countDown();
-              }
-          }
-      }
-      
-      /**
-       * 封装单例的静态内部类
-       */
-      private static class Singleton {
-  		
-          // 单例的zk会话对象
-          private static ZookeeperSession instance;
-          
-          static {
-              instance = new ZookeeperSession();
-          }
-          
-          public static ZookeeperSession getInstance() {
-              return instance;
-          }
-      }
-      
-      /**
-       * 获取单例
-       */
-      public static ZookeeperSession getInstance() {
-          return Singleton.getInstance();
-      }
-  
-      public static void init() {
-          getInstance();
-      }
-  }
-  ```
+```JAVA
+public class ZookeeperSession {
+    
+    // 闭锁
+    private static CountDownLatch connectedSemaphore = new CountDownLatch(1);
+    // zk客户端
+    private Zookeeper zookeeper;
+    private CountDownLatch latch;
+    
+    public ZookeeperSession() {
+        try {
+            // zk客户端
+            this.zookeeper = new Zookeeper("192.168.56.10:2181,192.168.56.10", 50000, new ZookeeperWatcher());
+            try {
+        	    connectedSemaphore .await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            // zk会话连接成功
+            System.out.println("ZooKeeper session established......");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * 获取分布式锁
+     */
+    public Boolean acquireDistributedLock(Long productId) {
+        // zk锁节点目录
+        String path = "/product-lock-" + productId;
+        try {
+            // 创建znode，即获取锁
+            zookeeper.create(path, "".getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHMERAL);
+            return true;
+        } catch (Exception e) {
+            // 若创建失败，即证明获取失败，锁已被其他人创建，接着自旋等待获取锁节点的创建权
+            while (true) {
+                try {
+                   // 给znode注册一个监听器，判断监听器是否存在
+                   Stat stat = zk.exists(path, true);
+                   if (stat != null) {
+                       // 在闭锁上阻塞，直到超时或被唤醒（持有锁的用户countDown一次）
+                       this.latch = new CountDownLatch();
+                       this.latch.await(waitTime, TimeUnit.MILLISECOND);
+                       this.latch = null;
+                   }
+                   // 尝试获取锁
+                   zookeeper.create(path, "".getBytes(), Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+                   return true;
+                } catch (Exception e) {
+                    // 抢锁失败，自旋
+                    continue; 
+                }
+            }
+        }
+        return true;
+    }
+    
+    /**
+     * 释放分布式锁
+     */
+    public void releaseDistributedLock(Long productId) {
+        // zk锁节点目录
+        String path = "/product-lock-" + productId;
+    	try {
+            // 删除临时znode，即释放锁
+            zookeeper.delete(path, -1);
+            System.out.println("release the lock for product[id=" + productId + "]......");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * 实现zk的监听器
+     */
+    private class ZookeeperWatcher implements Watcher {
+        
+        private void process(WatchedEvent event) {
+            System.out.println("Receive watched event: " + event.getState());
+            if (KeeperState.SyncConnected == event.getState()) {
+                connectedSemphore.countDown();
+            }
+            // 若监听器发现节点已被删除，就立即解除闭锁的阻塞，让等待自旋等待的线程去抢锁
+            if (this.latch != null) {
+                this.latch.countDown();
+            }
+        }
+    }
+    
+    /**
+     * 封装单例的静态内部类
+     */
+    private static class Singleton {
+		
+        // 单例的zk会话对象
+        private static ZookeeperSession instance;
+        
+        static {
+            instance = new ZookeeperSession();
+        }
+        
+        public static ZookeeperSession getInstance() {
+            return instance;
+        }
+    }
+    
+    /**
+     * 获取单例
+     */
+    public static ZookeeperSession getInstance() {
+        return Singleton.getInstance();
+    }
 
-* 临时顺序节点：如果有一把锁，被多个人竞争，此时多个人会排队，第一个拿到锁的人会执行，然后释放锁。后面的每个人都会在排在自己前面的那个人创建的znode上监听，一旦某个人释放了锁，排在自己后面的人就会被Zookeeper通知，即获取到了锁。
+    public static void init() {
+        getInstance();
+    }
+}
+```
 
-  ```JAVA
-  public class ZookeeperDistributedLock implements Watcher {
-      
-      private Zookeeper zk;
-      private String locksRoot = "/locks";
-      private String productId;
-      private String waitNode;
-      private String lockNode;
-      private CountDownLatch latch;
-      private CountDownLatch conectedLatch = new CountDownLatch(1);
-      private int sessionTimeout = 30000;
-      
-      public ZookeeperDistributedLock(String productId) {
-          this.productId = productId;
-          try {
-              String address = ;
-              zk = new Zookeeper("192.168.56.10:2181,192.168.56.11:2181,192.168.56.12:2181", sessionTimeout, this);
-              connectedLatch.await();
-          } catch (IOException e) {
-              throw new LockException(e);
-          } catch (KeeperException e) {
-              throw new LockException(e);
-          } catch (InterruptedException e) {
-              throw new LockException(e);
-          }
-      }
-      
-      public void process(WatchedEvent event) {
-          if (event.getState() == KeeperState.SyncConnected) {
-              connectedLatch.countDown();
-              return;
-          }
-          
-          if (this.latch != null) {
-              this.latch.coutDown();
-          }
-      }
-      
-      /**
-       * 获取锁
-       */
-      public void acquireDistributedLock() {
-          try {
-              if (this.tryLock()) {
-                  return;
-              } else {
-                  waitForLock(waitNode, sessionTimeout);
-              }
-          } catch (KeeperException e) {
-              throw new LockException(e);
-          } catch (InterruptedException e) {
-              throw new LockException(e);
-          }
-      }
-      
-      /**
-       * 尝试获取锁
-       */
-      public boolean tryLock() {
-          try {
-              // 创建锁节点
-              lockNode = zk.create(locksRoot + "/" + productId, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
-              
-              // 对locksRoot目录下的所有节点排序
-              List<String> locks = zk.getChildren(locksRoot, false);
-              Collections.sort(locks);
-              
-              // 判断刚才创建的节点是否为最小节点
-              if (lockNode.equals(locksRoot + "/" + locks.get(0))) {
-                  // 若是则表示获得锁
-              	return true;    
-              }
-              
-              // 若不是则找到自己的前一个节点
-              int previousLockIndex = -1;
-              for (int i = 0; i < locks.size(); i++) {
-                  if (lockNode.equals(locksRoot + "/" + locks.get(i))) {
-                 		previousLockIndex = i - 1;
-                      break;
-                  }
-              }
-              // 并且将其设置为当前等待节点
-              this.waitNode = locks.get(previousLockIndex);
-          } catch (KeeperException e) {
-              throw new LockException(e);
-          } catch (InterruptedException e) {
-              throw new LockException(e);
-          }
-          return false;
-      }
-      
-      private boolean waitForLock(String waitNode, long waitTime) throws InterruptedException, KeeperException {
-          Stat stat = zk.exists(locksRoot + "/" + waitNode, true);
-          if (stat != null) {
-              this.latch = new CountDownLatch(1);
-              this.latch.await(waitTime, TimeUnit.MILLISECONDS);
-              this.latch = null;
-          }
-          return true;
-      }
-      
-      /**
-       * 释放锁
-       */
-      public void unlock() {
-          try {
-              System.out.println("unlock " + lockNode);
-              zk.delete(lockNode, -1);
-              lockNode = null;
-              zk.close();
-          } catch (InterruptedException e) {
-              e.printStackTrace();
-          } catch (KeeperException e) {
-              e.printStackTrace();
-          }
-      }
-      
-      /**
-       * 自定义锁异常
-       */
-      public class LockException extends RuntimeException {
-          
-          private static final long serialVersionUID = 1L;
-          
-          public LockException(String e) {
-              super(e);
-          }
-          
-          public LockException(Exception e) {
-              super(e);
-          }
-      }
-  }
-  ```
+**临时顺序节点**：如果有一把锁，被多个人竞争，此时多个人会排队，第一个拿到锁的人会执行，然后释放锁。后面的每个人都会在排在自己前面的那个人创建的znode上监听，一旦某个人释放了锁，排在自己后面的人就会被Zookeeper通知，即获取到了锁。
 
-  
+```JAVA
+public class ZookeeperDistributedLock implements Watcher {
+    
+    private Zookeeper zk;
+    private String locksRoot = "/locks";
+    private String productId;
+    private String waitNode;
+    private String lockNode;
+    private CountDownLatch latch;
+    private CountDownLatch conectedLatch = new CountDownLatch(1);
+    private int sessionTimeout = 30000;
+    
+    public ZookeeperDistributedLock(String productId) {
+        this.productId = productId;
+        try {
+            String address = ;
+            zk = new Zookeeper("192.168.56.10:2181,192.168.56.11:2181,192.168.56.12:2181", sessionTimeout, this);
+            connectedLatch.await();
+        } catch (IOException e) {
+            throw new LockException(e);
+        } catch (KeeperException e) {
+            throw new LockException(e);
+        } catch (InterruptedException e) {
+            throw new LockException(e);
+        }
+    }
+    
+    public void process(WatchedEvent event) {
+        if (event.getState() == KeeperState.SyncConnected) {
+            connectedLatch.countDown();
+            return;
+        }
+        
+        if (this.latch != null) {
+            this.latch.coutDown();
+        }
+    }
+    
+    /**
+     * 获取锁
+     */
+    public void acquireDistributedLock() {
+        try {
+            if (this.tryLock()) {
+                return;
+            } else {
+                waitForLock(waitNode, sessionTimeout);
+            }
+        } catch (KeeperException e) {
+            throw new LockException(e);
+        } catch (InterruptedException e) {
+            throw new LockException(e);
+        }
+    }
+    
+    /**
+     * 尝试获取锁
+     */
+    public boolean tryLock() {
+        try {
+            // 创建锁节点
+            lockNode = zk.create(locksRoot + "/" + productId, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
+            
+            // 对locksRoot目录下的所有节点排序
+            List<String> locks = zk.getChildren(locksRoot, false);
+            Collections.sort(locks);
+            
+            // 判断刚才创建的节点是否为最小节点
+            if (lockNode.equals(locksRoot + "/" + locks.get(0))) {
+                // 若是则表示获得锁
+            	return true;    
+            }
+            
+            // 若不是则找到自己的前一个节点
+            int previousLockIndex = -1;
+            for (int i = 0; i < locks.size(); i++) {
+                if (lockNode.equals(locksRoot + "/" + locks.get(i))) {
+               		previousLockIndex = i - 1;
+                    break;
+                }
+            }
+            // 并且将其设置为当前等待节点
+            this.waitNode = locks.get(previousLockIndex);
+        } catch (KeeperException e) {
+            throw new LockException(e);
+        } catch (InterruptedException e) {
+            throw new LockException(e);
+        }
+        return false;
+    }
+    
+    private boolean waitForLock(String waitNode, long waitTime) throws InterruptedException, KeeperException {
+        Stat stat = zk.exists(locksRoot + "/" + waitNode, true);
+        if (stat != null) {
+            this.latch = new CountDownLatch(1);
+            this.latch.await(waitTime, TimeUnit.MILLISECONDS);
+            this.latch = null;
+        }
+        return true;
+    }
+    
+    /**
+     * 释放锁
+     */
+    public void unlock() {
+        try {
+            System.out.println("unlock " + lockNode);
+            zk.delete(lockNode, -1);
+            lockNode = null;
+            zk.close();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (KeeperException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * 自定义锁异常
+     */
+    public class LockException extends RuntimeException {
+        
+        private static final long serialVersionUID = 1L;
+        
+        public LockException(String e) {
+            super(e);
+        }
+        
+        public LockException(Exception e) {
+            super(e);
+        }
+    }
+}
+```
 
-### Redis分布式锁和zk分布式锁的区别
+
+
+### Redis分布式锁和ZK分布式锁的区别
 
 * Redis的分布式锁需要不断去尝试获取锁，比较消耗性能。而zk的分布式锁，在获取不到锁时注册监听器即可，不需要不断的主动尝试获取锁，性能开销小。
 * 当Redis获取锁的客户端挂了，那么只能等待超时时间过期才能释放锁。而zk只是创建了临时znode，只要客户端挂了，znode也就没了，就会自动释放锁。
@@ -9564,7 +9586,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-# Spring+SpringBoot
+# Spring/SpringBoot/SpringCloud
 
 ## Spring-概念和特性
 
@@ -9596,7 +9618,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-## Spring-@RestController和@Controller注解
+## Spring-基本注解
 
 **@Controller返回一个页面：**单独使用的话一般适用于需要返回视图的场景，属于传统的Spring MVC应用。
 
@@ -9775,9 +9797,1201 @@ MVC是一种设计模式，Spring MVC就是基于了这种设计模式的框架�
 
 
 
+## Spring-IOC源码分析
+
+```JAVA
+BeanNameAware's setBeanName
+BeanClassLoaderAware's setBeanClassLoader
+BeanFactoryAware's setBeanFactory
+EnvironmentAware's setEnvironment
+EmbeddedValueResolverAware's setEmbeddedValueResolver
+ResourceLoaderAware's setResourceLoader (only applicable when running in an application context)
+ApplicationEventPublisherAware's setApplicationEventPublisher (only applicable when running in an application context)
+MessageSourceAware's setMessageSource (only applicable when running in an application context)
+ApplicationContextAware's setApplicationContext (only applicable when running in an application context)
+ServletContextAware's setServletContext (only applicable when running in a web application context)
+postProcessBeforeInitialization methods of BeanPostProcessors
+InitializingBean's afterPropertiesSet
+a custom init-method definition
+postProcessAfterInitialization methods of BeanPostProcessors
+```
+
+![image-20201205213639864](assets/image-20201205213639864.png)
+
+`applicationContext.xml`
+
+```JAVA
+<beans>
+    <bean id="teacher" class="com.test.Teacher">
+    	<property name="name" value="albert"></property>
+    </bean>
+</beans>
+```
+
+`Test.java`
+
+```java
+public static void main(String[] args) {
+    AbstractApplicationContext ac = new ClassPathXmlApplicationContext("applicationContext.xml");
+    Teacher bean = ac.getBean(Teacher.class);
+    bean.getBeanName();
+    bean.getEnvironment();
+}
+```
+
+`ClassPathXmlApplicationContext构造方法`
+
+```java
+public ClassPathXmlApplicationContext(String[] configLocations, boolean refresh, ApplicationContext parent) throws BeansException {
+    // 调用父类构造方法，进行相关对象的创建、属性的赋值等操作
+    super(parent);
+    setConfigLocations(configLocations);
+    if (refresh) {
+        refresh();
+    }
+}
+```
+
+`AbstractApplicationContext#refresh()`
+
+```JAVA
+@Override
+public void refresh() throws BeansException, IllegalStateException {
+    synchronized (this.startupShutdownMonitor) {
+        // Prepare this context for refreshing.
+        /**
+         * 做容器刷新前的准备工作：
+         * 1.设置容器的启动时间；
+         * 2.设置活跃状态为true；
+         * 3.设置关闭状态为false；
+         * 4.获取Environment对象，并加载当前系统的属性值到Environment对象中；
+         * 5.准备监听器和事件的集合对象，默认为空的集合。
+         */
+        prepareRefresh();
+
+        // Tell the subclass to refresh the internal bean factory.
+        // 创建容器对象，DefaultListableBeanFactory
+        // 加载xml配置文件的属性值到当前工厂中，最重要的就是BeanDefinition
+        ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();  
+
+        // Prepare the bean factory for use in this context.
+        // BeanFactory的准备工作，对各种属性进行填充
+        prepareBeanFactory(beanFactory);
+
+        try {
+            // Allows post-processing of the bean factory in context subclasses.
+            // 留给子类进行扩展的模板方法
+            postProcessBeanFactory(beanFactory);
+
+            // Invoke factory processors registered as beans in the context.
+            // 真正执行各种BeanFactoryPostProcessor
+            invokeBeanFactoryPostProcessors(beanFactory);
+
+            // Register bean processors that intercept bean creation.
+            // 注册BeanPostProcessor，这里只是注册功能，真正执行的是getBean方法
+            registerBeanPostProcessors(beanFactory);
+
+            // Initialize message source for this context.
+            // 为上下文初始化message源，即不同语言的消息体、国际化处理
+            initMessageSource();
+
+            // Initialize event multicaster for this context.
+            // 初始化事件监听的多路广播器
+            initApplicationEventMulticaster();
+
+            // Initialize other special beans in specific context subclasses.
+            // 留给子类来初始化其他的Bean
+            onRefresh();
+
+            // Check for listener beans and register them.
+            // 在所有注册的Bean中查找Listener Bean，注册到消息广播器中
+            registerListeners();
+
+            // Instantiate all remaining (non-lazy-init) singletons.
+            // 实例化剩下的非懒加载的单实例
+            finishBeanFactoryInitialization(beanFactory);
+
+            // Last step: publish corresponding event.
+            // 完成刷新过程，通知生命周期处理器LifecycleProcessor刷新过程，同时发出ContextRefreshEvent通知别人
+            finishRefresh();
+        }
+
+        catch (BeansException ex) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("Exception encountered during context initialization - " +
+                            "cancelling refresh attempt: " + ex);
+            }
+
+            // Destroy already created singletons to avoid dangling resources.
+            destroyBeans();
+
+            // Reset 'active' flag.
+            cancelRefresh(ex);
+
+            // Propagate exception to caller.
+            throw ex;
+        }
+
+        finally {
+            // Reset common introspection caches in Spring's core, since we
+            // might not ever need metadata for singleton beans anymore...
+            resetCommonCaches();
+        }
+    }
+}
+```
+
+`AbstractApplicationContext#prepareRefresh()`
+
+```JAVA
+protected void prepareRefresh() {
+    // Switch to active.
+    // 设置容器启动的时间
+    this.startupDate = System.currentTimeMillis();
+    // 容器的关闭标志位
+    this.closed.set(false);
+    // 容器的激活标志位
+    this.active.set(true);
+
+    // 日志记录
+    if (logger.isDebugEnabled()) {
+        if (logger.isTraceEnabled()) {
+            logger.trace("Refreshing " + this);
+        }
+        else {
+            logger.debug("Refreshing " + getDisplayName());
+        }
+    }
+
+    // Initialize any placeholder property sources in the context environment.
+    // 留给子类覆盖，初始化属性资源
+    initPropertySources();
+
+    // Validate that all properties marked as required are resolvable:
+    // see ConfigurablePropertyResolver#setRequiredProperties
+    // 创建并获取环境对象，验证需要的属性文件是否都已经放入环境中
+    getEnvironment().validateRequiredProperties();
+
+    // Store pre-refresh ApplicationListeners...
+    // 判断刷新前的应用程序监听器集合是否为空，如果为空，则将监听器添加到该集合中
+    if (this.earlyApplicationListeners == null) {
+        this.earlyApplicationListeners = new LinkedHashSet<>(this.applicationListeners);
+    }
+    else {
+        // Reset local application listeners to pre-refresh state.
+        // 如果不为空，则清空集合中的元素对象
+        this.applicationListeners.clear();
+        this.applicationListeners.addAll(this.earlyApplicationListeners);
+    }
+
+    // Allow for the collection of early ApplicationEvents,
+    // to be published once the multicaster is available...
+    // 创建刷新前的监听器事件集合
+    this.earlyApplicationEvents = new LinkedHashSet<>();
+}
+```
+
+`AbstractApplicationContext#ConfigurableListableBeanFactory()`
+
+```JAVA
+protected ConfigurableListableBeanFactory obtainFreshBeanFactory() {
+    refreshBeanFactory();
+    return getBeanFactory();
+}
+```
+
+`AbstractRefreshableApplicationContext#refreshBeanFactory()`
+
+```JAVA
+@Override
+protected final void refreshBeanFactory() throws BeansException {
+    // 如果存在beanFactory，则销毁
+    if (hasBeanFactory()) {
+        destroyBeans();
+        closeBeanFactory();
+    }
+    try {
+        // 创建DefaultListableBeanFactory对象
+        DefaultListableBeanFactory beanFactory = createBeanFactory();
+        // 为了序列化指定id，可以从id反序列化到beanFactory对象
+        beanFactory.setSerializationId(getId());
+        // 定制beanFactory，设置相关属性，包括是否允许覆盖同名的不同定义的对象以及循环依赖
+        customizeBeanFactory(beanFactory);
+        // 初始化documentReader，并进行XML文件读取及解析，默认命名空间的解析，自定义标签的解析
+        loadBeanDefinitions(beanFactory);
+        synchronized (this.beanFactoryMonitor) {
+            this.beanFactory = beanFactory;
+        }
+    }
+    catch (IOException ex) {
+        throw new ApplicationContextException("I/O error parsing bean definition source for " + getDisplayName(), ex);
+    }
+}
+```
+
+`AbstractApplicationContext#prepareBeanFactory()`
+
+```JAVA
+protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+    // Tell the internal bean factory to use the context's class loader etc.
+    // 设置beanFactory的classloader为当前context的classloader
+    beanFactory.setBeanClassLoader(getClassLoader());
+    // 设置beanFactory的表达式语言处理器
+    beanFactory.setBeanExpressionResolver(new StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));
+    // 为beanFactory增加一个默认的propertyEditor，这个主要是对bean的属性等设置管理的一个工具类
+    beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
+
+    // Configure the bean factory with context callbacks.
+    // 添加beanPostProcessor。ApplicationContextAwareProcessor用于完成某些Aware对象的注入
+    beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
+    // 设置要忽略自动装配的接口，因为这些接口的实现是由容器通过set方法进行注入，所以在使用Autowire时需要忽略这些接口
+    beanFactory.ignoreDependencyInterface(EnvironmentAware.class);
+    beanFactory.ignoreDependencyInterface(EmbeddedValueResolverAware.class);
+    beanFactory.ignoreDependencyInterface(ResourceLoaderAware.class);
+    beanFactory.ignoreDependencyInterface(ApplicationEventPublisherAware.class);
+    beanFactory.ignoreDependencyInterface(MessageSourceAware.class);
+    beanFactory.ignoreDependencyInterface(ApplicationContextAware.class);
+
+    // BeanFactory interface not registered as resolvable type in a plain factory.
+    // MessageSource registered (and found for autowiring) as a bean.
+    // 设置几个自动装配的特殊规则，当在进行IOC初始化的如果有多个实现，那么就使用指定的对象进行注入
+    beanFactory.registerResolvableDependency(BeanFactory.class, beanFactory);
+    beanFactory.registerResolvableDependency(ResourceLoader.class, this);
+    beanFactory.registerResolvableDependency(ApplicationEventPublisher.class, this);
+    beanFactory.registerResolvableDependency(ApplicationContext.class, this);
+
+    // Register early post-processor for detecting inner beans as ApplicationListeners.
+    // 注册BeanPostProcessor
+    beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(this));
+
+    // Detect a LoadTimeWeaver and prepare for weaving, if found.
+    // 增加对AspectJ的支持，在Java中的织入分为三种方式，即编译期织入，类加载期织入，运行期织入。编译器织入发生在编译期间；类加载器织入是通过特殊的类加载器，在类字节码加载到JVM时，织入切面；运行期织入则是采用Cglib和jdk进行织入
+    if (beanFactory.containsBean(LOAD_TIME_WEAVER_BEAN_NAME)) {
+        beanFactory.addBeanPostProcessor(new LoadTimeWeaverAwareProcessor(beanFactory));
+        // Set a temporary ClassLoader for type matching.
+        beanFactory.setTempClassLoader(new ContextTypeMatchClassLoader(beanFactory.getBeanClassLoader()));
+    }
+
+    // Register default environment beans.
+    // 注册默认的系统环境bean到一级缓存中
+    if (!beanFactory.containsLocalBean(ENVIRONMENT_BEAN_NAME)) {
+        beanFactory.registerSingleton(ENVIRONMENT_BEAN_NAME, getEnvironment());
+    }
+    if (!beanFactory.containsLocalBean(SYSTEM_PROPERTIES_BEAN_NAME)) {
+        beanFactory.registerSingleton(SYSTEM_PROPERTIES_BEAN_NAME, getEnvironment().getSystemProperties());
+    }
+    if (!beanFactory.containsLocalBean(SYSTEM_ENVIRONMENT_BEAN_NAME)) {
+        beanFactory.registerSingleton(SYSTEM_ENVIRONMENT_BEAN_NAME, getEnvironment().getSystemEnvironment());
+    }
+}
+```
+
+`AbstractApplicationContext#finishBeanFactoryInitialization()`
+
+```JAVA
+protected void finishBeanFactoryInitialization(ConfigurableListableBeanFactory beanFactory) {
+    // Initialize conversion service for this context.
+    if (beanFactory.containsBean(CONVERSION_SERVICE_BEAN_NAME) &&
+        beanFactory.isTypeMatch(CONVERSION_SERVICE_BEAN_NAME, ConversionService.class)) {
+        beanFactory.setConversionService(
+            beanFactory.getBean(CONVERSION_SERVICE_BEAN_NAME, ConversionService.class));
+    }
+
+    // Register a default embedded value resolver if no bean post-processor
+    // (such as a PropertyPlaceholderConfigurer bean) registered any before:
+    // at this point, primarily for resolution in annotation attribute values.
+    if (!beanFactory.hasEmbeddedValueResolver()) {
+        beanFactory.addEmbeddedValueResolver(strVal -> getEnvironment().resolvePlaceholders(strVal));
+    }
+
+    // Initialize LoadTimeWeaverAware beans early to allow for registering their transformers early.
+    String[] weaverAwareNames = beanFactory.getBeanNamesForType(LoadTimeWeaverAware.class, false, false);
+    for (String weaverAwareName : weaverAwareNames) {
+        getBean(weaverAwareName);
+    }
+
+    // Stop using the temporary ClassLoader for type matching.
+    beanFactory.setTempClassLoader(null);
+
+    // Allow for caching all bean definition metadata, not expecting further changes.
+    beanFactory.freezeConfiguration();
+
+    // Instantiate all remaining (non-lazy-init) singletons.
+    beanFactory.preInstantiateSingletons();
+}
+```
+
+`DefaultListableBeanFactory#preInstantiateSingletons()`
+
+```java
+@Override
+public void preInstantiateSingletons() throws BeansException {
+    if (logger.isTraceEnabled()) {
+        logger.trace("Pre-instantiating singletons in " + this);
+    }
+
+    // Iterate over a copy to allow for init methods which in turn register new bean definitions.
+    // While this may not be part of the regular factory bootstrap, it does otherwise work fine.
+    // 将所有BeanDefinition的名字创建一个集合
+    List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
+
+    // Trigger initialization of all non-lazy singleton beans...
+    // 触发所有非懒加载单例Bean的初始化，遍历集合的对象
+    for (String beanName : beanNames) {
+        // 合并父类BeanDefinition
+        RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
+        // 条件判断、抽象、单例、非懒加载
+        if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
+            // 判断是否实现了FactoryBean接口
+            if (isFactoryBean(beanName)) {
+                // 根据&+beanName来获取具体的对象
+                Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
+                // 进行类型转换
+                if (bean instanceof FactoryBean) {
+                    final FactoryBean<?> factory = (FactoryBean<?>) bean;
+                    // 判断这个FactoryBean是否希望急切的初始化
+                    boolean isEagerInit;
+                    if (System.getSecurityManager() != null && factory instanceof SmartFactoryBean) {
+                        isEagerInit = AccessController.doPrivileged((PrivilegedAction<Boolean>)
+                                                                    ((SmartFactoryBean<?>) factory)::isEagerInit,
+                                                                    getAccessControlContext());
+                    }
+                    else {
+                        isEagerInit = (factory instanceof SmartFactoryBean &&
+                                       ((SmartFactoryBean<?>) factory).isEagerInit());
+                    }
+                    // 如果希望急切的初始化，则通过beanName获取bean实例
+                    if (isEagerInit) {
+                        getBean(beanName);
+                    }
+                }
+            }
+            else {
+                // 如果beanName对应的bean不是FactoryBean，只是普通的bean，则通过beanName获取bean实例
+                getBean(beanName);
+            }
+        }
+    }
+
+    // Trigger post-initialization callback for all applicable beans...
+    // 遍历beanName，触发所有SmartInitializingSingleton的后初始化回调
+    for (String beanName : beanNames) {
+        Object singletonInstance = getSingleton(beanName);
+        // 判断singletonInstance是否实现了SmartInitializingSingleton接口
+        if (singletonInstance instanceof SmartInitializingSingleton) {
+            final SmartInitializingSingleton smartSingleton = (SmartInitializingSingleton) singletonInstance;
+            if (System.getSecurityManager() != null) {
+                AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+                    smartSingleton.afterSingletonsInstantiated();
+                    return null;
+                }, getAccessControlContext());
+            }
+            else {
+                smartSingleton.afterSingletonsInstantiated();
+            }
+        }
+    }
+}
+```
+
+
+
+
+
+## Spring-AOP源码分析
+
+
+
+
+
 # 数据结构和算法
 
-## 数据结构-树
+## 树形结构
+
+### 基本概念
+
+树是由n个有限结点组成的具有层次关系的集合，其具有如下特点：
+
+* 每个结点有0个或n个子结点；
+* 没有父结点的结点称为根结点，一棵树有且只有一个根节点；
+* 每个非根结点只有一个父结点；
+* 每个结点及其后代结点整体上可以看成一棵树，称为当前结点的父结点的一颗子树。
+
+相关术语：
+
+* 结点的度：一个结点具有的子树个数称为该结点的度；
+* 叶子结点：度为0的结点称为叶子结点，也叫做终端结点；
+* 分支结点：度不为0的结点称为分支结点，也叫做非终端结点；
+* 结点的层次：从根结点开始记为1，之后的每个后继层次加1，以此类推；
+* 结点的层序编号：将树中的结点，按照从上层到下层，同层从左到右的顺序排成一个线性序列，并且编成连续的自然数；
+* 树的度：树中结点的最大度；
+* 树的高度（深度）：树中结点的最大层次；
+* 森林：m个互不相交的树的集。将一棵非空树的根结点删除，树就会变成一座森林；反之给森林添加一个统一的根结点，森林就会变成一颗树；
+* 孩子结点：一个结点的直接后继结点称为该结点的孩子结点；
+* 双亲结点（父结点）：一个结点的直接前驱结点称为该结点的双亲结点；
+* 兄弟结点：同一双亲结点的孩子结点间互称为兄弟结点。
+
+
+
+### 二叉树
+
+#### 基本概念
+
+所谓二叉树就是度不超过2的树，即每个结点最多有两个子结点。
+
+**满二叉树**：
+
+对于一个二叉树，如果每一层的结点数都达到最大值，则这个二叉树就是满二叉树。
+
+**完全二叉树**：
+
+叶子结点只能出现在最下层和次下层，并且最下面一层的结点都集中在该层最左边的若干位置的二叉树。
+
+
+
+#### 二分搜索树
+
+```JAVA
+public class BinarySearchTree<Key extends Comparable<Key>, Value> {
+
+    private Node<Key, Value> root;
+    private int N;
+
+    // 结点
+    private static class Node<Key, Value> {
+
+        private final Key key;
+        private Value value;
+        private Node<Key, Value> left;
+        private Node<Key, Value> right;
+
+        public Node(Key key, Value value, Node<Key, Value> left, Node<Key, Value> right) {
+            this.key = key;
+            this.value = value;
+            this.left = left;
+            this.right = right;
+        }
+    }
+
+    public int size() {
+        return N;
+    }
+
+    /**
+     * 插入结点
+     */
+    public void put(Key key, Value value) {
+        root = put(root, key, value);
+    }
+
+    public Node<Key, Value> put(Node<Key, Value> node, Key key, Value value) {
+        if (node == null) {
+            N++;
+            return new Node<>(key, value, null, null);
+        }
+
+        int cmp = key.compareTo(node.key);
+        if (cmp > 0) {
+            node.right = put(node.right, key, value);
+        } else if (cmp < 0) {
+            node.left = put(node.left, key, value);
+        } else {
+            node.value = value;
+        }
+        return node;
+    }
+
+    /**
+     * 按key搜索结点
+     */
+    public Value get(Key key) {
+        return get(root, key);
+    }
+
+    public Value get(Node<Key, Value> node, Key key) {
+        if (node == null) {
+            return null;
+        }
+
+        int cmp = key.compareTo(node.key);
+        if (cmp > 0) {
+            return get(node.right, key);
+        } else if (cmp < 0) {
+            return get(node.left, key);
+        } else {
+            return node.value;
+        }
+    }
+	
+    /**
+     * 按key删除结点
+     */
+    public void delete(Key key) {
+        delete(root, key);
+    }
+
+    public Node<Key, Value> delete(Node<Key, Value> node, Key key) {
+        if (node == null) {
+            return null;
+        }
+
+        int cmp = key.compareTo(node.key);
+        if (cmp > 0) {
+            node.right = delete(node.right, key);
+        } else if (cmp < 0) {
+            node.left = delete(node.left, key);
+        } else {
+            // 要删除的结点是叶子结点的情况
+            if (node.left == null && node.right == null) {
+                return null;
+            }
+
+            // 要删除的结点左子树为空，只有右子树
+            if (node.left == null) {
+                return node.right;
+            }
+
+            // 要删除的结点右子树为空，只有左子树
+            if (node.right == null) {
+                return node.left;
+            }
+
+            // 要删除的结点既有左子树又有右子树，则获取该结点的右子树的最小结点和其替换即可
+            Node<Key, Value> rightMinNode = null;	// 右子树的最小结点
+            Node<Key, Value> rightNode = node.right;	// 右子树的根节点
+            while (rightNode.left != null) {
+                // 判断当前结点的左结点是否是最小结点
+                if (rightNode.left.left == null) {
+                    rightMinNode = rightNode.left;
+                    // 若最小结点存在右子树，则将其挂入当前结点的左结点
+                    if (rightMinNode.right != null) {
+                        rightNode.left = rightMinNode.right;
+                    }
+                    break;
+                }
+                // 继续向左边移动
+                rightNode = rightNode.left;
+            }
+
+            // 用右子树的最小结点替换要删除的结点
+            assert rightMinNode != null;
+            rightMinNode.left = node.left;
+            rightMinNode.right = node.right;
+
+            // 返回新结点，将其挂入树中
+            return rightMinNode;
+        }
+
+        return null;
+    }
+
+    /**
+     * 获取最小key的结点
+     */
+    public Key min() {
+        return min(root).key;
+    }
+
+    public Node<Key, Value> min(Node<Key, Value> node) {
+        if (node.left != null) {
+            return min(node.left);
+        } else {
+            return node;
+        }
+    }
+
+    /**
+     * 获取最大key的结点
+     */
+    public Key max() {
+        return max(root).key;
+    }
+
+    public Node<Key, Value> max(Node<Key, Value> node) {
+        if (node.right != null) {
+            return max(node.right);
+        } else {
+            return node;
+        }
+    }
+
+    /**
+     * 前序遍历
+     */
+    public LinkedList<Key> preErgodic() {
+        LinkedList<Key> keys = new LinkedList<>();
+        preErgodic(root, keys);
+        return keys;
+    }
+
+    private void preErgodic(Node<Key, Value> node, LinkedList<Key> keys) {
+        if (node == null) {
+            return;
+        }
+
+        keys.addLast(node.key);
+        if (node.left != null) {
+            preErgodic(node.left, keys);
+        }
+        if (node.right != null) {
+            preErgodic(node.right, keys);
+        }
+    }
+
+    /**
+     * 中序遍历
+     */
+    public LinkedList<Key> midErgodic() {
+        LinkedList<Key> keys = new LinkedList<>();
+        midErgodic(root, keys);
+        return keys;
+    }
+
+    private void midErgodic(Node<Key, Value> node, LinkedList<Key> keys) {
+        if (node == null) {
+            return;
+        }
+
+        if (node.left != null) {
+            midErgodic(node.left, keys);
+        }
+        keys.addLast(node.key);
+        if (node.right != null) {
+            midErgodic(node.right, keys);
+        }
+    }
+	
+    /**
+     * 后序遍历
+     */
+    public LinkedList<Key> afterErgodic() {
+        LinkedList<Key> keys = new LinkedList<>();
+        midErgodic(root, keys);
+        return keys;
+    }
+
+    private void afterErgodic(Node<Key, Value> node, LinkedList<Key> keys) {
+        if (node == null) {
+            return;
+        }
+
+        if (node.left != null) {
+            midErgodic(node.left, keys);
+        }
+        if (node.right != null) {
+            midErgodic(node.right, keys);
+        }
+        keys.addLast(node.key);
+    }
+	
+    /**
+     * 层次遍历
+     */
+    public LinkedList<Key> layerErgodic() {
+        LinkedList<Key> keys = new LinkedList<>();
+        layerErgodic(root, keys);
+        return keys;
+    }
+
+    private void layerErgodic(Node<Key, Value> root, LinkedList<Key> keys) {
+        LinkedList<Node<Key, Value>> nodes = new LinkedList<>();
+
+        nodes.addLast(root);
+        while (!nodes.isEmpty()) {
+            Node<Key, Value> node = nodes.removeFirst();
+            keys.addLast(node.key);
+            if (node.left != null) {
+                nodes.addLast(node.left);
+            }
+            if (node.right != null) {
+                nodes.addLast(node.right);
+            }
+        }
+    }
+	
+    /**
+     * 树的最大深度
+     */
+    public int maxDepth() {
+        return maxDepth(root);
+    }
+
+    private int maxDepth(Node<Key, Value> node) {
+        if (node == null) {
+            return 0;
+        }
+
+        int leftMax = 0, rightMax = 0;
+        if (node.left != null) {
+            leftMax = maxDepth(node.left);
+        }
+        if (node.right != null) {
+            rightMax = maxDepth(node.right);
+        }
+
+        return leftMax > rightMax ? leftMax + 1 : rightMax + 1;
+    }
+}
+```
+
+
+
+### 堆
+
+#### 基本概念
+
+堆是完全二叉树，除了树的最后一层结点不需要是满的，其他的每一层从左到右都是满的，如果最后一层结点不是满的，那么要求左满右不满；
+
+![image-20201206180731132](assets/image-20201206180731132.png)
+
+通常是由数组实现的树形结构，具体方法就是将二叉树的结点按照层级顺序放入数组中，根节点在位置1，子节点在位置2和3，而子结点的子结点则分别放在位置4，5，6和7，以此类推。
+
+如果一个结点的位置为k，则它的父结点的位置为k/2，而它的两个子结点的位置分别为2k和2k+1。这样，在不使用指针的情况下，可以通过计算数组的索引在树中上下移动，如：从a[k]向上一层，就令k等于k/2，向下一层就令k等于2k或2k+1。
+
+每个结点都大于等于它的两个子结点，但两个子结点之间的顺序不做规定。
+
+![image-20201206181314999](assets/image-20201206181314999.png)
+
+
+
+#### 最大堆
+
+```java
+public class Heap<T extends Comparable<T>> {
+
+    // 存储堆中的元素
+    private T[] items;
+    // 记录堆中元素的个数
+    private int N;
+    // 记录堆中第一个元素的下标
+    private static final int FIRST = 1;
+
+    public Heap(int capacity) {
+        this.items = (T[]) new Comparable[capacity + 1];
+        this.N = 0;
+    }
+
+    /**
+     * 判断堆中索引i处的元素是否小于索引j处的元素
+     */
+    private boolean less(int i, int j) {
+        return items[i].compareTo(items[j]) < 0;
+    }
+
+    /**
+     * 交换堆中索引i和索引j处的元素
+     */
+    private void exc(int i, int j) {
+        T temp = items[i];
+        items[i] = items[j];
+        items[j] = temp;
+    }
+
+    /**
+     * 插入元素，数组末尾
+     */
+    public void insert(T item) {
+        items[++N] = item;
+        swim(N);
+    }
+
+    /**
+     * 上浮操作，将索引index处的元素浮动到正确的位置
+     */
+    private void swim(int index) {
+        while (index > FIRST) {
+            int parentIndex = index / 2;
+            if (less(parentIndex, index)) {
+                exc(parentIndex, index);
+            }
+            index = parentIndex;
+        }
+    }
+
+    /**
+     * 删除堆中最大的元素，数组开头
+     */
+    public T delMax() {
+        T item = items[FIRST];
+        exc(FIRST, N);
+        items[N] = null;
+        N--;
+        sink(FIRST);
+        return item;
+    }
+
+    /**
+     * 下沉操作，将索引index处的元素沉入到正确位置
+     */
+    private void sink(int index) {
+        while (2 * index <= N) {
+            int childMax, leftIndex = 2 * index, rightIndex = 2 * index + 1;
+            if (rightIndex<= N && less(leftIndex, rightIndex)) {
+                childMax = rightIndex;
+            } else {
+                childMax = leftIndex;
+            }
+
+            if (!less(index, childMax)) {
+                break;
+            } else {
+                exc(index, childMax);
+            }
+
+            index = childMax;
+        }
+    }
+}
+```
+
+
+
+#### 优先队列
+
+```JAVA
+/**
+ * 最大优先队列
+ * @param <T>
+ */
+public class MaxPriorityQueue<T extends Comparable<T>> {
+
+    private T[] items;
+    private int N;
+
+    public MaxPriorityQueue(int capacity) {
+        this.items = (T[]) new Comparable[capacity + 1];
+        this.N = 0;
+    }
+
+    public int size() {
+        return this.N;
+    }
+
+    public boolean isEmpty() {
+        return this.N == 0;
+    }
+
+    private boolean less(int i, int j) {
+        return this.items[i].compareTo(this.items[j]) < 0;
+    }
+
+    private void exchange(int i, int j) {
+        T temp = this.items[i];
+        this.items[i] = this.items[j];
+        this.items[j] = temp;
+    }
+
+    public void insert(T item) {
+        this.items[++N] = item;
+        swim(N);
+    }
+
+    private void swim(int index) {
+        while (index > 1) {
+            int parentIndex = index / 2;
+            if (less(index, parentIndex)) {
+                exchange(index, parentIndex);
+            }
+            index = parentIndex;
+        }
+    }
+
+    public T delMax() {
+        T max = this.items[1];
+        exchange(1, N);
+        this.items[N] = null;
+        N--;
+        sink(1);
+        return max;
+    }
+
+    private void sink(int index) {
+        while (2 * index <= N) {
+            int childMax, leftIndex = 2 * index, rightIndex = 2 * index + 1;
+            if (rightIndex <= N && less(leftIndex, rightIndex)) {
+                childMax = rightIndex;
+            } else {
+                childMax = leftIndex;
+            }
+
+            if (less(childMax, index)) {
+                break;
+            } else {
+                exchange(childMax, index);
+            }
+
+            index = childMax;
+        }
+    }
+}
+```
+
+
+
+#### 索引优先队列
+
+```java
+/**
+ * 最小索引优先队列
+ * @param <T>
+ */
+public class IndexMinPriorityQueue<T extends  Comparable<T>> {
+
+    private T[] items;
+    private int[] pq;
+    private int[] qp;
+    private int N;
+
+    public IndexMinPriorityQueue(int capacity) {
+        this.items = (T[]) new Comparable[capacity + 1];
+        this.pq = new int[capacity + 1];
+        this.qp = new int[capacity + 1];
+        this.N = 0;
+
+        for (int i = 0; i < qp.length; i++) {
+            qp[i] = -1;
+        }
+    }
+
+    public int size() {
+        return this.N;
+    }
+
+    public boolean isEmpty() {
+        return this.N == 0;
+    }
+
+    private boolean less(int i, int j) {
+        return items[pq[i]].compareTo(items[pq[j]]) < 0;
+    }
+
+    private void exchange(int i, int j) {
+        int temp = pq[i];
+        pq[i] = pq[j];
+        pq[j] = temp;
+
+        qp[pq[i]] = i;
+        qp[pq[j]] = j;
+    }
+
+    public boolean contains(int index) {
+        return qp[index] != -1;
+    }
+
+    public int minIndex() {
+        return pq[1];
+    }
+
+    public void insert(int index, T item) {
+        if (contains(index)) {
+            return;
+        }
+
+        N++;
+        items[index] = item;
+        pq[N] = index;
+        qp[index] = N;
+
+        swim(N);
+    }
+
+    public int delMin() {
+        int minIndex = pq[1];
+        exchange(1, N);
+
+        qp[pq[N]] = -1;
+        pq[N] = -1;
+        items[minIndex] = null;
+        N--;
+
+        sink(1);
+        return minIndex;
+    }
+
+    public void delete(int index) {
+        int sourceIndex = qp[index];
+        exchange(sourceIndex, N);
+
+        items[sourceIndex] = null;
+        qp[pq[N]] = -1;
+        pq[N] = -1;
+        N--;
+
+        sink(sourceIndex);
+        swim(sourceIndex);
+    }
+
+    public void changeItem(int index, T item) {
+        items[index] = item;
+        int sourceIndex = qp[index];
+        sink(sourceIndex);
+        swim(sourceIndex);
+    }
+
+    private void swim(int index) {
+        while (index > 1) {
+            int parentIndex = index / 2;
+            if (less(index, parentIndex)) {
+                exchange(index, parentIndex);
+            }
+            index = parentIndex;
+        }
+    }
+
+    private void sink(int index) {
+        while (2 * index <= N) {
+            int childMin, leftIndex = 2 * index, rightIndex = 2 * index + 1;
+            if (rightIndex <= N && less(rightIndex, leftIndex)) {
+                childMin = rightIndex;
+            } else {
+                childMin = leftIndex;
+            }
+
+            if (less(index, childMin)) {
+                break;
+            } else {
+                exchange(index, childMin);
+            }
+
+            index = childMin;
+        }
+    }
+}
+```
+
+
+
+### 平衡树
+
+#### 基本概念
+
+二分搜索树在极端情况下会退化成链表，导致查找元素的效率变得和链表一样低。如下图，依次向BST上插入9，8，7，6，5，4，3，2，1这9个数，那么最终构建出的树结构就是一个链表。
+
+而平衡树就是一种能够不受插入数据的影响，让生成的树结构都能像完全二叉树一样，即使在极端情况下，依旧能保证查找性能。
+
+![image-20201207161327060](assets/image-20201207161327060.png)
+
+
+
+#### 2-3查找树
+
+一颗2-3查找树需要满足以下两个要求：
+
+* 2-结点：含有一个键值对和两条链，左链接指向的2-3树中的键都小于该结点，右链接指向的2-3树中的键都大于该结点；
+* 3-结点：含有两个键值对和三条链，左链接指向的2-3树中的键都小于该结点，中链接指向的2-3树中的键都位于该结点的两个键之间，右链接指向的2-3树中的键都大于该结点。
+
+![image-20201207163944967](assets/image-20201207163944967.png)
+
+TODO
+
+2-3树在插入元素的时候，需要做一些局部的交换来保持2-3树的平衡，一颗完全平衡的2-3树具有以下性质：
+
+* 任意空链接到根结点的路径长度都是相等的；
+* 4-结点交换为3-结点时，树的高度不会发生变化，只有当根结点是临时的4-结点，分解根结点时，树高才会+1；
+* 2-3树与普通二叉搜索树最大的区别是，BST是自顶向下生长的，而2-3树是自底向上生长的。
+
+
+
+#### 红黑树
+
+2-3在极端的情况下依旧能保证所有子结点都是2-结点，树的高度为logN，比之BST极端情况下的N，确保了时间复杂度，但是过于复杂。
+
+红黑树主要是对2-3树进行编码，红黑树背后的基本思想是用标志的二分搜索树（完全由2-结点构成）和一些额外的信息（替换3-结点）来表示2-3树：
+
+* 红链接：将两个2-结点连接起来构成一个3-结点；
+* 黑链接：对比于2-3树中的普通链接。
+
+准确的说，将3-结点表示为由一条左斜的红色链接（就是两个2-结点其中一个是另一个的左子结点）相连的两个2-结点，优点是无需修改就可以使用标准的BST的查找方法。
+
+![image-20201207181907810](assets/image-20201207181907810.png)
+
+红黑树是含有红黑链接并满足下列条件的二发搜索树：
+
+* 红链接均为左节点；
+* 没有任何一个结点同时和两条红链接相连；
+* 该树是完美黑色平衡的二叉树，即任意空链接到根结点的路径上的黑链接数量相同。
+
+![image-20201207212934907](assets/image-20201207212934907.png)
+
+![image-20201207212949565](assets/image-20201207212949565.png)
+
+![image-20201207213035898](assets/image-20201207213035898.png)
+
+平衡化：在对红黑树进行一些增删改查操作后，很有可能会出现红色的右链接或者两条连续的红色链接，而这些都不满足红黑树的定义，所以我们需要对这些情况通过旋转进行修复，让红黑树保持平衡。
+
+左旋：当某个结点的左子结点为黑色，右子结点为红色，此时需要左旋（当前结点为h，其右子结点为x）。
+
+1. 将x的左子结点置为h的右子结点`h.right=x.left`；
+2. 将h置为x的左子结点 `x.left=h`；
+3. 将x的color置为h的color `x.color=h.color`；
+4. 将h的color置为READ `h.color=true`。
+
+![image-20201207224542223](assets/image-20201207224542223.png)
+
+右旋：当某个结点的左子结点是红色，且左子结点的左子结点也是红色，则需要右旋（当前结点为h，其左子结点为x）。
+
+1. 将x的右子结点置为h的左子结点`h.left=x.right`；
+2. 将h置为x的右子结点 `x.right=h`；
+3. 将x的color置为h的color `x.color=h.color`；
+4. 将h的color置为READ `h.color=true`。
+
+![image-20201207225709627](assets/image-20201207225709627.png)
+
+向单个2-结点插入新键：
+
+* 一颗只含有一个键的红黑树只含有一个2-结点，在插入新键的同时也需要旋转操作；
+
+* 如果新建小于当前结点的键，则只需要新增一个红色结点即可，新的红黑树和单个3-结点完全等价；
+
+  ![image-20201207231021787](assets/image-20201207231021787.png)
+
+* 如果新键大于当前结点的键，那么新增的红色结点将会产生一条红色的右链接，此时需要通过左旋操作，将红色右链接变为左链接，插入操作才算完成。形成的新红黑树依然和3-结点等价，其包含两个键，一条红色链接。
+
+  ![image-20201207231301903](assets/image-20201207231301903.png)
+
+向底部的2-结点插入新键：用和二分搜索树相同的方式向一颗红黑树中插入新键，会在树的底部新增一个结点（可以保证有序性），唯一的区别就是红黑树需要用一条红链接将新结点和其父结点相连，如果其父结点是一个2-结点，那么刚才的方式仍然适用。
+
+![image-20201207231511365](assets/image-20201207231511365.png)
+
+颜色反转：当一个结点的左子结点和右子结点的color都为RED时，也就是出现了临时的4-结点，此时只需要将左子结点和右子结点的颜色反转为BLACK，即让当前结点的颜色变为RED即可。
+
+![image-20201207232134128](assets/image-20201207232134128.png)
+
+向一棵双键树（3-结点）中插入新键：
+
+* 新键大于原树中的两个键：
+
+  ![image-20201207232754336](assets/image-20201207232754336.png)
+
+* 新建小于原树中的两个键：
+
+  ![image-20201207233325794](assets/image-20201207233325794.png)
+
+  ![image-20201207233350881](assets/image-20201207233350881.png)
+
+* 新建介于原树中两个键之间：
+
+  ![image-20201207233440234](assets/image-20201207233440234.png)
+
+  ![image-20201207233536538](assets/image-20201207233536538.png)
+
+根结点的颜色总是黑色：结点的红色是由和其父结点间的链接决定的，由于根结点不存在父结点，所以每次插入后，都需要将根结点的颜色置为黑色，因为根结点可能会被旋转操作置换掉。
+
+向树底部的3-结点插入新键：若是在树的底部的一个3-结点下插入新的结点，则出现三种情况，即指向新结点的链接可能是3-结点的右连接（此时只需要反转颜色即可）、左链接（此时需要进行右旋后再反转颜色）和中链接（此时先左旋再右旋最后反转颜色）。颜色的反转操作会使中间结点变红，相当于将其和其父结点变为了3-结点，也就意味着父结点会被插入一个新键，只需要用相同方法向上处理即可，直到向上遇到2-结点或根结点为止。
+
+![image-20201207234209730](assets/image-20201207234209730.png)
+
+![image-20201207235200290](assets/image-20201207235200290.png)
+
+
+
+#### B树
+
+
+
+#### B+树
+
+
 
 ## 排序算法
 
@@ -9790,6 +11004,7 @@ public class SelectionSort {
         if (arr == null || arr.length < 2) {
             return;
         }
+        
         for (int i = 0; i < arr.length - 1; i++) {
           	int minIndex = i;
             for (int j = i + 1; j < arr.length; j++) {
@@ -9800,9 +11015,9 @@ public class SelectionSort {
     }
     
     public static void swap(int[] arr, int i, int j) {
-        int tmp = arr[i];
-        arr[i] = arr[j];
-        arr[j] = tmp;
+        arr[i] = arr[i] ^ arr[j];
+        arr[j] = arr[i] ^ arr[j];
+        arr[i] = arr[i] ^ arr[j];
     }
 }
 ```
@@ -9818,6 +11033,7 @@ public class BubbleSort {
         if (arr == null || arr.length < 2) {
             return;
         }
+        
         for (int e = arr.length - 1; e > 0; e--) {
             for (int i = 0; i < e; i++) {
                 if (arr[i] > arr[i + 1]) {
@@ -9846,6 +11062,7 @@ public class InsertionSort {
         if (arr == null || arr.length < 2) {
             return;
         }
+        
         for (int i = 1; i < arr.length; i++) {
             for (int j = i - 1; j >= 0 && arr[j] > arr[j+1]; j--) 
                 swap(arr, j, j+1); 
@@ -9860,3 +11077,60 @@ public class InsertionSort {
     }
 }
 ```
+
+
+
+### 堆排序
+
+```JAVA
+
+```
+
+
+
+### 希尔排序
+
+```JAVA
+
+```
+
+
+
+### 归并排序
+
+```JAVA
+
+```
+
+
+
+### 快速排序
+
+```JAVA
+
+```
+
+
+
+### 计数排序
+
+```JAVA
+
+```
+
+
+
+### 基数排序
+
+```JAVA
+
+```
+
+
+
+### 桶排序
+
+```JAVA
+
+```
+
