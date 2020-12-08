@@ -10239,13 +10239,9 @@ public void preInstantiateSingletons() throws BeansException {
 
 所谓二叉树就是度不超过2的树，即每个结点最多有两个子结点。
 
-**满二叉树**：
+**满二叉树**：对于一个二叉树，如果每一层的结点数都达到最大值，则这个二叉树就是满二叉树。
 
-对于一个二叉树，如果每一层的结点数都达到最大值，则这个二叉树就是满二叉树。
-
-**完全二叉树**：
-
-叶子结点只能出现在最下层和次下层，并且最下面一层的结点都集中在该层最左边的若干位置的二叉树。
+**完全二叉树**：叶子结点只能出现在最下层和次下层，并且最下面一层的结点都集中在该层最左边的若干位置的二叉树。
 
 
 
@@ -10867,7 +10863,7 @@ public class IndexMinPriorityQueue<T extends  Comparable<T>> {
 
 二分搜索树在极端情况下会退化成链表，导致查找元素的效率变得和链表一样低。如下图，依次向BST上插入9，8，7，6，5，4，3，2，1这9个数，那么最终构建出的树结构就是一个链表。
 
-而平衡树就是一种能够不受插入数据的影响，让生成的树结构都能像完全二叉树一样，即使在极端情况下，依旧能保证查找性能。
+而平衡树就是一种能够不受插入数据的影响，让生成的树结构都能像完全二叉树一样，即使在极端情况下，依然能保证查询性能。
 
 ![image-20201207161327060](assets/image-20201207161327060.png)
 
@@ -10882,13 +10878,45 @@ public class IndexMinPriorityQueue<T extends  Comparable<T>> {
 
 ![image-20201207163944967](assets/image-20201207163944967.png)
 
-TODO
+2-3树的查找：将BST查找算法一般化就能得到2-3树的查找算法。要判断一个键是否在树中，先将其和根结点中的键比较，如果和其中任意一个键相等，查询命中；否则就根据比较的结果找到指向相应区间的链接，并在其指向的子树上通过递归继续查找。如果找到空链接，则查询未命中。
+
+![image-20201208163136379](assets/image-20201208163136379.png)
+
+![image-20201208163210231](assets/image-20201208163210231.png)
+
+向2-结点下插入新结点：和BST插入元素一样，首先要按顺序进行查找，然后将结点挂到新位置上。2-3树之所以能在极端情况下保证效率是因为在其插入后能保证树的平衡猪状态。如果新结点被定位到一个2-结点上，那么只需要将新结点和2-结点组合成一个3-结点即可；如果是定位到一个3-结点上，则有下面几种情况。
+
+![image-20201208164353992](assets/image-20201208164353992.png)
+
+向只含有一个3-结点的树中插入新结点：若一棵2-3树只包含一个3-结点，即这个结点已经存在两个键，没有空间来插入第三个键了，则会先和这个3-结点组合成临时的4-结点。然后将这个4-结点的中间键向上提升为新得父节点，左键做为其左子结点，右键做为其右子结点，以此自底向上生长树。当插入完成后，2-3树保持平衡，树的高度加1。
+
+![image-20201208164554381](assets/image-20201208164554381.png)
+
+向一个父结点为2-结点的3-结点中插入新结点：和上面的方式一样将新元素和3-结点组合成临时的4-结点，然后将该结点中间键向上提升和处于2-结点的父结点组合成为3-结点，最后将左右键分别挂在这个新3-结点的合适位置。
+
+![image-20201208165903497](assets/image-20201208165903497.png)
+
+![image-20201208170108719](assets/image-20201208170108719.png)
+
+向一个父结点为3-结点的3-结点中插入新结点：当新结点插入，定位到一个3-结点上时，将结点临时组合后再拆分，中间键提升。但此时父结点是一个3-结点，插入后父结点被组合成了4-结点，这时还需要继续提升中间键，一直向上提升直到遇到一个是2-结点的父结点，和其组合后变为3-结点，此时保证了树的平衡，完成了插入。
+
+![image-20201208170047113](assets/image-20201208170047113.png)
+
+![image-20201208171038034](assets/image-20201208171038034.png)
+
+![image-20201208171415109](assets/image-20201208171415109.png)
+
+分解根结点：当插入结点到根结点的路径上全部都是3-结点的时候，最终根结点会变为一个临时的4-结点，此时就需要将中间键向上提升为新的根结点，左右键拆分为两个2-结点做为新根结点的左右子结点。完成插入后树会自底向上生长导致高度加1。
+
+![image-20201208171436193](assets/image-20201208171436193.png)
+
+![image-20201208171947538](assets/image-20201208171947538.png)
 
 2-3树在插入元素的时候，需要做一些局部的交换来保持2-3树的平衡，一颗完全平衡的2-3树具有以下性质：
 
 * 任意空链接到根结点的路径长度都是相等的；
-* 4-结点交换为3-结点时，树的高度不会发生变化，只有当根结点是临时的4-结点，分解根结点时，树高才会+1；
-* 2-3树与普通二叉搜索树最大的区别是，BST是自顶向下生长的，而2-3树是自底向上生长的。
+* 4-结点变换为3-结点时，树的高度不会发生变化，只有当根结点是临时的4-结点，分解根结点时，树高才会+1；
+* 2-3树与普通二分搜索树最大的区别是，BST是自顶向下生长的，而2-3树是自底向上生长的。
 
 
 
@@ -10983,17 +11011,404 @@ TODO
 
 ![image-20201207235200290](assets/image-20201207235200290.png)
 
+```JAVA
+public class RedBlackTree<Key extends Comparable<Key>, Value> {
+
+    // 根结点
+    private Node root;
+    // 记录树中元素的个数
+    private int N;
+    // 红色链接标记
+    private static final boolean RED = true;
+    // 黑色链接标记
+    private static final boolean BLACK = false;
+
+    /**
+     * 树结点
+     */
+    private class Node {
+
+        // 键
+        public Key key;
+        // 值
+        private Value value;
+        // 左链接
+        public Node left;
+        // 右链接
+        public Node right;
+        // 结点颜色（由和其父结点间的链接决定）
+        public boolean color;
+
+        public Node(Key key, Value value, Node left, Node right, boolean color) {
+            this.key = key;
+            this.value = value;
+            this.left = left;
+            this.right = right;
+            this.color = color;
+        }
+    }
+
+    /**
+     *
+     * @return
+     */
+    public int size() {
+        return this.N;
+    }
+
+    /**
+     *
+     * @param node
+     * @return
+     */
+    private boolean isRed(Node node) {
+        if (node == null) {
+            return false;
+        }
+        return node.color = RedBlackTree.RED;
+    }
+
+    /**
+     *
+     * @param h
+     * @return
+     */
+    private Node rotateLeft(Node h) {
+        Node x = h.right;
+        h.right = x.left;
+        x.left = h;
+        x.color = h.color;
+        h.color = RedBlackTree.RED;
+        return x;
+    }
+
+    /**
+     *
+     * @param h
+     * @return
+     */
+    private Node rotateRight(Node h) {
+        Node x = h.left;
+        h.left = x.right;
+        x.right = h;
+        x.color = h.color;
+        h.color = RedBlackTree.RED;
+        return x;
+    }
+
+    /**
+     *
+     * @param node
+     */
+    private void flipColors(Node node) {
+        node.color = RedBlackTree.RED;
+        node.left.color = RedBlackTree.BLACK;
+        node.right.color = RedBlackTree.BLACK;
+    }
+
+    /**
+     *
+     * @param key
+     * @param value
+     */
+    public void put(Key key, Value value) {
+        root = put(root, key, value);
+        root.color = RedBlackTree.BLACK;
+    }
+
+    /**
+     *
+     * @param node
+     * @param key
+     * @param value
+     * @return
+     */
+    private Node put(Node node, Key key, Value value) {
+        if (node == null) {
+            N++;
+            return new Node(key, value, null, null, RED);
+        }
+
+        int cmp = key.compareTo(node.key);
+        if (cmp > 0) {
+            node.right = put(node.right, key, value);
+        } else if (cmp < 0) {
+            node.left = put(node.left, key, value);
+        } else {
+            node.value = value;
+        }
+
+        if (isRed(node.right) && !isRed(node.left)) {
+            node = rotateLeft(node);
+        }
+
+        if (isRed(node.left) && isRed(node.left.left)) {
+            node = rotateRight(node);
+        }
+
+        if (isRed(node.left) && isRed(node.right)) {
+            flipColors(node);
+        }
+
+        return node;
+    }
+
+    /**
+     *
+     * @param key
+     * @return
+     */
+    public Value get(Key key) {
+        return get(root, key);
+    }
+
+    /**
+     *
+     * @param node
+     * @param key
+     * @return
+     */
+    public Value get(Node node, Key key) {
+        if (node == null) {
+            return null;
+        }
+
+        int cmp = key.compareTo(node.key);
+        if (cmp < 0) {
+            return get(node.left, key);
+        } else if (cmp > 0) {
+            return get(node.right, key);
+        } else {
+            return node.value;
+        }
+    }
+}
+```
+
 
 
 #### B树
+
+B树中允许一个结点中包含多个key，看具体情况实现。假设一个参数M，以此来构造B树，即构造的是M阶的B树：
+
+* 每个结点最多有M-1个key，并且以升序排列；
+* 每个结点最多能有M个子结点；
+* 根结点至少有两个子结点。
+
+在实际应用中B树的阶数一般都比较大（通常大于100），所以即使存储大量的数据，B树的高度仍然比较小，这样在某些应用场景下可用显著体现优势（如MySQL的索引）。
+
+![image-20201208113420082](assets/image-20201208113420082.png)
+
+若参数M=5，则每个结点最多包含4对键值，下图以5阶B树为例，描述B树的数据存储：
+
+![image-20201208115449079](assets/image-20201208115449079.png)
+
+![image-20201208115929957](assets/image-20201208115929957.png)
+
+**B树在磁盘文件中的应用**：
+
+在程序中不可避免的会存在通过IO操作磁盘中存储的文件，而操作系统操作磁盘上的文件是通过文件系统进行操作的，在文件系统中就使用了B树。
+
+磁盘：是一种能够大量保存数据（GB到TB级别），但读取速度较慢（因为涉及到机器操作，读取速度为毫秒级）的硬件存储器。
+
+磁盘是由盘片构成，每个盘片有两个面，称为盘面。盘片中央有一个可以旋转的主轴，会让盘片以固定的速度旋转（通常是5400 rpm或7200 rpm），一个磁盘中包含多个这样的盘片并封装在一个密闭的容器中。盘片的每个表面是由一组称为磁道的同心圆组成，每个磁道被划分为一组扇区，每个扇区包含相等数量的数据位（通常是512 byte），扇区之间由一些间隙隔开，这些间隙中不存储数据。
+
+![image-20201208120534728](assets/image-20201208120534728.png)
+
+磁盘是用磁头来读写存储在盘片表面的位，而磁头链接到一个移动臂上，移动臂沿着盘片半径前后移动，可用将磁头定位到任何磁道上，这被称为寻道操作。一旦定位到磁道后，盘片转动，磁道上的每个位经过磁头时，读写磁头就可以感知和修改该位的值。对磁盘的访问时间分为寻道时间、旋转时间和传送时间。
+
+![image-20201208121816618](assets/image-20201208121816618.png)
+
+由于存储介质的特性，磁盘本身的存取速度就慢于主存，再加上机械运动的消耗，因此为了提高效率，要尽量减少磁盘IO，减少读写操作。为了达到这个目的，磁盘往往不会严格的按需读取，而是每次都会预读，即使只需要一个字节，磁盘也会从这个位置开始，顺序向后读取一定长度的数据放入内存，这样做的理论依据是计算机科学中著名的局部性原理（时间、空间局部性）。由于磁盘顺序读取的效率很高（不需要寻道，只需要旋转），因此预读可以提高IO的效率。
+
+页是计算机管理存储器的逻辑块，硬件及操作系统往往将主存和磁盘存储区分割为连续的大小相等的块，每个存储块被称为一页（1024字节或其整数倍），预读的长度一般为页的整数倍。主存和磁盘以页为单位交换数据，当程序要读取的数据不在主存中时，会触发一个缺页异常，此时系统会向磁盘发出信号，磁盘会找到数据的起始位置并向后连续读取一页或几页装入内存中，然后异常中断返回，程序继续执行。
+
+文件系统的设计上利用了磁盘预读的原理，将一个结点大小设为等于一个页，这样每个结点只需要一次IO操作就可以完全载入。那么3层的B树可以容纳 `1024*1024*1024` 将近10亿左右的数据，如果使用二叉树类结构来存储，则需要30层的深度。假设操作系统一次读取一个结点，且根结点保留在内存中，那么B树在10亿个数据中查找目标，只需要3次以内的磁盘IO就可以找到目标，但二叉树类结构如红黑树则需要30次以内的磁盘IO，因此B树做为文件系统的底层结构远远优于二叉树。
 
 
 
 #### B+树
 
+B+树是对B树的一种变形，与B树的区别在于：
+
+* 非叶子结点具有索引的作用，即分支结点只存储key，不存储value；
+* 树的所有叶子结点构成一个有序链表，可以按照key的顺序遍历全部数据。
+
+假设参数M=5，那么B+树每个结点最多包含4个键值对，下图以5阶B+树为例，描述B+树的数据存储：
+
+![image-20201208145833507](assets/image-20201208145833507.png)
+
+![image-20201208150752217](assets/image-20201208150752217.png)
+
+B树和B+树的优缺点对比：
+
+* B+树：
+  * 由于B+树在非叶子结点上不包含真正的数据，只当做索引使用，因此在内存相同大小的情况下，能够存放更多的key；
+  * B+树的叶子结点都是相连的，因此对整棵树的遍历只需要一次线性遍历叶子结点即可。而且由于数据顺序排列且相连，更加便于范围性的查找，而B树则需要进行每一层的递归遍历。
+* B树：由于B树的每一个结点都包含key和value，因此根据key查找value时，只需要找到key所在的位置，就能找到value，但B+树只有叶子结点存储数据，索引每一次查找，都必须找到树的最深处，也就是需要经过叶子结点的深度，才能找到value。
+
+B+树在数据库中的应用：在操作数据库时，为了提高查询效率，可以基于某张表的某个字段建立索引，以提高查询效率，MySQL中的索引就是通过B+树结构实现的。
+
+在未建立主键索引时进行查询：执行 `select * from user where id = 18;` 需要从第一条数据开始，一直查询到第6条数据才能发现id=18的数据，需要遍历比较6次。
+
+![image-20201208152856746](assets/image-20201208152856746.png)
+
+在建立了主键索引后进行查询：执行精确匹配时只需要通过key找到value即地址，通过地址之间定位到数据。不仅如此，在执行 `select * from user where id >= 12 and id <= 18;` 这种范围查询时，由于B+树的叶子结点形成了一个有序链表，所以只需要找到id=12的叶子结点，然后向后按顺序遍历即可。
+
+![image-20201208153322379](assets/image-20201208153322379.png)
+
 
 
 ## 排序算法
+
+### 时间复杂度
+
+#### 大O记法
+
+在进行算法分析时，语句总的执行次数T(n)是关于问题规模n的函数，进而分析T(n)随着n的变化情况并确定T(n)的量级。算法的时间复杂度，就是算法的时间度量，记作T(n)=O(f(n))。即表示随着问题规模n的增大，算法执行的时间（执行次数）增长率和f(n)的增长率相同，称为算法的渐近时间复杂度，其中f(n)是问题规模n的某个函数。
+
+使用大O记法表示时间复杂度的示例：
+
+```java
+// 共3次
+public static void main(String[] args) {
+    // 执行1次
+    int sum = 0;
+    // 执行1次
+    int n = 100;
+    // 执行1次
+    sum = (n + 1) * n / 2;
+    System.out.println("sum = " + sum);
+} 
+```
+
+```JAVA
+// 共n+3次
+public static void main(String[] args) {
+    // 执行1次
+    int sum = 0;
+    // 执行1次
+    int n = 100;
+    // 执行n次
+    for (int i = 1; i <= n; i++) {
+        sum += i;
+    }
+    System.out.println("sum = " + sum);
+}
+```
+
+```JAVA
+// 共n^2+2次
+public static void main(String[] args) {
+    // 执行1次
+    int sum = 0;
+    // 执行1次
+    int n = 100;
+    // 执行n^2次
+    for (int i = 1; i <= n; i++) {
+        for (int j = 1; j <= n; j++) {
+    		sum += i;        
+        }
+    }
+    System.out.println("sum = " + sum);
+}
+```
+
+基于对函数渐近增长的分析，使用大O阶表示法有以下规则：
+
+* 用常数1取代运行时间中的所有加法常数；
+* 在修改后的运行次数中，只保留高阶项；
+* 如果最高价项存在，且常数因子不为1，则去除与这个项相乘的常数。
+
+所以，上述算法的大O记法为：O(1)、O(n)、O(n^2)。
+
+
+
+#### 常见的大O阶
+
+* 线性阶：一般含有非嵌套循环涉及线性阶，线性阶就是随着输入规模的扩大，对应计算的次数呈直线增长。
+
+```JAVA
+// O(n)
+public static void main(String[] args) {
+    int sum = 0;
+    int n = 100;
+    for (int i = 1; i <= n; i++) {
+        sum += i;
+    }
+    System.out.println("sum = " + sum);
+}
+```
+
+* 平方阶：一般嵌套循环属于这种时间复杂度。
+
+```JAVA
+// O(n^2)
+public static void main(String[] args) {
+    int sum = 0, n = 100;
+    for (int i = 1; i <= n; i++) {
+        for (int j = 1; j <= n; j++) {
+    		sum += 1;        
+        }
+    }
+    System.out.println("sum = " + sum);
+}
+```
+
+* 立方阶：三层嵌套循环属于这种时间复杂度。
+
+```JAVA
+// O(n^3)
+public static void main(String[] args) {
+    int sum = 0, n = 100;
+    for (int i = 1; i <= n; i++) {
+        for (int j = i; j <= n; j++) {
+    		for (int k = i; k <= n; k++) {	
+        		sum++;        
+            }        
+        }
+    }
+    System.out.println("sum = " + sum);
+}
+```
+
+* 对数阶：由于随着输入规模n的增大，不管底数是多少，其增长趋势是相同的，所以会忽略底数。
+
+```JAVA
+public static void main(String[] args) {
+    int i = 1, n = 100;
+    // 由于每次i*2后，就距离n更近一步，即共有x个2相乘后大于n，然后退出循环。
+    // 由于是2^x=n，则得到x=log(2)n，所以该循环的时间复杂度为O(logN)。
+    while (i < n) {
+        i = i * 2;
+    }
+}
+```
+
+* 常数阶：不涉及循环操作的基本都是常数阶，因为其不会随着n的增长而增加操作次数。
+
+```JAVA
+// O(1)
+public static void main(String[] args) {
+    int n = 100;
+    int i = n + 2;
+    System.out.println(n);
+}
+```
+
+
+
+#### 函数调用的时间复杂度分
+
+#### 最坏情况
+
+
+
+### 空间复杂度
+
+
+
+
 
 ### 选择排序
 
