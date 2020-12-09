@@ -11398,130 +11398,458 @@ public static void main(String[] args) {
 
 
 
-#### 函数调用的时间复杂度分
+#### 函数调用的时间复杂度分析
 
-#### 最坏情况
+```JAVA
+// O(n)
+public static void main(String[] args) {
+    int n = 100;
+    for (int i = 0; i < n; i++) {
+        show(i);
+    }
+}
+
+private static void show(int i) {
+    System.out.println(i);
+}
+```
+
+```java
+// O(n^2)
+public static void main(String[] args) {
+    int n = 100;
+    for (int i = 0; i < n; i++) {
+        show(i);
+    }
+}
+
+private static void show(int i) {
+    for (int i = 0; i < n; i++) {
+        System.out.println(i);
+    }
+}
+```
+
+```java
+// 2n^2+n+1 
+// 根据大O规则，只保留n的最高阶项，并去掉最高阶项的常数因子，最终用大O记法得出 O(n^2)
+public static void main(String[] args) {
+    int n = 100; // 1
+    show(n);	// n
+    // n^2
+    for (int i = 0; i < n; i++) {
+        show(i);
+    }
+    // n^2
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            System.out.println(j);
+        }
+    }
+}
+
+private static void show(int i) {
+    for (int i = 0; i < n; i++) {
+        System.out.println(i);
+    }
+}
+```
+
+
+
+#### 考虑最坏的情况
+
+最坏情况是一种保证，指的是在应用程序中，即使遇到了最坏情况，也能够保证正常提供服务。所以默认情况下算法的时间复杂度都是在最坏情况下分析的。
+
+```JAVA
+// 从一个存储了n个随机数字的数组中找出指定的数字
+public int search(int num) {
+    int[] arr = {11, 10, 8, 9, 7, 22, 23, 0};
+    for (int i = 0; i < arr.length; i++) {
+        if (num == arr[i]) {
+            return i;
+        }
+    }
+    return -1;
+} 
+```
+
+* 最好情况：查找第一个数字就是期望数字，那么算法的时间复杂度为O(1)；
+* 最坏情况：一直查找到最后一个数字才是期望数字，那么算法的时间复杂度为O(n)；
+* 平均情况：任何数字查找的平均成本是O(n/2)。
 
 
 
 ### 空间复杂度
 
+#### Java中常见的内存占用
+
+* 基本数据类型的内存占用情况：
+
+| 数据类型 | 占用字节数 |
+| :------: | :--------: |
+|   byte   |     1      |
+|  short   |     2      |
+|   int    |     4      |
+|   long   |     8      |
+|  float   |     4      |
+|  double  |     8      |
+| boolean  |     1      |
+|   char   |     2      |
+
+* 一个引用类型的变量需要占用8个字节：如 `Date date = new Date` 语句中的date变量就是引用变量。
+
+* 创建一个对象，除了对象内部数据占用的空间外，该对象本身也具有内存开销，每个对象的头信息占用16个字节。
+
+* 一般内存的使用，如果不满足8个字节，都会被填充成8字节：
+
+  ```JAVA
+  // 对象头信息占用16个字节
+  public class A {
+      // 整型变量a占用4个字节
+      public int a = 1;
+  }
+  new A();	// A对象共占用20个字节，由于不是8的整数倍，所以会被填充为24个字节
+  ```
+
+* Java中的数组被限定为对象，一般都会因为要记录其长度而需要额外的内存，一个基本数据类型的数组一般需要占用24个字节（即16个字节的头信息+4个字节的长度信息+4个填充字节）。
 
 
 
+#### 算法的空间复杂度分析
 
-### 选择排序
+案例分析：对指定的数组元素进行反转。
 
 ```JAVA
-public class SelectionSort {
-    
-    public static void selectionSort(int[] arr) {
-        if (arr == null || arr.length < 2) {
-            return;
-        }
-        
-        for (int i = 0; i < arr.length - 1; i++) {
-          	int minIndex = i;
-            for (int j = i + 1; j < arr.length; j++) {
-                minIndex = arr[j] < arr[minIndex] ? j : minIndex;
-            }
-            swap(arr, i, minIndex);
-        }
+// 解法1：O(8) -> O(1)
+public static int[] reverse01(int[] arr) {
+    int n = arr.length;	// 4字节
+    int temp;	// 4字节
+    for (int start = 0, end = n - 1; start <= end; start++, end--) {
+    	temp = arr[start];
+        arr[start] = arr[end];
+        arr[end] = temp;
     }
-    
-    public static void swap(int[] arr, int i, int j) {
-        arr[i] = arr[i] ^ arr[j];
-        arr[j] = arr[i] ^ arr[j];
-        arr[i] = arr[i] ^ arr[j];
-    }
+    return arr;
 }
 ```
+
+```java
+// 解法2：O(4+24+4n) -> O(n)
+public static int[] reverse02(int[] arr) {
+    int n = arr.length;	// 4字节
+    int[] temp = new int[n];	// 数组对象的24字节+元素的n*4字节
+    for (int i = n - 1; i >= 0; i--) {
+        temp[n - 1 - i] = arr[i];
+    }
+    return temp;
+} 
+```
+
+由于Java存在垃圾回收机制，且JVM对程序的内存占用也有一定的优化，所以无法精确的评估一个Java程序的内存占用情况，只能进行估算。另外，现代计算机的内存一般都比较大，所以空间占用一般不是算法分析的主要方面（即不是算法的性能瓶颈），一般情况下所说的算法复杂度，默认就是时间复杂度。
 
 
 
 ### 冒泡排序
 
+* 比较两个相邻的元素，如果前一个大于后一个，就互换位置；
+* 对集合中每一对相邻的元素做同样的工作，最终被交换到末尾的就是最大元素，下次比较就可以忽略末尾元素；
+* 多次完成从头到尾的比较操作，每次比较完后都会在末尾确定一个元素的位置，等所有比较操作收敛后集合归于有序。
+
+![image-20201209110544195](assets/image-20201209110544195.png)
+
 ```JAVA
 public class BubbleSort {
     
-    public static void bubbleSort(int[] arr) {
-        if (arr == null || arr.length < 2) {
-            return;
-        }
-        
-        for (int e = arr.length - 1; e > 0; e--) {
-            for (int i = 0; i < e; i++) {
-                if (arr[i] > arr[i + 1]) {
-                    swap(arr, i, i + 1);
+    public static void sort(Comparable[] arr) {
+        // 控制整体比较操作执行的次数
+        for (int i = arr.length - 1; i > 0; i--) {
+            // 控制单次比较操作执行的次数
+            for (int j = 0; j < i; j++) {
+                // 比较相邻元素的大小
+                if (greater(arr[j], arr[j + 1])) {
+                    // 交换元素位置
+                    swap(arr, j, j + 1);
                 }
             }
         }
     }
-    
-    public static void swap(int[] arr) {
-        arr[i] = arr[i] ^ arr[j];
-        arr[j] = arr[i] ^ arr[j];
-        arr[i] = arr[i] ^ arr[j];
+
+    private static boolean greater(Comparable left, Comparable right) {
+        return left.compareTo(right) > 0;
+    }
+
+    private static void swap(Comparable[] arr, int i, int j) {
+        Comparable temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
     }
 }
 ```
+
+时间复杂度分析：冒泡排序使用了双层for循环，其中内层循环是真正完成排序操作的代码，所以分析时间复杂度时主要关注内层循环即可。在最坏的情况下，也就是要升序排序的集合为(6,5,4,3,2,1)时：
+
+* 元素的比较次数为：`(N-1)+(N-2)+(N-3)+...+2+1=((N-1)+1)*(N-1)/2=N^2/2-N/2`；
+* 元素的交换次数为：`(N-1)+(N-2)+(N-3)+...+2+1=((N-1)+1)*(N-1)/2=N^2/2-N/2`；
+* 总执行次数为：`(N^2/2-N/2)+(N^2/2-N/2)=N^2-N`；
+* 按照大O推导法则，保留函数中的最高阶项：`O(N^2)`。
+
+
+
+### 选择排序
+
+* 每次遍历的过程中，都假定一个位置的元素为最小值，然后和其之后的所有元素依次比较，并将本次发现的最小元素和其交换，一次遍历完后可以在首部确定一个位置；
+* 多次完成比较交换的遍历操作，每次假定的最小值位置都会是上一次遍历确定的位置的后一位。当所有比较操作收敛后集合就会趋于有序。
+
+![image-20201209123034408](assets/image-20201209123034408.png)
+
+```JAVA
+public class SelectionSort {
+
+    public static void sort(Comparable[] arr) {
+        for (int i = 0; i < arr.length - 1; i++) {
+            // 每次比较操作之前假定的最小值下标
+            int minIndex = i;
+            // 内层循环的作用是比较出本次真正的最小值
+            for (int j = i + 1; j < arr.length; j++) {
+                if (greater(arr[minIndex], arr[j])) {
+                    minIndex = j;
+                }
+            }
+            // 将最小值交换到合适的位置
+            swap(arr, i, minIndex);
+        }
+    }
+
+    private static boolean greater(Comparable left, Comparable right) {
+        return left.compareTo(right) < 0;
+    }
+
+    private static void swap(Comparable[] arr, int i, int j) {
+        Comparable temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+    }
+}
+
+```
+
+时间复杂度分析：选择排序使用了双层for循环，其中外层循环控制数据的交换，内层循环控制数据的比较。
+
+* 数据比较次数：`(N-1)+(N-2)+(N-3)+...+2+1=((N-1)+1)*(N-1)/2=N^2/2-N/2`；
+* 数据交换次数：`N-1`；
+* 总执行次数：`N^2/2-N/2+(N-1)=N^2/2+N/2+1`；
+* 时间复杂度：根据大O推导法则，保留最高阶项，去除常数因子，时间复杂度为 `O(N^2)`。
 
 
 
 ### 插入排序
 
+* 将集合中的所有元素逻辑上划分为有序和无序两组，有序在前，无序在后；
+* 找到无序集合中的第一个元素，向有序集合中插入；
+* 新插入的元素从有序组的末尾向前开始比较，遇到更大的元素则交换位置，直到遇到更小或相等的元素，才会停止比较。
+
+![image-20201209161312485](assets/image-20201209161312485.png)
+
 ```JAVA
 public class InsertionSort {
-    
-    public static void insertionSort(int[] arr) {
-        if (arr == null || arr.length < 2) {
-            return;
-        }
-        
+
+    public static void sort(Comparable[] arr) {
         for (int i = 1; i < arr.length; i++) {
-            for (int j = i - 1; j >= 0 && arr[j] > arr[j+1]; j--) 
-                swap(arr, j, j+1); 
+            for (int j = i - 1; j >= 0 &&
+                    greater(arr[j], arr[j + 1]); j--) {
+                swap(arr, j, j + 1);
             }
         }
     }
-    
-    public static void swap(int[] arr) {
-        arr[i] = arr[i] ^ arr[j];
-        arr[j] = arr[i] ^ arr[j];
-        arr[i] = arr[i] ^ arr[j];
+
+    private static boolean greater(Comparable left, Comparable right) {
+        return left.compareTo(right) > 0;
+    }
+
+    private static void swap(Comparable[] arr, int i, int j) {
+        Comparable temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
     }
 }
 ```
 
+时间复杂度分析：插入排序使用双层for循环，其中内层循环体是真正完成排序的代码，所以分析插入排序的时间复杂度主要分析内存代码的执行次数即可。在最坏的情况下，插入排序的时间复杂度分析：
 
-
-### 堆排序
-
-```JAVA
-
-```
+* 比较次数为：`(N-1)+(N-2)+(N-3)+...+2+1=((N-1)+1)*(N-1)/2=N^2/2-N/2`；
+* 交换次数为：`(N-1)+(N-2)+(N-3)+...+2+1=((N-1)+1)*(N-1)/2=N^2/2-N/2`；
+* 总执行次数：`(N^2/2-N/2)+(N^2/2-N/2)=N^2-N`；
+* 时间复杂度：根据大O推导法则，只保留函数中的最高阶项，时间复杂度为 `O(n^2)`。
 
 
 
 ### 希尔排序
 
-```JAVA
+* 首先选定一个步长h，以其做为依据对集合进行分组，即从首部元素开始，与和其间隔步长整数倍的元素分为一组；
+* 对组内的数据进行比较/交换操作，也就是进行了插入排序； 
+* 将步长h缩减为原来的1/2后重新对集合进行分组，然后重复第2步的比较操作。最后，当步长h缩减为1且比较完毕后，算法收敛。 
 
+![image-20201209171558957](assets/image-20201209171558957.png)
+
+```JAVA
+public class ShellSort {
+
+    public static void sort(Comparable[] arr) {
+        // 初始化步长
+        int h = 1;
+        while (h < arr.length / 2) {
+            h = 2 * h + 1;
+        }
+		
+        // 步长递减控制
+        while (h >= 1) {
+            // 根据步长分组进行插入排序
+            for (int i = h; i < arr.length; i++) {
+                for (int j = i; j >= h &&
+                        greater(arr[j - h], arr[j]); j -= h) {
+                    swap(arr, j - h, j);
+                }
+            }
+            h = h / 2;
+        }
+    }
+
+    private static boolean greater(Comparable left, Comparable right) {
+        return left.compareTo(right) > 0;
+    }
+
+    private static void swap(Comparable[] arr, int i, int j) {
+        Comparable temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+    }
+}
 ```
 
 
 
 ### 归并排序
 
+* 首先将原集合尽可能的拆分为元素相等的两个子几个，并对每个子集合继续进行拆分，直到元素个数为1为止；
+* 然后将相邻的两个子集进行排序并合并；
+* 重复第2部的操作，直到最终合并成一个有序集合为止。
+
+![image-20201209204421856](assets/image-20201209204421856.png)
+
+归并操作的原理：
+
+![image-20201209221306275](assets/image-20201209221306275.png)
+
+![image-20201209223318945](assets/image-20201209223318945.png)
+
+![image-20201209223352000](assets/image-20201209223352000.png)
+
+![image-20201209223411396](assets/image-20201209223411396.png)
+
+```JAVA
+public class MergeSort {
+
+    private static Comparable[] assist;
+
+    private static boolean less(Comparable left, Comparable right) {
+        return left.compareTo(right) < 0;
+    }
+
+    private static void exchange(Comparable[] arr, int i, int j) {
+        Comparable temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+    }
+
+    public static void sort(Comparable[] arr) {
+        assist = new Comparable[arr.length];
+        int start = 0;
+        int end = arr.length - 1;
+        sort(arr, start, end);
+    }
+
+    private static void sort(Comparable[] arr, int start, int end) {
+        if (end <= start) {
+            return;
+        }
+
+        int middle = start + (start + end) / 2;
+
+        sort(arr, start, middle);
+        sort(arr, middle + 1, end);
+
+        merge(arr, start, middle, end);
+    }
+
+    private static void merge(Comparable[] arr, int start, int middle, int end) {
+        int index = start, p1 = start, p2 = middle + 1;
+
+        while (p1 <= middle && p2 <= end) {
+            assist[index++] = less(arr[p1], arr[p2]) ? arr[p1++] : arr[p2++];
+        }
+
+        while (p1 <= middle) {
+            assist[index++] = arr[p1++];
+        }
+
+        while (p2 <= end) {
+            assist[index++] = arr[p2++];
+        }
+
+        for (int i = start; i <= end; i++) {
+            arr[i] = assist[i];
+        }
+    }
+}
+```
+
+时间复杂度分析：归并排序是分治思想的典型例子，该算法对arr[start, ..., end]进行排序，先将其分为arr[start, ..., middle]和arr[middle+1, ..., end]两个部分，然后分别通过递归调用将它们单独排序，最后将有序的子数组归并为最终的排序结果。该递归的出口在于如果一个数组不能再被分为两个子数组，那么就会执行merge进行归并操作，在归并的时候判断元素的大小进行排序。
+
+![image-20201209225245561](assets/image-20201209225245561.png)
+
+用树状图来描述归并，如果一个数组有8个元素，那么它将每次除以2找到最小
+
+子数组，共拆分log8次，值为3，所以树共有3层，那么自顶向下第k层具有2^k个子数组，每个数组的长度为 `2^(3-k)`，归并最多需要 `2^(3-k)` 次比较。因此每层的比较次数为 `2^k*2^(3-k)=2^3`，那么3层总共为 `3*2^3`。
+
+假设元素的个数为n，那么使用归并排序拆分的次数为log2(n)，所以共log2(n)层，那么使用log2(n)替换上面 `3*2^3` 中的3这个层数，最终得出的归并排序时间复杂度为：`log2(n)*2^(log2(n))=log2(n)*n`，根据大O推导法则，忽略底数，最终归并排序的时间复杂度为 `O(nlogn)`。
+
+
+
+### 快速排序
+
+* 首先设定一个分界值，通过该分界值将数组分为左右两个部分；
+* 将大于或等于分界值的数据放到数据右边，小于分界值的数据放到数组左边。此时左边部分中各元素都小于或等于分界值，而右边部分中各元素都大于或等于分界值；
+* 然后，左边和右边的数据可以独立的进行排序，对于每个子数组都可以再次设定分界值，同样的将数据分为左右两部分，左边为较小值，右边是较大值；
+* 重复上述的过程，即通过递归将左右两侧的数据都排好顺序后，整个数组的排序也就完成了。
+
+![image-20201209231401377](assets/image-20201209231401377.png)
+
+切分操作的原理：
+
+1. 设定一个基准值，用两个指针分别指向数组的头部和尾部；
+2. 先从尾部向头部开始搜索到一个比基准值小的元素，并记录指针的位置；
+3. 再从头部向尾部开始搜索到一个比基准值大的元素，并记录指针的位置；
+4. 交换左右两边指针指向的元素；
+5. 重复2、3、4步骤，直到左边指针的值大于右边指针的值为止。
+
+![image-20201209233919736](assets/image-20201209233919736.png)
+
+![image-20201209234151026](assets/image-20201209234151026.png)
+
+![image-20201209234505112](assets/image-20201209234505112.png)
+
+![image-20201209234605535](assets/image-20201209234605535.png)
+
 ```JAVA
 
 ```
 
 
 
-### 快速排序
+### 堆排序
 
-```JAVA
+```java
 
 ```
 
