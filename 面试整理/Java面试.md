@@ -3274,7 +3274,7 @@ JDK1.8之后的内存结构（JVM运行时数据区中的方法区被直接内�
 
 * 堆是垃圾收集器主要管理的区域，因此也被称为GC堆。从GC的角度来看，垃圾收集器基本都采用分代收集算法，所以堆还可以细分为新生代和老年代（Eden、From Survivor、To Survivor空间等），更细致划分的目的是更好的回收内存和更快的分配内存；
 
-  ![image-20201101144024875](assets/image-20201101144024875.png)
+  ![image-20201210205804493](assets/image-20201210205804493.png)
 
 * 上图eden区、s0区、s1区都属于新生代，tentired区属于老年代。大部分情况下对象都会在Eden区分配内存，在经过了一次新生代GC后，若还有对象存活，则会进入s0或s1，并且对象的年龄会增加1（从eden区进入survivor区后对象的初始年龄为1），当对象的年龄到达一个阈值后（默认15，可以通过参数 `-XX:MaxTenuringThreshold` 设置），就会进入老年代。
 
@@ -3410,7 +3410,7 @@ public class Test {
 
 **可达性分析算法：**基本思路是通过一系列被称为GC Roots的对象作为起点，以此开始向下搜索，节点所经过的路径称为引用链。当一个对象到GC Roots没有任何引用链相连的话，则该对象就是不能再被使用的。
 
-![image-20201101172715257](assets/image-20201101172715257.png)
+![image-20201210200047117](assets/image-20201210200047117.png)
 
 
 
@@ -3597,6 +3597,8 @@ public class T04_PhantomReference {
 
 垃圾回收器是基于垃圾回收算法的具体实现，不同的回收器适用于不同的场景，如HotSpot就实现了7种垃圾回收器用于适配各种场景的应用。
 
+![image-20201210211724813](assets/image-20201210211724813.png)
+
 ### Serial收集器
 
 **概念：**串行收集器是最基本的单线程收集器（新生代使用复制算法，老年代使用标记-整理算法），单线程不仅是指只有一条垃圾回收线程工作，而且在进行垃圾回收作业时必须暂停其他所有的工作线程（Stop the World），直到回收作业完成。
@@ -3654,7 +3656,7 @@ CMS（Concurrent Mark Sweep）收集器是一种以获取最短停顿时间为�
 
 1. **初始标记：**暂停用户线程，运行GC线程记录直接与GC Roots相连的对象，这个阶段速度很快；
 2. **并发标记：**该阶段会同时运行GC和用户线程，用一个闭包结构去记录可达对象。但是在该阶段结束后，这个闭包结构并不能保证包含了所有的可达对象，因为用户线程可能会不断的更新引用域，会导致GC线程无法实时的分析可达性，所以这个阶段也会跟踪记录那些发生引用更新的对象。
-3. **重新标记：**该阶段就是为了修正并发标记期间因为用户线程继续运行而导致引用发生变化的对象。收集器处于该阶段的时间一般比初始标记阶段稍长，远比并发标记阶段时间短。
+3. **重新标记：**暂停用户线程，该阶段就是为了修正并发标记期间因为用户线程继续运行而导致引用发生变化的对象（漏标：新垃圾，错标：垃圾被重新引用）。收集器处于该阶段的时间一般比初始标记阶段稍长，远比并发标记阶段时间短。 
 4. **并发清除：**该阶段会恢复用户线程的执行，同时GC线程开始回收之前标记的区域。
 
 **优点：**并发回收效率高、用户线程低停顿。
@@ -3694,6 +3696,12 @@ CMS（Concurrent Mark Sweep）收集器是一种以获取最短停顿时间为�
 
 
 
+### 扩展：三色标记算法
+
+
+
+
+
 ## JVM-内存分配和回收策略
 
 ### Minor GC和Full GC
@@ -3705,6 +3713,8 @@ CMS（Concurrent Mark Sweep）收集器是一种以获取最短停顿时间为�
 
 
 ### 内存分配策略
+
+![image-20201210211340153](assets/image-20201210211340153.png)
 
 **对象优先在Eden分配：**大多数情况下，对象在新生代的Eden区分配，当Eden空间不够时，发起Minor GC；
 
@@ -3893,6 +3903,28 @@ protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundE
 * 若没有使用双亲委派机制，而是每个类加载器加载自己的话就会出现一些问题，比如编写一个 `java.lang.Object ` 类的话，那么程序运行时，就会加载出多个不同的Object类；
 
 * 自底向上检查类是否被重复加载，自顶向下加载保证类加载的优先级。
+
+
+
+## JVM-调优
+
+![image-20201210220938777](assets/image-20201210220938777.png)
+
+![image-20201210221003219](assets/image-20201210221003219.png)
+
+![image-20201210221022041](assets/image-20201210221022041.png)
+
+![image-20201210221032269](assets/image-20201210221032269.png)
+
+### GC常用参数
+
+### Parallel常用参数
+
+### CMS常用参数
+
+### G1常用参数
+
+
 
 
 
@@ -11552,6 +11584,8 @@ public static int[] reverse02(int[] arr) {
 
 ### 冒泡排序
 
+![img](assets/bubbleSort.gif)
+
 * 比较两个相邻的元素，如果前一个大于后一个，就互换位置；
 * 对集合中每一对相邻的元素做同样的工作，最终被交换到末尾的就是最大元素，下次比较就可以忽略末尾元素；
 * 多次完成从头到尾的比较操作，每次比较完后都会在末尾确定一个元素的位置，等所有比较操作收敛后集合归于有序。
@@ -11597,6 +11631,8 @@ public class BubbleSort {
 
 
 ### 选择排序
+
+![img](assets/selectionSort.gif)
 
 * 每次遍历的过程中，都假定一个位置的元素为最小值，然后和其之后的所有元素依次比较，并将本次发现的最小元素和其交换，一次遍历完后可以在首部确定一个位置；
 * 多次完成比较交换的遍历操作，每次假定的最小值位置都会是上一次遍历确定的位置的后一位。当所有比较操作收敛后集合就会趋于有序。
@@ -11645,6 +11681,8 @@ public class SelectionSort {
 
 ### 插入排序
 
+![img](assets/insertionSort.gif)
+
 * 将集合中的所有元素逻辑上划分为有序和无序两组，有序在前，无序在后；
 * 找到无序集合中的第一个元素，向有序集合中插入；
 * 新插入的元素从有序组的末尾向前开始比较，遇到更大的元素则交换位置，直到遇到更小或相等的元素，才会停止比较。
@@ -11685,6 +11723,8 @@ public class InsertionSort {
 
 
 ### 希尔排序
+
+![img](assets/Sorting_shellsort_anim.gif)
 
 * 首先选定一个步长h，以其做为依据对集合进行分组，即从首部元素开始，与和其间隔步长整数倍的元素分为一组；
 * 对组内的数据进行比较/交换操作，也就是进行了插入排序； 
@@ -11730,6 +11770,8 @@ public class ShellSort {
 
 
 ### 归并排序
+
+![img](assets/mergeSort.gif)
 
 * 首先将原集合尽可能的拆分为元素相等的两个子几个，并对每个子集合继续进行拆分，直到元素个数为1为止；
 * 然后将相邻的两个子集进行排序并合并；
@@ -11818,6 +11860,8 @@ public class MergeSort {
 
 ### 快速排序
 
+![img](assets/quickSort.gif)
+
 * 首先设定一个分界值，通过该分界值将数组分为左右两个部分；
 * 将大于或等于分界值的数据放到数据右边，小于分界值的数据放到数组左边。此时左边部分中各元素都小于或等于分界值，而右边部分中各元素都大于或等于分界值；
 * 然后，左边和右边的数据可以独立的进行排序，对于每个子数组都可以再次设定分界值，同样的将数据分为左右两部分，左边为较小值，右边是较大值；
@@ -11842,38 +11886,359 @@ public class MergeSort {
 ![image-20201209234605535](assets/image-20201209234605535.png)
 
 ```JAVA
+public class QuickSort {
 
+    private static boolean less(Comparable left, Comparable right) {
+        return left.compareTo(right) < 0;
+    }
+
+    private static void exchange(Comparable[] arr, int i, int j) {
+        Comparable temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+    }
+
+    private static void sort(Comparable[] arr) {
+        int start = 0, end = arr.length - 1;
+        sort(arr, start, end);
+    }
+
+    private static void sort(Comparable[] arr, int start, int end) {
+        if (end <= start) {
+            return;
+        }
+
+        int partition = partition(arr, start, end);
+
+        sort(arr, start, partition - 1);
+        sort(arr, partition + 1, end);
+    }
+
+    private static int partition(Comparable[] arr, int start, int end) {
+        Comparable partitionKey = arr[start];
+
+        int left = start, right = end + 1;
+
+        while (true) {
+            while (less(partitionKey, arr[--right])) {
+                if (right == start) {
+                    break;
+                }
+            }
+
+            while (less(arr[++left], partitionKey)) {
+                if (left == end) {
+                    break;
+                }
+            }
+
+            if (left >= right) {
+                break;
+            } else {
+                exchange(arr, left, right);
+            }
+        }
+
+        exchange(arr, start, right);
+
+        return right;
+    }
+}
 ```
+
+**和归并排序的区别**：快速排序是另外一种基于分治思想实现的排序算法，它将一个数组分成若干个子数组，并将每个部分独立的排序。快速排序和归并排序是互补的：归并排序将数组分成若干个子数组并分别排序，最后将有序的子数组合并从而使整个数组有序；而快速排序的方式则是当若干个数组有序时，整个数组自然就有序了。在归并排序中，一个数组会被均等的拆分，归并操作会在处理整个数组之前；而快速排序中，拆分数组的为止取决于数组的内容，递归调用发生在处理整个数组之后。
+
+**时间复杂度分析**：快速排序的一次切分从头尾开始交替搜索，直到left和right重合。因此，一次切分算法的时间复杂度为O(n)，但整个快速排序的时间复杂度和切分的次数相关。
+
+* **平均情况**：每一次切分选择的基准数字不是最大值、最小值和中值，这种情况下的时间复杂度为 `O(nlogn)`。
+
+* **最优情况**：每一次切分选择的基准数字刚好能将当前序列等分。如果将数组的切分看成是一棵树，那么下图就是最优情况，共切分了logn次。所以，最优情况下快速排序的时间复杂度为 `O(nlogn)`。
+
+![image-20201210095447564](assets/image-20201210095447564.png)
+
+* **最坏情况**：每一个切分选择的基准数字是当前序列的最大或最小值，这使得每次切分都会有一个子组，那么总共就得切分n次。所以，最坏情况下快速排序的时间复杂度为 `O(n^2)`。
+
+![image-20201210095834047](assets/image-20201210095834047.png)
 
 
 
 ### 堆排序
 
-```java
+![img](assets/heapSort.gif)
 
+* 首先根据原集合构造出堆结构；
+* 得到堆顶元素，这个值就是最大值；
+* 交换堆顶元素和数组中的最后一个元素，此时所有元素中的最大元素都已经放到合适的位置了；
+* 对堆进行调整，重新让除了最后一个元素的剩余元素的最大值放到堆顶；
+* 重复2~4步骤，直到堆中只剩下一个元素为止。
+
+**堆构造过程**：最直观的方法就是创建一个新的数组，然后从头开始遍历原数组，将每个元素按顺序添加到新数组中，并从数据长度的一半处（因为堆的特性，后半段的叶子结点无需下沉）开始下沉对堆进行调整，最后就形成了一个有序堆。
+
+![image-20201210181811811](assets/image-20201210181811811.png)
+
+![image-20201210182413557](assets/image-20201210182413557.png)
+
+![image-20201210182510013](assets/image-20201210182510013.png)
+
+**堆排序过程**：对于构造好的堆，只需要做类似于堆删除的操作，就可以完成排序。
+
+* 将堆顶元素和堆中最后一个元素交换位置；
+* 通过对堆顶元素下沉调整堆，把最大的元素放到堆顶（此时最后一个元素不参与堆的调整，因为最大的数据已经到了数组的最右边）；
+* 重复1~2步骤，直到堆中只剩最后一个元素。
+
+![image-20201210184026043](assets/image-20201210184026043.png)
+
+![image-20201210184426389](assets/image-20201210184426389.png)
+
+![image-20201210184441732](assets/image-20201210184441732.png)
+
+![image-20201210184508936](assets/image-20201210184508936.png)
+
+![image-20201210184539277](assets/image-20201210184539277.png)
+
+![image-20201210184559099](assets/image-20201210184559099.png)
+
+```java
+public class HeapSort {
+
+    /**
+     * 判断堆中索引i处的元素是否小于索引j处的元素
+     */
+    private static boolean less(Comparable[] heap, int i, int j) {
+        return heap[i].compareTo(heap[j]) < 0;
+    }
+
+    /**
+     * 交换堆中索引i和j处的元素
+     */
+    private static void exchange(Comparable[] heap, int i, int j) {
+        Comparable temp = heap[i];
+        heap[j] = heap[i];
+        heap[i] = temp;
+    }
+
+    /**
+     * 根据待排序的原数组构造出堆
+     */
+    private static void createHeap(Comparable[] source, Comparable[] heap) {
+        System.arraycopy(source, 0, heap, 1, source.length);
+        for (int i = heap.length / 2; i > 0; i--) {
+            sink(heap, i, heap.length - 1);
+        }
+    }
+
+    /**
+     * 对原数组中的数据进行升序排序
+     */
+    public static void sort(Comparable[] source) {
+        Comparable[] heap = new Comparable[source.length + 1];
+        // 构建堆
+        createHeap(source, heap);
+        // 纪录未排序元素中最大的索引
+        int N = heap.length - 1;
+        while (N != 1) {
+            // 将根结点（即最大元素），交换到数组末尾并确定其位置
+            exchange(heap, 1, N);
+            // 堆数组末尾的元素已经确定了位置，下次循环则无需参与操作
+            N--;
+            // 将索引1处的元素下沉，就是将下次循环的最大元素交换到根结点
+            sink(heap, 1, N);
+        }
+        System.arraycopy(heap, 1, source, 0, source.length);
+    }
+
+    /**
+     * 在堆中对索引target处的元素在range范围内下沉
+     */
+    private static void sink(Comparable[] heap, int target, int range) {
+        while (2 * target <= range) {
+            int childMax, leftIndex = 2 * target, rightIndex = 2 * target + 1;
+            if (rightIndex <= range && less(heap, leftIndex, rightIndex)) {
+                childMax = rightIndex;
+            } else {
+                childMax = leftIndex;
+            }
+
+            if (!less(heap, target, childMax)) {
+                break;
+            } else {
+                exchange(heap, target, childMax);
+            }
+
+            target = childMax;
+        }
+    }
+}
 ```
 
 
 
 ### 计数排序
 
-```JAVA
+![img](assets/countingSort.gif)
 
+```JAVA
+public class CountSort {
+
+    public static int[] sort(int[] arr, int range) {
+        // 结果数组
+        int[] result = new int[arr.length];
+        // 计数数组
+        int[] count = new int[range];
+
+        // 原数组的值对应计算数组的下标，因为下标是天生有序的，所以原数据的值在计算数组中就已经有序了
+        // 计数数组的值就是下标对应的元素在原数组出现的次数
+        for (int elem : arr) {
+            count[elem]++;
+        }
+
+//        /**
+//         * 该方式具有局限性，若是数据的范围间隔非常大，就会造成空间的浪费。且该方式不稳定。
+//         */
+//        // 遍历计数数组
+//        for (int i = 0, j = 0; i < count.length; i++) {
+//            // 按下标顺序装入结果数组，最终得出的结果数组就是有序数组
+//            while (count[i]-- > 0) {
+//                result[j++] = i;
+//            }
+//        }
+
+        // 根据计算数组构建出累计数组
+        for (int i = 1; i < count.length; i++) {
+            count[i] = count[i] + count[i - 1];
+        }
+
+        // 根据累计数组确定原数组的元素位置后并装入结果数组
+        for (int i = arr.length - 1; i >= 0; i--) {
+            result[--count[arr[i]]] = arr[i];
+        }
+
+        return result;
+    }
+}
 ```
 
 
 
 ### 基数排序
 
-```JAVA
+![img](assets/radixSort.gif)
 
+```JAVA
+public class RadixSort {
+
+    public static int[] sort(int[] arr, int range, int num) {
+        int[] result = new int[arr.length];
+        int[] count = new int[range];
+
+        for (int i = 0; i < num; i++) {
+            int division = (int) Math.pow(10, i);
+            for (int j = 0; j < arr.length; j++) {
+                count[arr[j] / division % 10]++;
+            }
+		
+            // 计数排序
+            for (int m = 1; m < count.length; m++) {
+                count[m] = count[m] + count[m - 1];
+            }
+
+            for (int n = arr.length - 1; n >= 0; n--) {
+                result[--count[arr[n] / division % 10]] = arr[n];
+            }
+
+            System.arraycopy(result, 0, arr, 0, arr.length);
+            Arrays.fill(count, 0);
+        }
+        return result;
+    }
+}
 ```
 
 
 
 ### 桶排序
 
-```JAVA
+一句话总结：**划分多个范围相同的区间，每个子区间自排序，最后合并**。
 
+桶排序是计数排序的扩展版本，计数排序可以看成每个桶只存储相同元素，而桶排序每个桶存储一定范围的元素，通过映射函数，将待排序数组中的元素映射到各个对应的桶中，对每个桶中的元素进行排序，最后将非空桶中的元素逐个放入原序列中。
+
+桶排序需要尽量保证元素分散均匀，否则当所有数据集中在同一个桶中时，桶排序失效。
+
+<img src="assets/20190219081232815.png" alt="img" style="zoom: 67%;" />
+
+```JAVA
+public class BucketSort {
+    
+    public static void sort(int[] arr) {
+        // 计算最大值与最小值
+        int max = Integer.MIN_VALUE;
+        int min = Integer.MAX_VALUE;
+        for(int i = 0; i < arr.length; i++){
+            max = Math.max(max, arr[i]);
+            min = Math.min(min, arr[i]);
+        }
+
+        // 计算桶的数量
+        int bucketNum = (max - min) / arr.length + 1;
+        ArrayList<ArrayList<Integer>> bucketArr = new ArrayList<>(bucketNum);
+        for(int i = 0; i < bucketNum; i++){
+            bucketArr.add(new ArrayList<Integer>());
+        }
+
+        // 将每个元素放入桶
+        for(int i = 0; i < arr.length; i++){
+            int num = (arr[i] - min) / (arr.length);
+            bucketArr.get(num).add(arr[i]);
+        }
+
+        // 对每个桶进行排序
+        for(int i = 0; i < bucketArr.size(); i++){
+            Collections.sort(bucketArr.get(i));
+        }
+
+        // 将桶中的元素赋值到原序列
+        int index = 0;
+        for(int i = 0; i < bucketArr.size(); i++){
+            for(int j = 0; j < bucketArr.get(i).size(); j++){
+                arr[index++] = bucketArr.get(i).get(j);
+            }
+        }  
+    }
+}
 ```
 
+复杂度分析：
+
+* 时间复杂度：`O(N + C)`。
+
+  * 对于待排序序列大小为 N，共分为 M 个桶，主要步骤有：
+    * N 次循环，将每个元素装入对应的桶中
+    * M 次循环，对每个桶中的数据进行排序（平均每个桶有 N/M 个元素）
+  * 一般使用较为快速的排序算法，时间复杂度为 O ( N l o g N ) O(NlogN)*O*(*N**l**o**g**N*)，实际的桶排序过程是以链表形式插入的。
+
+  * 整个桶排序的时间复杂度为：
+
+    O(N)+O(M*(N/M*log(N/M)))=O(N*(log(N/M)+1))*O*(*N*)+*O*(*M*∗(*N*/*M*∗*l**o**g*(*N*/*M*)))=*O*(*N*∗(*l**o**g*(*N*/*M*)+1))
+
+  * 当 N = M 时，复杂度为 `O(N) `。
+
+* 额外空间复杂度：`O(N + M)`。
+
+稳定性分析：桶排序的稳定性取决于桶内排序使用的算法。
+
+
+
+### 排序的稳定性
+
+数组arr中右若干元素，其中A元素和B元素相等，并且A元素在B元素前面，如果使用某种排序算法排序后，能够保证A元素依然在B元素的前面，就可以说该算法是稳定的。
+
+![image-20201210100321459](assets/image-20201210100321459.png)
+
+常见算法的稳定性：
+
+* **冒泡排序**：只有当arr[i]>arr[i+1]的时候，才会交换元素，而相等的时候不会交换，所以冒泡排序是一种稳定的排序算法；
+* **选择排序**：该排序算法是每次都会选择一个当前最小的元素，现有数据(5(1)，8，5(2)，2，9)，选择出本次的最小元素2并和5(1)交换，导致稳定性被破坏；
+* **插入排序**：比较操作是从有序序列的末尾开始的，也就是将想要插入的元素和已经有序的最大者开始比较，一直向前找到合适的位置，如果相等则直接放在后面，所以插入排序是稳定的；
+* **希尔排序**：该排序算法是按照步长对元素分组进行各自的插入排序，虽然单次的插入排序是稳定的，但在不同的插入排序过程中，相同的元素可能会在各自的插入排序中移动，导致稳定性被破坏；
+* **归并排序**：该算法在归并的过程中，只有arr[i]<arr[i+1]才会交换位置，如果两个元素相等则不会改变，所以归并排序也是稳定的；
+* **快速排序**：该算法需要一个基准值，在基准值右侧找一个更小的元素，在基准值左侧找一个更大的元素，然后交换，会破坏稳定性。
