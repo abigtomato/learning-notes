@@ -3926,8 +3926,6 @@ protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundE
 
 
 
-
-
 # 从I/O模型到计算机网络再到Netty
 
 ## I/O模型-Linux的Socket API
@@ -7553,18 +7551,31 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 ### Collection接口概述
 
 * Set：
-  * TreeSet：基于红黑树实现，支持有序性操作，如根据范围查找元素。查询效率不如HashSet，时间复杂度为O(logN)，而HashSet是O(1)；
-  * HashSet：基于哈希表实现，支持快速查找，但不支持有序性操作。且失去了元素插入时的顺序信息，即HashSet中元素的位置是无序的；
-  * LinkedHashSet：具有HashSet的查找效率，底层基于LinkedHashMap实现，可使用双向链表维护元素的插入顺序。
-
+  * SortedSet/TreeSet：基于红黑树实现，支持有序性操作，如根据范围查找元素。查询效率不如HashSet，时间复杂度为O(logN)，而HashSet是O(1)；
+  * HashSet/LinkedHashSet：基于哈希表实现，支持快速查找，但不支持有序性操作。且失去了元素插入时的顺序信息，即HashSet中元素的位置是无序的。而底层基于LinkedHashMap实现，可使用双向链表维护元素的插入顺序；
+  * EnumSet：
+* CopyOnWriteArraySet：写时复制的ArraySet。相比于CopyOnWriteArrayList没有重复元素；
+  * ConcurrentSkipListSet：跳表，
 * List：
   * ArrayList：基于可动态扩容的数组实现，支持根据下标随机访问；
-  * Vector：可以看成是线程安全的ArrayList；
-  * LinkedList：基于双向链表实现，只能顺序访问，但可以快速在任意位置插入和删除元素。且还能够实现栈、队列等结构。
-
+  * Vector/Stack：可以看成是线程安全的ArrayList（所有方法都是synchronized的）； 
+  * LinkedList：基于双向链表实现，只能顺序访问，但可以快速在任意位置插入和删除元素。且还能够实现栈、队列等结构；
+* CopyOnWriteArrayList：是写时复制的ArrayList，当一个ArrayList写操作非常少，读操作非常多时使用。所谓写时复制是当些操作发生时，会整体将数组复制一份并执行写操作，之后将引用重新指向。在大量线程同时访问时，写操作真正操作的是复制后的新数组，而读操作访问原数组就可以无需加锁，以此提高效率。
 * Queue：
+  * Deque：
+    * ArrayDeque：
+    * BlockingDeque/LinkedBlockingDeque：
+  * BlockingQueue：
+    * ArrayBlockingQueue：
+    * PriorityBlockingQueue：
+    * LinkedBlockingQueue：
+    * TransferQueue/LinkedTransferQueue：
+    * SynchronousQueue：
+    * DelayQueue：
   * LinkedList：可实现双向队列；
-  * PriorityQueue：基于堆结构实现，可实现优先队列。
+  * PriorityQueue：基于堆结构实现，可实现优先队列；
+  * ConcurrentLinkedQueue：
+  * DelayQueue：
 
 <img src="assets/Java容器概述.png" alt="Java容器概述" style="zoom: 67%;" />
 
@@ -7575,7 +7586,11 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 * TreeMap：基于红黑树实现，元素具有顺序的特性；
 * HashMap：JDK1.8之前是由数组+链表组成，数组是主体，链表是为了解决哈希冲突而存在的。JDK1.8后当链表的长度大于阈值8时，将链表转换为红黑树（若当前数组长度小于64，则优先扩容数组），减少搜索时间；
 * HashTable：可以看成是线程安全的HashMap；
-* LinkedHashMap：使用双向链表维护元素的顺序，顺序为插入顺序或最近最少使用（LRU）顺序。
+* LinkedHashMap：使用双向链表维护元素的顺序，顺序为插入顺序或最近最少使用（LRU）顺序；
+* WeakHashMap：
+* IdentityHashMap：
+* ConcurrentHashMap：
+* ConcurrentSkipListMap：
 
 <img src="assets/Map接口.png" alt="Map接口" style="zoom:67%;" />
 
