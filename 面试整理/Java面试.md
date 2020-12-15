@@ -696,7 +696,11 @@ Process finished with exit code 0
   前线程什么都不做。最后，CAS 返回当前 V 的真实值。CAS 操作是抱着乐观的态度进行的(乐观锁)，它总是认为自己可以成功完成操作。当多个线程同时使用 CAS 操作一个变量时，只有一个会胜出，并成功更新，其余均会失败。失败的线程不会被挂起，仅是被告知失败，并且允许再次尝试，当然也允许失败的线程放弃操作。基于这样的原理，CAS 操作即使没有锁，也可以发现其他线程对当前线程的干扰，并进行恰当的处理。
 * **CAS会导致的ABA问题**：CAS 算法实现一个重要前提需要取出内存中某时刻的数据，而在下时刻比较并替换，那么在这个时间差类会导致数据的变化。比如说一个线程 one 从内存位置 V 中取出 A，这时候另一个线程 two 也从内存中取出 A，并且two 进行了一些操作变成了 B，然后 two 又将 V 位置的数据变成 A，这时候线程 one 进行 CAS 操作发现内存中仍然是 A，然后 one 操作成功。尽管线程 one 的 CAS 操作成功，但是不代表这个过程就是没有问题的。部分乐观锁的实现是通过版本号（version）的方式来解决 ABA 问题，乐观锁每次在执行数据的修改操作时，都会带上一个版本号，一旦版本号和数据的版本号一致就可以执行修改操作并对版本号执行+1 操作，否则就执行失败。因为每次操作的版本号都会随之增加，所以不会出现 ABA 问题，因为版本号只会增加不会减少。
 
+
+
 ### 锁升级原理
+
+![image-20201211130222490](assets/image-20201211130222490.png)
 
 JDK1.6之后优化了synchronized操作，锁会随着竞争的激烈而逐渐升级，主要存在4种状态：无锁（unlocked）、偏向锁（biasble）、轻量级锁（lightweight locked）、重量级锁（inflated）。
 
@@ -1385,43 +1389,39 @@ private volatile int value;
 
 ## Java线程-AQS
 
-### AQS概念
-
-AQS是用来构建锁和同步器的框架，如ReentrantLock、Semaphore、ReentrantReadWriteLock、SynchronousQueue、FutureTask都是基于AQS实现的。
-
-
-
 ### AQS原理
+
+AQS（抽象的队列同步器）是用来构建锁和同步器的框架，其内置一个队列来管理资源获取线程的排队工作，并通过一个int类型的变量state表示锁的状态。如ReentrantLock、Semaphore、ReentrantReadWriteLock、SynchronousQueue、FutureTask都是基于AQS实现的。
 
 ![image-20201027215712930](assets/image-20201027215712930.png)
 
-1. **核心思想**：如果请求的共享资源空闲，则将该线程设置为工作线程，并将共享资源设置为锁定状态，如果请求的共享资源被占用，那么使用CLH队列实现线程阻塞等待以及被唤醒时锁分配的机制，即将暂时获取不到锁的线程加入到队列中。
+**核心思想**：如果请求的共享资源空闲，则将该线程设置为工作线程，并将共享资源设置为锁定状态，如果请求的共享资源被占用，那么使用CLH队列实现线程阻塞等待以及被唤醒时锁分配的机制，即将暂时获取不到锁的线程加入到队列中。
 
-2. **CLH队列**：是一个虚拟的双向队列，即不存在队列实例，仅存在结点间的关联关系。AQS是将每个请求共享资源的线程封装成一个CLH锁队列的一个结点Node来实现锁的分配。
+**CLH队列**：是一个底层使用链表实现的双向队列，AQS将每个请求共享资源的线程封装成CLH队列中的一个结点Node，并通过CAS、自旋和LockSupport的方式去维护state的状态，使并发达到同步的控制效果。
 
-3. 源码分析：
+**源码分析**：
 
-   ```JAVA
-   // AQS维护了一个由内存可见性的int类型成员变量来表示同步状态，通过使用CAS对该同步状态进行修改，通过内置的FIFO队列来完成等待获取资源的线程的排队工作
-   private volatile int state;
-   ```
+```JAVA
+// AQS维护了一个由内存可见性的int类型成员变量来表示同步状态，通过使用CAS对该同步状态进行修改，通过内置的FIFO队列来完成等待获取资源的线程的排队工作
+private volatile int state;
+```
 
-   ```JAVA
-   // 返回同步状态的当前值
-   protected final int getState() {
-   	return state;
-   }
-   
-   // 设置同步状态的值
-   protected final void setState(int newState) {
-   	state = newState;
-   }
-   
-   // 若当前同步状态的值等于期望值，则将同步状态值设置为给定值update
-   protected final boolean compareAndSetState(int expect, int update) {
-   	return unsafe.compareAndSwapInt(this, stateOffset, expect, update);
-   }
-   ```
+```JAVA
+// 返回同步状态的当前值
+protected final int getState() {
+	return state;
+}
+
+// 设置同步状态的值
+protected final void setState(int newState) {
+	state = newState;
+}
+
+// 若当前同步状态的值等于期望值，则将同步状态值设置为给定值update
+protected final boolean compareAndSetState(int expect, int update) {
+	return unsafe.compareAndSwapInt(this, stateOffset, expect, update);
+}
+```
 
 
 
@@ -1591,6 +1591,12 @@ AQS是用来构建锁和同步器的框架，如ReentrantLock、Semaphore、Reen
       1. state会在初始化时被指定具体数值，即倒计时初始值或门闩上的锁数量（也可称闭锁），可理解为初始化了多把锁，只有其上的所有锁都被释放，闭锁才会被真正释放；
       2. 主调用线程会通过await()阻塞，当有线程调用countDown()方法一次，state就会以CAS的方式自减一次（释放一把锁）；
       3. 当state归0时，或者说所有的锁都被释放完毕时，会unpark()主调用线程，使其从await()方法返回，继续执行。
+
+
+
+### ReentrantLock可重入锁
+
+
 
 
 
@@ -1896,6 +1902,118 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 
 
 ## Java线程-JUC
+
+### LockSupport
+
+**是什么？**
+
+用于创建锁和其他同步类的基本线程阻塞原语。
+
+该类与使用它的每个线程关联一个许可证（在[`Semaphore`](https://www.apiref.com/java11-zh/java.base/java/util/concurrent/Semaphore.html)类的意义上）。 如果许可证可用，将立即返回`park` ，并在此过程中消费; 否则*可能会*阻止。 如果尚未提供许可，则致电`unpark`获得许可。 （与Semaphores不同，许可证不会累积。最多只有一个。）可靠的使用需要使用volatile（或原子）变量来控制何时停放或取消停放。 对于易失性变量访问保持对这些方法的调用的顺序，但不一定是非易失性变量访问。
+
+方法`park`和`unpark`提供了阻止和解除阻塞线程的有效方法，这些线程没有遇到导致不推荐使用的方法`Thread.suspend`和`Thread.resume`无法用于此类目的的问题：一个线程调用`park`和另一个线程尝试`unpark`将保留活跃性，由于许可证。 此外，如果调用者的线程被中断，则会返回`park` ，并且支持超时版本。 `park`方法也可以在任何其他时间返回，“无理由”，因此通常必须在返回时重新检查条件的循环内调用。 在这个意义上， `park`可以作为“忙碌等待”的优化，不会浪费太多时间旋转，但必须与`unpark`配对才能生效。
+
+三种形式的`park`每个也支持`blocker`对象参数。 在线程被阻塞时记录此对象，以允许监视和诊断工具识别线程被阻止的原因。 （此类工具可以使用方法[`getBlocker(Thread)`](https://www.apiref.com/java11-zh/java.base/java/util/concurrent/locks/LockSupport.html#getBlocker(java.lang.Thread))访问[阻止程序](https://www.apiref.com/java11-zh/java.base/java/util/concurrent/locks/LockSupport.html#getBlocker(java.lang.Thread)) 。）强烈建议使用这些表单而不是没有此参数的原始表单。 在锁实现中作为`blocker`提供的正常参数是`this` 。
+
+**为什么？**
+
+synchronized&wait&notify/notifyAll机制的限制：
+
+```java
+public class WaitNotify {
+	
+    private static Object objectLock = new Object();
+    
+    public static void main(String[] args) {
+        new Thread(() -> {
+            synchronized (objectLock) {
+                try {
+                    TimeUnit.SECONDS.sleep(3);
+                    objectLock.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+           System.out.println(Thread.currentThread().getName() + "\t线程已被唤醒");
+            }
+        }, "A").start();
+    	
+        new Thread(() -> {
+            synchronized (objectLock) {
+                objectLock.notify();
+                System.out.println(Thread.currentThread().getName() + "\t线程已发送通知唤醒等待线程");
+            }
+        }, "B").start();
+    }
+}
+```
+
+ReentrantLock&await&signal机制的限制：
+
+```java
+public class AwaitSignalTest {
+    
+    private static Lock lock = new ReentrantLock();
+    private static Condition condition = lock.newCondition();
+    
+    public static void main(String[] args) {
+        new Thread(() -> {
+            lock.lock();
+            try {
+                TimeUnit.SECONDS.sleep(3);
+                condition.await();
+                System.out.println(Thread.currentThread().getName() + "\t线程已被唤醒");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                lock.unlock();
+            }
+        }, "A").start();
+        
+        new Thread(() -> {
+            lock.lock();
+            try {
+                condition.signal();
+                System.out.println(Thread.currentThread().getName() + "\t线程已发送通知唤醒等待线程");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                lock.unlock();
+            }
+        }, "B").start();
+    } 
+}
+```
+
+**怎么用？**
+
+```java
+public class LockSupport {
+    
+    public static void main(String[] args) {
+        Thread a = new Thread(() -> {
+            try {
+                TimeUnit.SECONDS.sleep(3L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            // 阻塞当前线程（凭证为0时阻塞，直到被发放了凭证后才会被唤醒）
+            LockSupport.park();
+            System.out.println(Thread.currentThread().getName() + "\t线程已被唤醒");
+        }, "A");
+        a.start();
+    	
+        new Thread(() -> {
+            // 唤醒指定线程（为其发放1个凭证，凭证的上限为1）
+            LockSupport.unpark(a);
+            System.out.println(Thread.currentThread().getName() + "\t线程已发送通知唤醒等待线程");
+        }).start();
+    }
+}
+```
+
+
+
+
 
 ### FutureTask
 
@@ -3170,14 +3288,14 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 ### 磁盘结构
 
-* 盘面（Platter）：一个磁盘有多个盘面；
-* 磁道（Track）：盘面上的圆形带状区域，一个盘面有多个磁道；
-* 扇区（Track Sector）：磁道上的一个弧段，一个磁道可以有多个扇区，是最小的存储单位，目前主要有512byte和4kb两种大小；
-* 磁头（Head）：与盘面非常接近，能够将盘面上的磁场转换为电信号（读），或者将电信号转换为磁场（写）；
-* 制动手臂（Actuator arm）：用于在磁道间移动磁头；
-* 主轴（Spindle）：使整个盘面转动。
+* **盘面（Platter）**：一个磁盘有多个盘面；
+* **磁道（Track）**：盘面上的圆形带状区域，一个盘面有多个磁道；
+* **扇区（Track Sector）**：磁道上的一个弧段，一个磁道可以有多个扇区，是最小的存储单位，目前主要有512byte和4kb两种大小；
+* **磁头（Head）**：与盘面非常接近，能够将盘面上的磁场转换为电信号（读），或者将电信号转换为磁场（写）；
+* **制动手臂（Actuator arm）**：用于在磁道间移动磁头；
+* **主轴（Spindle）**：使整个盘面转动。
 
-![磁盘结构](assets/磁盘结构.jpg)
+<img src="assets/磁盘结构.jpg" alt="磁盘结构" style="zoom: 80%;" />
 
 
 
@@ -3192,11 +3310,11 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 * **最短寻道时间优先（SSTF，Shortest Seek Time First）**：优先调度与当前磁头所在磁道距离最近的磁道。虽然平均寻道时间较低，但是不够公平。如果新到达的磁道请求总是比一个在等待的磁道请求近，那么在等待的磁道请求会一直等待下去，即出现了饥饿现象；
 
-  ![磁盘调度算法1](assets/磁盘调度算法1.png)
+  <img src="assets/磁盘调度算法1.png" alt="磁盘调度算法1" style="zoom:80%;" />
 
 * **电梯算法（SCAN）**：电梯总是保持一个方向运行，直到该方向没有请求为止，然后改变运行方向。电梯算法又称扫描算法，其和电梯的运行过程类似，总是朝着一个方向进行磁盘调度，直到该方向上没有未完成的磁盘请求，然后改变方向。因为扫描范围更广，因此所有磁盘请求都会被满足，解决了SSFT的饥饿问题。
 
-  ![磁盘调度算法2](assets/磁盘调度算法2.png)
+  <img src="assets/磁盘调度算法2.png" alt="磁盘调度算法2" style="zoom:80%;" />
 
 
 
@@ -7255,8 +7373,6 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 
 
 
-
-
 # Java基础和容器
 
 ## Java基础-概念
@@ -7554,8 +7670,8 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
   * SortedSet/TreeSet：基于红黑树实现，支持有序性操作，如根据范围查找元素。查询效率不如HashSet，时间复杂度为O(logN)，而HashSet是O(1)；
   * HashSet/LinkedHashSet：基于哈希表实现，支持快速查找，但不支持有序性操作。且失去了元素插入时的顺序信息，即HashSet中元素的位置是无序的。而底层基于LinkedHashMap实现，可使用双向链表维护元素的插入顺序；
   * EnumSet：
-* CopyOnWriteArraySet：写时复制的ArraySet。相比于CopyOnWriteArrayList没有重复元素；
-  * ConcurrentSkipListSet：跳表，
+  * CopyOnWriteArraySet：写时复制的ArraySet。相比于CopyOnWriteArrayList没有重复元素；
+  * ConcurrentSkipListSet：跳表。
 * List：
   * ArrayList：基于可动态扩容的数组实现，支持根据下标随机访问；
   * Vector/Stack：可以看成是线程安全的ArrayList（所有方法都是synchronized的）； 
@@ -7563,18 +7679,18 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 * CopyOnWriteArrayList：是写时复制的ArrayList，当一个ArrayList写操作非常少，读操作非常多时使用。所谓写时复制是当些操作发生时，会整体将数组复制一份并执行写操作，之后将引用重新指向。在大量线程同时访问时，写操作真正操作的是复制后的新数组，而读操作访问原数组就可以无需加锁，以此提高效率。
 * Queue：
   * Deque：
-    * ArrayDeque：
-    * BlockingDeque/LinkedBlockingDeque：
+    * ArrayDeque：底层使用数组实现的双端队列；
+    * BlockingDeque/LinkedBlockingDeque：阻塞的双端队列。
   * BlockingQueue：
-    * ArrayBlockingQueue：
-    * PriorityBlockingQueue：
-    * LinkedBlockingQueue：
-    * TransferQueue/LinkedTransferQueue：
-    * SynchronousQueue：
-    * DelayQueue：
-  * LinkedList：可实现双向队列；
-  * PriorityQueue：基于堆结构实现，可实现优先队列；
-  * ConcurrentLinkedQueue：
+    * ArrayBlockingQueue：底层使用数组实现的阻塞队列。队列为空则消费者阻塞，队列已满则生产者阻塞。
+    * PriorityBlockingQueue：底层使用堆实现的带优先级的阻塞队列；
+    * LinkedBlockingQueue：底层使用链表实现的阻塞队列；
+    * TransferQueue/LinkedTransferQueue：生产者和消费者必须成对的队列。生产者会一直阻塞在队列上，直到另一端有消费者过来消费为止；
+    * SynchronousQueue：容量为空的队列；
+    * DelayQueue：基于阻塞队列实现的延迟队列。提供了在指定时间才能获取队列元素的功能，队列头元素是最接近过期的元素。当生产者线程调用put之类的方法加入元素时，会触发Delayed接口中的compareTo方法进行排序，也就是说队列中元素的顺序是按到期时间排序的，而非它们进入队列的顺序。排在队列头部的元素是最早到期的，越往后到期时间赿晚。
+  * LinkedList：可基于双向链表实现双端队列；
+  * PriorityQueue：底层使用堆（小顶堆/大顶堆）实现的优先队列；
+  * ConcurrentLinkedQueue：并发的且底层使用链表实现的队列；
   * DelayQueue：
 
 <img src="assets/Java容器概述.png" alt="Java容器概述" style="zoom: 67%;" />
@@ -9004,59 +9120,137 @@ SELECT c1 FROM t WHERE c1 BETWEEN 10 and 20 FOR UPDATE;
 
 ## Redis-数据结构和使用场景
 
+### RedisDb数据结构
+
+* Redis默认情况下有16个数据库；
+* Redis的一个数据库对应一个redisDb结构；
+* redisDb中的dict字典字段维护了一个被封装HashTable，即dictht；
+* dictht存储dictEntry类型的元素，若是不同的dictEntry哈希定位到了同一个位置，则通过dictEntry的next指针构成链表；
+* redisObject中维护了元素的各种特性，如元素指针、编码、LRU和引用计数器等。
+
+![image-20201211184234161](assets/image-20201211184234161.png)
+
+
+
 ### String
 
+![image-20201211192919299](assets/image-20201211192919299.png)
+
 * 底层使用二进制安全的字节数组存储；
+* 字符串操作：分布式锁（`SETNS key: value)`）、集群Session共享、小文件存储（小图片的二进制流）、单值缓存（商品库存）、对象缓存（JSON序列化 `SET key:value`）；
 
-* 字符串操作：分布式锁（``setnx(key, value)``）、Token（验证是否登录）、序列化对象和小文件存储（小图片的二进制流）；
-
-* 数值操作：秒杀、限流（信号量）、计数器；
-
+* 数值操作：秒杀、限流（信号量）、计数器（文章阅读量 `INCR key:value`）、分布式全局ID；
 * 位图操作（二进制操作）：
 
   * 统计任意时间窗口内用户的登录次数：
 
     1. 用户id做为key，日期做为offset，一年的天数设置为365个二进制位（0~364），用户在某天上线则将该天对应的二进制位置为1；
     2. 要统计任意时间窗口内用户的登录天数只要使用 `bitcount user_id 0 364` 命令统计二进制位1的出现次数即可。
-
-  * OA系统中各个用户对应的不同模块所具有的权限；
-
-  * 布隆过滤器。
+* OA系统中各个用户对应的不同模块所具有的权限；
+  * 用户是否参加过某次活动、是否已读过某篇文章、是否是注册会员；
+* 布隆过滤器。
 
 
 
 ### List
 
-* 底层使用双向链表存储；
-* 可以模拟栈、双端队列、数组、阻塞队列和进行截取操作；
-* 数据共享、迁出、粉丝列表、文章的评论列表。
+![image-20201211225951571](assets/image-20201211225951571.png)
+
+![image-20201211230831424](assets/image-20201211230831424.png)
+
+* List是一个按插入时间排序的数据结构，底层使用QuickList（维护双向链表）和ZipList（存储数据）实现；
+* 可以实现栈（`LPUSH+LPOP`）、双端队列（`LPUSH+RPOP/RPUSH+LPOP`）、数组（正负索引）、阻塞队列（`LPUSH+BRPOP`）和进行范围截取操作（`LRANGE key start end`）；
+* 数据的共享、迁出和粉丝列表、文章评论列表；
+* 微博和微信公众号的消息流：
+  * 用户关注的用户发微博：`LPUSH msg:{userId} {msgId}`；
+  * 用户查看最新的微博消息：`LRANGE msg:{userId} 0 5`。
 
 
 
 ### Hash
 
+![image-20201211233449097](assets/image-20201211233449097.png)
+
 * 类似于Java的HashMap；
-* 存储结构化数据（如对象缓存）、好友关注（用户id做为key，field为所有好友的id，value为对应的关注时间）、用户维度统计（用户id做为key，不同维度做为field，value为对应的统计数据）。
+
+* 存储结构化数据：如对象缓存 `HMSET key field:value `）；
+
+* 好友关注：用户id做为key，field为所有好友的id，value为对应的关注时间；
+
+* 用户维度统计：用户id为key，不同的统计维度为field，对应的统计数据为value；
+
+* 电商购物车（用户id为key，商品id为field，商品数量为value）：
+
+  * 添加商品：`HSET cart:1001 10088 1`；
+  * 增加数量：`HINCRBY cart:1001 10088 1`；
+  * 商品总数：`HLEN cart:1001`；
+  * 删除商品：`HDEL cart:1001 10088`；
+  * 获取购物车中所有商品：`HGETALL cart:1001`。
+
+* 优点：
+
+  * 同类数据归类整合存储，方便数据管理；
+  * 相比于String操作消耗的内存和CPU更小；
+  * 相比于String更节省空间。
+
+* 缺点：
+
+  ![image-20201211162827338](assets/image-20201211162827338.png)
+
+  * 过期功能不能使用在field上，只能使用在key上；
+  * Redis集群下不适合大规模使用。
 
 
 
 ### Set
 
 * 底层使用无序且唯一的哈希表存储；
-* 随机抽取抽奖、共同好友（交集）、推荐好友（差集）。
+* 抽奖：
+  * 用户参与抽奖：`SADD key {userId}`；
+  * 查看参与抽象的所有用户：`SMEMBERS key`；
+  * 随机抽取指定数量的中奖用户：`SRANDMEMBER key [count]/SPOP key [count]`。
+* 微博点赞、收藏、标签：
+  * 点赞操作：`SADD like:{msgId} {userId}`；
+  * 取消点赞：`SREM like:{msgId} {userId}`；
+  * 检查用户是否已经点过赞了：`SISMEMBER like:{msgId} {userId}`；
+  * 获取所有点赞的用户：`SMEMBERS like:{msgId}`；
+  * 获取点赞的用户数：`SCARD like:{msgId}`。
+* 微博微信关注模型：
+  * 用户和好友的公共关注（交集）：`SINER userSet friendSet1`；
+  * 我关注的人也关注他：`SISMEMBER friendSet1 friendSer2`；
+  * 推荐给用户的好友（差集）：`SDIFF userSet friendSet1`。
+* 电商商品按各维度标签筛选：
+  * `SADD brand:huawei P30`；
+  * `SADD brand:xiaomi RedMi 8`；
+  * `SADD brand:iPhone iPhone X`;
+  * `SADD CPU:Intel P30 RedMi 8`；
+  * `SADD OS:Android P30 RedMi 8`；
+  * `SADD RAM:8G P30 RedMi 8 iPhone X`；
+  * `SINTER OS:Android CPU:Intel RAM:8G`。
+
 
 
 
 ### Sorted Set
 
 * 底层使用带分值排序的压缩表/跳表存储；
-* 歌曲的排行榜：
-  1. 每首歌名做为元素，对应的播放次数做为分值；
 
-  2. 通过 `zrevrange key start stop` 逆序获取最高播放次数的歌曲前n位。
+* 微博新闻排行榜：
+
+  * 点击新闻：`ZINCRBY hotNews:20201211 1 xxx`；
+
+  * 展示当日排行Top10：`ZREVRANGE hotNews:20201211 0 9 WITHSCORES`；
+  * 计算近七日的排行榜（并集）：`ZUNIONSTORE hotNews:20201205-20201211 7 hotNews:20201205 ... hotNews:20201211`；
+  * 展示近七日排行Top10：`ZREVRANGE hotNews:202005-20201211 0 9 WITHSCORES`。
+
 * 微博动态翻页：
-  1. 每条微博做为元素，对应的发布时间戳做为分值；
-  2. 通过 `zrevrange key start stop` 逆序获取最新发布的微博n条（如果在翻页时微博出现新的动态，有序集合会动态的重新排序）。
+  * 每条微博做为元素，对应的发布时间戳做为分值； 
+  * 通过 `zrevrange key start stop` 逆序获取最新发布的微博n条（如果在翻页时微博出现新的动态，有序集合会动态的重新排序）。
+
+* 延迟队列：
+
+  * 当前时间戳+需要延迟的时长做为score，消息内容做为元素；
+  * 使用ZADD生产消息，消费者使用ZRANGEBYSCORE获取当前时间之前的数据做轮询处理，消费完后删除。
 
 
 
