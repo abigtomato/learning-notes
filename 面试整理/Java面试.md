@@ -72,7 +72,7 @@ JVM进程运行时所管理的内存区域如下图，一个进程中可以存�
 
 |          类型           |                             功能                             |
 | :---------------------: | :----------------------------------------------------------: |
-| 虚拟机线程（VM thread） | 等待 JVM 到达安全点操作出现。这些操作必须要在独立的线程里执行，因为当堆修改无法进行时，线程都需要 JVM 位于安全点。这些操作的类型有： stop-theworld 垃圾回收、线程栈 dump、线程暂停、线程偏向锁（biased locking）解除 |
+| 虚拟机线程（VM thread） | 等待JVM到达安全点操作出现。这些操作必须要在独立的线程里执行，因为当堆修改无法进行时，线程都需要JVM位于安全点。这些操作的类型有： StopTheWorld垃圾回收、线程栈dump、线程暂停、线程偏向锁解除 |
 |     周期性任务线程      |    负责定时器事件（也就是中断），用来调度周期性操作的执行    |
 |         GC线程          |                 支持JVM中不同的垃圾回收活动                  |
 |       编译器线程        |        在运行时将字节码动态编译成本地平台相关的机器码        |
@@ -133,6 +133,8 @@ public static void main(String[] args) {
 }
 ```
 
+
+
 ### 基础机制
 
 **Exector**：线程池可以管理多个互不干扰，不需要同步操作的异步任务的执行。
@@ -189,6 +191,8 @@ public static void main(String[] args) {
     }).start();
 }
 ```
+
+
 
 ### 中断机制
 
@@ -1626,15 +1630,21 @@ public final native boolean compareAndSwapInt(Object var1, long var2, int var4, 
 
 ## 并发工具-AQS
 
-### AQS原理
+### 基本概念
 
-AQS（抽象的队列同步器）是用来构建锁和同步器的框架，其内置一个队列来管理资源获取线程的排队工作，并通过一个int类型的变量state表示锁的状态。如ReentrantLock、Semaphore、ReentrantReadWriteLock、SynchronousQueue、FutureTask都是基于AQS实现的。
+AQS（AbstractQueuedSynchronizer，抽象的队列同步器）是用来构建锁和同步组件的框架，其内置一个队列来管理资源获取线程的排队工作，并通过一个int类型的变量表示同步状态。
 
 ![image-20201027215712930](assets/image-20201027215712930.png)
 
 **核心思想**：如果请求的共享资源空闲，则将该线程设置为工作线程，并将共享资源设置为锁定状态，如果请求的共享资源被占用，那么使用CLH队列实现线程阻塞等待以及被唤醒时锁分配的机制，即将暂时获取不到锁的线程加入到队列中。
 
 **CLH队列**：是一个底层使用链表实现的双向队列，AQS将每个请求共享资源的线程封装成CLH队列中的一个结点Node，并通过CAS、自旋和LockSupport的方式去维护state的状态，使并发达到同步的控制效果。
+
+**AQS的结构**：是由一个阻塞队列和多个条件队列（ConditionObject）组成，阻塞队列管理竞争锁的线程，条件队列管理await状态的线程，条件队列中的线程被唤醒会先进入阻塞队列再竞争锁资源。
+
+![image.png](assets/1594740762387-062f6b3a-f65e-4936-892c-875b67a2fab1.png)
+
+**AQS的使用**：其本身是抽象类，不能直接使用，其主要的使用方式是通过子类的继承，子类通过继承AQS并实现其抽象方法来管理同步状态。在实现上，子类推荐被定义为自定义同步组件的静态内部类，AQS自身没有实现任何接口，仅定义了若干同步状态获取和释放的方法来供自定义同步组件使用，同步器既支持独占获取，也支持共享获取。
 
 ```JAVA
 static final class Node {
@@ -1862,286 +1872,14 @@ protected final boolean compareAndSetState(int expect, int update) {
 
 
 
-### AQS对资源的共享方式
+### 资源共享方式
 
-**Exclusive（独占）**：只有一个线程能够访问资源，如ReentrantLock，该方式又能分为公平锁和非公平锁：
+**Exclusive（独占）**：
 
-1. 公平锁：按照线程在队列中的排队顺序，先到者先拿到锁；
+* 只有一个线程能够访问资源，如ReentrantLock，该方式又能分为公平锁和非公平锁；
 
-2. 非公平锁：当线程要获取锁时，先通过两次CAS操作去竞争锁，若没抢到，再次入队等待唤醒。
-
-3. **ReentrantLock源码分析**：
-
-   ```JAVA
-   /** Synchronizer providing all implementation mechanics */
-   private final Sync sync;
-   
-   /**
-    * Base of synchronization control for this lock. Subclassed
-    * into fair and nonfair versions below. Uses AQS state to
-    * represent the number of holds on the lock.
-    */
-   abstract static class Sync extends AbstractQueuedSynchronizer {
-       
-       private static final long serialVersionUID = -5179523762034025860L;
-   
-       /**
-     * Performs {@link Lock#lock}. The main reason for subclassing
-        * is to allow fast path for nonfair version.
-     */
-       abstract void lock();
-   
-       /**
-        * Performs non-fair tryLock.  tryAcquire is implemented in
-        * subclasses, but both need nonfair try for trylock method.
-        */
-       final boolean nonfairTryAcquire(int acquires) {
-           final Thread current = Thread.currentThread();
-           int c = getState();
-           if (c == 0) {
-               if (compareAndSetState(0, acquires)) {
-                   setExclusiveOwnerThread(current);
-                   return true;
-               }
-           }
-           else if (current == getExclusiveOwnerThread()) {
-               int nextc = c + acquires;
-               if (nextc < 0) // overflow
-                   throw new Error("Maximum lock count exceeded");
-               setState(nextc);
-               return true;
-           }
-           return false;
-       }
-   
-       protected final boolean tryRelease(int releases) {
-           int c = getState() - releases;
-           if (Thread.currentThread() != getExclusiveOwnerThread())
-               throw new IllegalMonitorStateException();
-           boolean free = false;
-           if (c == 0) {
-               free = true;
-               setExclusiveOwnerThread(null);
-           }
-           setState(c);
-           return free;
-    }
-   
-    protected final boolean isHeldExclusively() {
-           // While we must in general read state before owner,
-           // we don't need to do so to check if current thread is owner
-           return getExclusiveOwnerThread() == Thread.currentThread();
-       }
-   
-       final ConditionObject newCondition() {
-           return new ConditionObject();
-       }
-   
-       // Methods relayed from outer class
-   
-       final Thread getOwner() {
-           return getState() == 0 ? null : getExclusiveOwnerThread();
-       }
-   
-       final int getHoldCount() {
-           return isHeldExclusively() ? getState() : 0;
-       }
-   
-       final boolean isLocked() {
-           return getState() != 0;
-       }
-   
-       /**
-        * Reconstitutes the instance from a stream (that is, deserializes it).
-        */
-       private void readObject(java.io.ObjectInputStream s)
-           throws java.io.IOException, ClassNotFoundException {
-           s.defaultReadObject();
-           setState(0); // reset to unlocked state
-       }
-   }
-   
-   /**
-    * 同步器的非公平锁
-    *
-    * Sync object for non-fair locks
-    */
-   static final class NonfairSync extends Sync {
-       
-       private static final long serialVersionUID = 7316153563782823691L;
-   
-       /**
-        * Performs lock.  Try immediate barge, backing up to normal
-        * acquire on failure.
-        */
-    final void lock() {
-           if (compareAndSetState(0, 1))
-            setExclusiveOwnerThread(Thread.currentThread());
-           else
-               acquire(1);
-       }
-   
-       protected final boolean tryAcquire(int acquires) {
-           return nonfairTryAcquire(acquires);
-       }
-   }
-   
-   /**
-    * 同步器的公平锁
-    * 
-    * Sync object for fair locks
-    */
-   static final class FairSync extends Sync {
-       
-       private static final long serialVersionUID = -3000897897090466540L;
-   
-       final void lock() {
-           acquire(1);
-       }
-   
-       /**
-        * Fair version of tryAcquire.  Don't grant access unless
-        * recursive call or no waiters or is first.
-        */
-       protected final boolean tryAcquire(int acquires) {
-           final Thread current = Thread.currentThread();
-           int c = getState();
-           if (c == 0) {
-               if (!hasQueuedPredecessors() &&
-                   compareAndSetState(0, acquires)) {
-                   setExclusiveOwnerThread(current);
-                   return true;
-               }
-           }
-           else if (current == getExclusiveOwnerThread()) {
-               int nextc = c + acquires;
-               if (nextc < 0)
-                   throw new Error("Maximum lock count exceeded");
-               setState(nextc);
-               return true;
-           }
-           return false;
-       }
-   }
-   ```
-   
-   ```JAVA
-   /**
-    * Creates an instance of {@code ReentrantLock}.
-    * This is equivalent to using {@code ReentrantLock(false)}.
-    */
-   public ReentrantLock() {
-       //  默认使用非公平锁，性能更佳
-       sync = new NonfairSync();
-   }
-   
-   /**
-    * 通过参数指定使用公平锁还是非公平锁
-    * 
-    * Creates an instance of {@code ReentrantLock} with the
-    * given fairness policy.
-    *
-    * @param fair {@code true} if this lock should use a fair ordering policy
-    */
-   public ReentrantLock(boolean fair) {
-       sync = fair ? new FairSync() : new NonfairSync();
-   }
-   ```
-   
-   公平锁的``lock()``方法：
-   
-   ```JAVA
-   static final class FairSync extends Sync {
-       
-       final void lock() {
-           acquire(1);
-       }
-       
-       // AbstractQueuedSynchronizer.acquire(int arg)
-       public final void acquire(int arg) {
-           if (!tryAcquire(arg) &&
-               acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
-               selfInterrupt();
-       }
-       
-       protected final boolean tryAcquire(int acquires) {
-           final Thread current = Thread.currentThread();
-           int c = getState();
-           // 判断锁是否已被释放
-           if (c == 0) {
-               // 和非公平锁相比，这里多了一个判断阻塞队列中是否有线程在等待（hasQueuedPredecessors），若队列中存在等待中的线程，则按照FIFO出队一个线程去持有锁，若队列为空，则直接CAS抢锁
-               if (!hasQueuedPredecessors() &&
-                   compareAndSetState(0, acquires)) {
-                   setExclusiveOwnerThread(current);
-                   return true;
-               }
-           } else if (current == getExclusiveOwnerThread()) {
-               int nextc = c + acquires;
-               if (nextc < 0)
-                   throw new Error("Maximum lock count exceeded");
-               setState(nextc);
-               return true;
-           }
-           return false;
-       }
-   }
-   ```
-   
-   非公平锁的`lock `方法：
-   
-   ```JAVA
-   static final class NonfairSync extends Sync {
-       
-       final void lock() {
-           // 非公平锁会直接进行一次CAS抢锁，成功就返回
-           if (compareAndSetState(0, 1))
-               setExclusiveOwnerThread(Thread.currentThread());
-           else
-               acquire(1);
-       }
-       
-       // AbstractQueuedSynchronizer.acquire(int arg)
-       public final void acquire(int arg) {
-           if (!tryAcquire(arg) &&
-               acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
-               selfInterrupt();
-       }
-       
-       protected final boolean tryAcquire(int acquires) {
-           return nonfairTryAcquire(acquires);
-       }
-   }
-   
-   /**
-    * Performs non-fair tryLock.  tryAcquire is implemented in
-    * subclasses, but both need nonfair try for trylock method.
-    */
-   final boolean nonfairTryAcquire(int acquires) {
-       final Thread current = Thread.currentThread();
-       int c = getState();
-       if (c == 0) {
-           // 非公平锁不会先对阻塞队列进行判断，而是直接CAS抢锁
-           if (compareAndSetState(0, acquires)) {
-               setExclusiveOwnerThread(current);
-               return true;
-           }
-       } else if (current == getExclusiveOwnerThread()) {
-           int nextc = c + acquires;
-           if (nextc < 0) // overflow
-               throw new Error("Maximum lock count exceeded");
-           setState(nextc);
-           return true;
-       }
-       return false;
-   }
-   ```
-   
-   ReentrantLock实现公平锁和非公平锁的区别和相同点：
-   
-   1. 非公平锁在调用lock后，首先就会使用CAS进行竞争锁的操作，若这时锁恰好没有被占用，则直接获取锁返回；
-   2. 非公平锁在CAS操作失败后，和公平锁一样都会进入 `tryAcquire()` 方法，在该方法中，若发现锁的状态state为0，即锁已被释放，非公平锁会直接CAS抢占，但公平锁会判断等待队列中是否有线程处于等待状态，若有则出队线程去占有锁，新的线程入队等待；
-   3. 若非公平锁的两次CAS都不成功，则接下来和公平锁一样，线程会进入阻塞队列等待唤醒；
-   4. 相对公平锁，非公平锁具有更好的性能，但也会让线程获取锁的时间不确定，导致阻塞队列中的线程长期处于等待状态。
+* 公平锁：按照线程在队列中的排队顺序，先到者先拿到锁；
+* 非公平锁：当线程要获取锁时，先通过两次CAS操作去竞争锁，若没抢到，再次入队等待唤醒。
 
 **Share（共享）**：
 
@@ -2151,52 +1889,59 @@ protected final boolean compareAndSetState(int expect, int update) {
 
 
 
-### AQS底层使用了模板方法模式
+### 模板方法模式
 
-1. 使用AQS自定义同步器：
+**使用AQS自定义同步器**：
 
-   1. 使用者继承AbstractQueuedSynchronizer并重写指定方法，即对共享资源state的获取和释放的方法；
-   2. 将AQS组合在自定义同步组件的实现中，并调用其模板方法，而这些模板方法会调用使用者重写的方法。
+1. 使用者继承AbstractQueuedSynchronizer并重写指定方法，即对共享资源state的获取和释放的方法；
+2. 将AQS组合在自定义同步组件的实现中，并调用其模板方法，而这些模板方法会调用使用者重写的方法。
 
-2. 模板方法设计模式：
+**模板方法设计模式**：
 
-   1. 基于继承的模式，主要是为了在不改变模板结构的前提下在子类中重新定义模板中的内容以实现复用代码。
-   2. 如生活中``购票butTicket() -> 安检securityCheck() -> 乘坐交通工具ride() -> 到达目的地arrive()``这样的一个常见的流程，除了具体乘坐哪种交通工具不确定外，其他的流程都可以固定下来，即可以定义抽象类，重写除了ride()的其他方法，ride()则根据具体实现继承抽象类重写即可。
+1. 基于继承的模式，主要是为了在不改变模板结构的前提下在子类中重新定义模板中的内容以实现复用代码。
+2. 如生活中``购票butTicket() -> 安检securityCheck() -> 乘坐交通工具ride() -> 到达目的地arrive()``这样的一个常见的流程，除了具体乘坐哪种交通工具不确定外，其他的流程都可以固定下来，即可以定义抽象类，重写除了ride()的其他方法，ride()则根据具体实现继承抽象类重写即可。
 
-3. 自定义同步器需要重写的AQS模板方法：
+**自定义同步器需要重写的AQS模板方法**：
 
-   ```JAVA
-   // 判断该线程是否正在独占资源，只有用到condition才需要去实现它
-   isHeldExclusively()
-   // 独占方式尝试获取资源，成功则返回true，失败则返回false
-   tryAcquire(int)
-   // 独占方式尝试释放资源，成功则返回true，失败则返回false
-   tryRelease(int)
-   // 共享方式尝试获取资源，负数表示失败；0表示成功，但没有剩余可用资源；正数表示成功，且有剩余资源
-   tryAcquireShared(int)
-   // 共享方式尝试释放资源，成功则返回true，失败则返回false
-   tryReleaseShared(int)
-   ```
+```JAVA
+// 判断该线程是否正在独占资源，只有用到condition才需要去实现它
+isHeldExclusively()
+// 独占方式尝试获取资源，成功则返回true，失败则返回false
+tryAcquire(int)
+// 独占方式尝试释放资源，成功则返回true，失败则返回false
+tryRelease(int)
+// 共享方式尝试获取资源，负数表示失败；0表示成功，但没有剩余可用资源；正数表示成功，且有剩余资源
+tryAcquireShared(int)
+// 共享方式尝试释放资源，成功则返回true，失败则返回false
+tryReleaseShared(int)
+```
 
-   以上所有方法默认都会抛出``UnsupportedOperationException``，方法内部的实现必须是线程安全的。AQS类中的其他方法都有final修饰，无法被其他类使用；
+以上所有方法默认都会抛出 ``UnsupportedOperationException``，方法内部的实现必须是线程安全的。AQS类中的其他方法都有final修饰，无法被其他类使用；
 
-4. 基于AQS实现同步器的重写示例：
-   1. **ReetrantLock**：
-      1. state初始化为0，即未锁定状态；
-      2. 当有线程调用lock()加锁时，会调用tryAcquire()独占锁并将state自增，之后的其他线程调用tryAcquire()时就会失败（CAS操作state失败），直到持有锁的线程调用unlock()释放锁为止（state自减为0），其他线程才有机会获取锁；
-      3. 在释放锁之前，持有锁的线程可以重复获取该锁（state继续自增），即锁可重入，但线程在释放锁的时候同样需要多次释放，直到state自减为0。
-   2. **CountDownLatch**：
-      1. state会在初始化时被指定具体数值，即倒计时初始值或门闩上的锁数量（也可称闭锁），可理解为初始化了多把锁，只有其上的所有锁都被释放，闭锁才会被真正释放；
-      2. 主调用线程会通过await()阻塞，当有线程调用countDown()方法一次，state就会以CAS的方式自减一次（释放一把锁）；
-      3. 当state归0时，或者说所有的锁都被释放完毕时，会unpark()主调用线程，使其从await()方法返回，继续执行。
+**基于AQS实现同步器的重写示例**：
+
+1. **ReetrantLock**：
+   1. state初始化为0，即未锁定状态；
+   2. 当有线程调用lock()加锁时，会调用tryAcquire()独占锁并将state自增，之后的其他线程调用tryAcquire()时就会失败（CAS操作state失败），直到持有锁的线程调用unlock()释放锁为止（state自减为0），其他线程才有机会获取锁；
+   3. 在释放锁之前，持有锁的线程可以重复获取该锁（state继续自增），即锁可重入，但线程在释放锁的时候同样需要多次释放，直到state自减为0。
+2. **CountDownLatch**：
+   1. state会在初始化时被指定具体数值，即倒计时初始值或门闩上的锁数量（也可称闭锁），可理解为初始化了多把锁，只有其上的所有锁都被释放，闭锁才会被真正释放；
+   2. 主调用线程会通过await()阻塞，当有线程调用countDown()方法一次，state就会以CAS的方式自减一次（释放一把锁）；
+   3. 当state归0时，或者说所有的锁都被释放完毕时，会unpark()主调用线程，使其从await()方法返回，继续执行。
 
 
 
-### Condition接口
+### Condition/ConditionObject条件对象
 
-**概念**：Condition将对象监视器Monitor的wait、notify和notifyAll方法根据不同的条件分解为多个Java对象，可以将这些对象与任意Lock接口的实现绑定起来，为每一个对象提供多个等待集合（WaitSet）。Lock和Condition组合的目的是加强synchronized和wait/notify的等待唤醒机制，实现多个线程的协调和通信。
+#### 基本概念
 
-**使用**：Condition结合ReentrantLock实现生产者消费者模型。
+Condition将对象监视器Monitor的wait、notify和notifyAll方法根据不同的条件分解为多个Java对象，可以将这些对象与任意Lock接口的实现绑定起来，为每一个对象提供多个等待集合（WaitSet）。Lock和Condition组合的目的是加强synchronized和wait/notify的等待唤醒机制，实现多个线程的协调和通信。
+
+
+
+#### 使用示例
+
+Condition结合ReentrantLock实现生产者消费者模型。
 
 ```java
 public class ProducterConsumer {
@@ -2245,7 +1990,11 @@ public class ProducterConsumer {
 }
 ```
 
-**原理**：ConditionObject实现了Condition接口，是AQS的内部类。每个ConditionObject都包含一个等待队列，队列中每个Node都包含一个线程引用，这些线程都等待在某个Condition条件上。
+
+
+#### 源码分析
+
+ConditionObject实现了Condition接口，是AQS的内部类。每个ConditionObject都包含一个等待队列，队列中每个Node都包含一个线程引用，这些线程都等待在某个Condition条件上。
 
 ```JAVA
 public class ConditionObject implements Condition, java.io.Serializable {
@@ -2258,10 +2007,13 @@ public class ConditionObject implements Condition, java.io.Serializable {
 
 如果一个线程调用 `Condition.await()` 方法，就会释放锁并封装为Node加入等待队列中并通过 `LockSupport.park(this)` 进入阻塞状态。
 
+![image](assets/648116-20180515071118116-198589862.png)
+
 ```JAVA
 public final void await() throws InterruptedException {
     if (Thread.interrupted())
         throw new InterruptedException();
+    // 向条件队列中添加一个等待者，并返回Node封装后的实例
     Node node = addConditionWaiter();
     int savedState = fullyRelease(node);
     int interruptMode = 0;
@@ -2279,12 +2031,13 @@ public final void await() throws InterruptedException {
 }
 ```
 
-![image](assets/648116-20180515071118116-198589862.png)
-
 其他线程通过调用 `Condition.signal()` 方法，会通过 `LockSupport.unpark(node.thread)` 唤醒在等待队列中等待时间最长的Node（首节点），并将其移动到Lock的同步队列中去。
+
+![image](assets/648116-20180515071122335-2001301461.png)
 
 ```JAVA
 public final void signal() {
+    // 判断是否为排它锁
     if (!isHeldExclusively())
         throw new IllegalMonitorStateException();
     Node first = firstWaiter;
@@ -2303,17 +2056,17 @@ private void doSignal(Node first) {
 
 final boolean transferForSignal(Node node) {
     /*
-         * If cannot change waitStatus, the node has been cancelled.
-         */
+     * If cannot change waitStatus, the node has been cancelled.
+     */
     if (!compareAndSetWaitStatus(node, Node.CONDITION, 0))
         return false;
 
     /*
-         * Splice onto queue and try to set waitStatus of predecessor to
-         * indicate that thread is (probably) waiting. If cancelled or
-         * attempt to set waitStatus fails, wake up to resync (in which
-         * case the waitStatus can be transiently and harmlessly wrong).
-         */
+     * Splice onto queue and try to set waitStatus of predecessor to
+     * indicate that thread is (probably) waiting. If cancelled or
+     * attempt to set waitStatus fails, wake up to resync (in which
+     * case the waitStatus can be transiently and harmlessly wrong).
+     */
     Node p = enq(node);
     int ws = p.waitStatus;
     if (ws > 0 || !compareAndSetWaitStatus(p, ws, Node.SIGNAL))
@@ -2322,17 +2075,1034 @@ final boolean transferForSignal(Node node) {
 }
 ```
 
-![image](assets/648116-20180515071122335-2001301461.png)
-
 
 
 ### ReentrantLock可重入锁
+
+#### 基本概念
+
+ReentrantLock可重入锁是基于AQS实现的同步器。使用整型变量state记录锁的状态（0未占用，1已被占用），并维护一个管理阻塞线程的队列。其最大的特点是已持有锁的线程再次加锁无需重新获取锁，而是让state状态加1，表示重入了一次，在释放锁的时候也需要释放相应的次数。
+
+
+
+#### 基于AQS实现的同步器Sync
+
+```JAVA
+// 实现所有AQS同步机制的同步器
+private final Sync sync;
+
+abstract static class Sync extends AbstractQueuedSynchronizer {
+
+    private static final long serialVersionUID = -5179523762034025860L;
+
+    // 抽象的，有公平/非公平两种实现
+    abstract void lock();
+
+    // 尝试获取锁
+    final boolean nonfairTryAcquire(int acquires) {
+        final Thread current = Thread.currentThread();
+        int c = getState();
+        if (c == 0) {
+            if (compareAndSetState(0, acquires)) {
+                setExclusiveOwnerThread(current);
+                return true;
+            }
+        }
+        else if (current == getExclusiveOwnerThread()) {
+            int nextc = c + acquires;
+            if (nextc < 0) // overflow
+                throw new Error("Maximum lock count exceeded");
+            setState(nextc);
+            return true;
+        }
+        return false;
+    }
+
+    // 尝试释放锁
+    protected final boolean tryRelease(int releases) {
+        int c = getState() - releases;
+        if (Thread.currentThread() != getExclusiveOwnerThread())
+            throw new IllegalMonitorStateException();
+        boolean free = false;
+        if (c == 0) {
+            free = true;
+            setExclusiveOwnerThread(null);
+        }
+        setState(c);
+        return free;
+    }
+
+    protected final boolean isHeldExclusively() {
+        return getExclusiveOwnerThread() == Thread.currentThread();
+    }
+
+    // 获取一个和Lock绑定的条件对象
+    final ConditionObject newCondition() {
+        return new ConditionObject();
+    }
+
+    // Methods relayed from outer class
+    final Thread getOwner() {
+        return getState() == 0 ? null : getExclusiveOwnerThread();
+    }
+
+    final int getHoldCount() {
+        return isHeldExclusively() ? getState() : 0;
+    }
+
+    // 锁是否已被锁定
+    final boolean isLocked() {
+        return getState() != 0;
+    }
+
+    private void readObject(java.io.ObjectInputStream s)
+        throws java.io.IOException, ClassNotFoundException {
+        s.defaultReadObject();
+        setState(0); // 重置为解锁状态
+    }
+}
+```
+
+
+
+#### 构造方法和基本方法及属性
+
+```JAVA
+// 空构造器默认使用非公平锁，性能更佳
+public ReentrantLock() {
+    sync = new NonfairSync();
+}
+
+// 通过参数指定使用公平锁还是非公平锁
+public ReentrantLock(boolean fair) {
+    sync = fair ? new FairSync() : new NonfairSync();
+}
+
+// 加锁（公平/非公平）
+public void lock() {
+    sync.lock();
+}
+
+// 释放锁
+public void unlock() {
+    sync.release(1);
+}
+```
+
+
+
+#### 非公平锁加锁流程
+
+```java
+/**
+ * 非公平锁类型的同步器
+ */
+static final class NonfairSync extends Sync {
+
+    private static final long serialVersionUID = 7316153563782823691L;
+
+    // 非公平版的加锁
+    final void lock() {
+        // 非公平锁会直接进行一次CAS抢锁，成功就返回，否则和
+        if (compareAndSetState(0, 1))
+            setExclusiveOwnerThread(Thread.currentThread());
+        else
+            acquire(1);
+    }
+    
+    // 尝试获取锁
+    protected final boolean tryAcquire(int acquires) {
+        return nonfairTryAcquire(acquires);
+    }
+}
+
+// 非公平版的尝试获取锁
+final boolean nonfairTryAcquire(int acquires) {
+    final Thread current = Thread.currentThread();
+    int c = getState();
+    if (c == 0) {
+        // 若锁未被占用，非公平锁会再次CAS抢锁
+        if (compareAndSetState(0, acquires)) {
+            // 若抢锁成功，则设置当前线程为持有锁的线程
+            setExclusiveOwnerThread(current);
+            return true;
+        }
+    } else if (current == getExclusiveOwnerThread()) {
+        // 若是当前线程已经持有锁，则可重入，锁状态+1
+        int nextc = c + acquires;
+        if (nextc < 0) // overflow
+            throw new Error("Maximum lock count exceeded");
+        setState(nextc);
+        return true;
+    }
+    return false;
+}
+```
+
+
+
+#### 公平锁加锁流程
+
+```java
+/**
+ * 公平锁类型的同步器
+ */
+static final class FairSync extends Sync {
+
+    private static final long serialVersionUID = -3000897897090466540L;
+
+    // 公平版的加锁
+    final void lock() {
+        acquire(1);
+    }
+
+    // 公平版的尝试获取锁
+    protected final boolean tryAcquire(int acquires) {
+        final Thread current = Thread.currentThread();
+        int c = getState();
+        if (c == 0) {
+            // 公平锁的实现和非公平锁相比，唯一的区别就是多了一个判断阻塞队列中是否有线程在等待（hasQueuedPredecessors）
+            // 若队列中存在等待的线程，则按照FIFO的规则出队一个线程去持有锁，若队列为空，则直接CAS抢锁
+            if (!hasQueuedPredecessors() &&
+                compareAndSetState(0, acquires)) {
+                setExclusiveOwnerThread(current);
+                return true;
+            }
+        }
+        else if (current == getExclusiveOwnerThread()) {
+            // 可重入机制
+            int nextc = c + acquires;
+            if (nextc < 0)
+                throw new Error("Maximum lock count exceeded");
+            setState(nextc);
+            return true;
+        }
+        return false;
+    }
+}
+```
+
+
+
+#### 公共加锁流程
+
+* 尝试以公平/非公平的方式获取锁tryAcquire()；
+* 获取成功的占用锁；
+* 获取失败的封装为节点addWaiter()，然后阻塞LockSupport.park()并入队acquireQueued()，并；
+* 最后自我中断Thread.currentThread().interrupt()。
+
+```java
+// 获取锁的整体流程
+public final void acquire(int arg) {
+    if (!tryAcquire(arg) &&
+        acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
+        // 未抢到锁的线程自我中断
+        selfInterrupt();
+}
+
+// 封装未抢到锁的线程为Node
+private Node addWaiter(Node mode) {
+    Node node = new Node(Thread.currentThread(), mode);
+    Node pred = tail;
+    if (pred != null) {
+        node.prev = pred;
+        if (compareAndSetTail(pred, node)) {
+            pred.next = node;
+            return node;
+        }
+    }
+    enq(node);
+    return node;
+}
+
+// Node入队
+final boolean acquireQueued(final Node node, int arg) {
+    boolean failed = true;
+    try {
+        boolean interrupted = false;
+        for (;;) {
+            final Node p = node.predecessor();
+            if (p == head && tryAcquire(arg)) {
+                setHead(node);
+                p.next = null; // help GC
+                failed = false;
+                return interrupted;
+            }
+            if (shouldParkAfterFailedAcquire(p, node) &&
+                parkAndCheckInterrupt())
+                interrupted = true;
+        }
+    } finally {
+        if (failed)
+            cancelAcquire(node);
+    }
+}
+
+// 阻塞线程并检查中断
+private final boolean parkAndCheckInterrupt() {
+    LockSupport.park(this);
+    return Thread.interrupted();
+}
+
+// 线程自我中断
+static void selfInterrupt() {
+    Thread.currentThread().interrupt();
+}
+```
+
+
+
+#### 释放锁流程：
+
+```java
+// 释放锁
+public final boolean release(int arg) {
+    if (tryRelease(arg)) {
+        Node h = head;
+        if (h != null && h.waitStatus != 0)
+            unparkSuccessor(h);
+        return true;
+    }
+    return false;
+}
+
+// 尝试释放锁
+protected final boolean tryRelease(int releases) {
+    // 锁状态state释放一次（重入几次释放几次）
+    int c = getState() - releases;
+    if (Thread.currentThread() != getExclusiveOwnerThread())
+        throw new IllegalMonitorStateException();
+    boolean free = false;
+    if (c == 0) {
+        // 锁被释放（state减为0）
+        free = true;
+        setExclusiveOwnerThread(null);
+    }
+    setState(c);
+    return free;
+}
+
+// 释放锁后去唤醒队列中阻塞的线程
+private void unparkSuccessor(Node node) {
+    int ws = node.waitStatus;
+    if (ws < 0)
+        compareAndSetWaitStatus(node, ws, 0);
+
+	// 获取头节点的后继节点，即队列中第一个节点
+    Node s = node.next;
+    if (s == null || s.waitStatus > 0) {
+        s = null;
+        for (Node t = tail; t != null && t != node; t = t.prev)
+            if (t.waitStatus <= 0)
+                s = t;
+    }
+    if (s != null)
+        // 唤醒队列中第一个节点
+        LockSupport.unpark(s.thread);
+}
+```
+
+**ReentrantLock实现公平锁和非公平锁的区别和相同点**：
+
+* 非公平锁在调用lock后，首先就会使用CAS进行竞争锁的操作，若这时锁恰好没有被占用，则直接获取锁返回；
+* 非公平锁在CAS操作失败后，和公平锁一样都会进入 `tryAcquire()` 方法，在该方法中，若发现锁的状态state为0，即锁已被释放，非公平锁会直接CAS抢占，但公平锁会判断等待队列中是否有线程处于等待状态，若有则出队线程去占有锁，新的线程入队等待；
+* 若非公平锁的两次CAS都不成功，则接下来和公平锁一样，线程会进入阻塞队列等待唤醒；
+* 相对公平锁，非公平锁具有更好的性能，但也会让线程获取锁的时间不确定，导致阻塞队列中的线程长期处于等待状态。
+
+
+
+### ReentrantReadWriteLock可重入读写锁
+
+#### 基本概念
+
+ReentrantReadWriteLock可重入读写锁是基于AQS实现的同步器。同样也维护state锁状态和阻塞队列来保证同步，其特点是具有读写两种锁状态，允许同一时刻多个读线程访问，但写线程访问时，所有的读写线程均被阻塞。这种分离读写的方式除了保证写操作的线程安全外，还能让读操作的并发性能提升（如缓存结构）。
+
+
+
+#### 构造方法和基本方法及属性
+
+```JAVA
+// 读锁
+private final ReentrantReadWriteLock.ReadLock readerLock;
+// 写锁
+private final ReentrantReadWriteLock.WriteLock writerLock;
+// AQS同步器
+final Sync sync;
+
+// 默认非公平
+public ReentrantReadWriteLock() {
+    this(false);
+}
+
+// 初始化两把锁
+public ReentrantReadWriteLock(boolean fair) {
+    sync = fair ? new FairSync() : new NonfairSync();
+    readerLock = new ReadLock(this);
+    writerLock = new WriteLock(this);
+}
+
+// 获取读/写锁
+public ReentrantReadWriteLock.WriteLock writeLock() { return writerLock; }
+public ReentrantReadWriteLock.ReadLock  readLock()  { return readerLock; }
+```
+
+
+
+#### 基于AQS实现的同步器Sync
+
+```java
+abstract static class Sync extends AbstractQueuedSynchronizer {
+    private static final long serialVersionUID = 6317671515068378041L;
+
+    /*
+     * 读写计数提取常量和函数。
+     * 锁状态逻辑上分为两个无符号短路：
+     * 下面的一个表示独占（写入）锁保持计数，上限表示共享（读卡器）保持计数。
+     */
+    static final int SHARED_SHIFT   = 16;
+    static final int SHARED_UNIT    = (1 << SHARED_SHIFT);
+    static final int MAX_COUNT      = (1 << SHARED_SHIFT) - 1;
+    static final int EXCLUSIVE_MASK = (1 << SHARED_SHIFT) - 1;
+
+    /** Returns the number of shared holds represented in count  */
+    static int sharedCount(int c)    { return c >>> SHARED_SHIFT; }
+    /** Returns the number of exclusive holds represented in count  */
+    static int exclusiveCount(int c) { return c & EXCLUSIVE_MASK; }
+
+    static final class HoldCounter {
+        int count = 0;
+        final long tid = getThreadId(Thread.currentThread());
+    }
+
+    static final class ThreadLocalHoldCounter
+        extends ThreadLocal<HoldCounter> {
+        public HoldCounter initialValue() {
+            return new HoldCounter();
+        }
+    }
+
+    private transient ThreadLocalHoldCounter readHolds;
+
+    private transient HoldCounter cachedHoldCounter;
+
+    private transient Thread firstReader = null;
+    private transient int firstReaderHoldCount;
+
+    Sync() {
+        readHolds = new ThreadLocalHoldCounter();
+        setState(getState()); // ensures visibility of readHolds
+    }
+
+    abstract boolean readerShouldBlock();
+
+    abstract boolean writerShouldBlock();
+
+    protected final boolean tryRelease(int releases) {
+        if (!isHeldExclusively())
+            throw new IllegalMonitorStateException();
+        int nextc = getState() - releases;
+        boolean free = exclusiveCount(nextc) == 0;
+        if (free)
+            setExclusiveOwnerThread(null);
+        setState(nextc);
+        return free;
+    }
+
+    protected final boolean tryAcquire(int acquires) {
+        Thread current = Thread.currentThread();
+        int c = getState();
+        int w = exclusiveCount(c);
+        if (c != 0) {
+            // (Note: if c != 0 and w == 0 then shared count != 0)
+            if (w == 0 || current != getExclusiveOwnerThread())
+                return false;
+            if (w + exclusiveCount(acquires) > MAX_COUNT)
+                throw new Error("Maximum lock count exceeded");
+            // Reentrant acquire
+            setState(c + acquires);
+            return true;
+        }
+        if (writerShouldBlock() ||
+            !compareAndSetState(c, c + acquires))
+            return false;
+        setExclusiveOwnerThread(current);
+        return true;
+    }
+
+    protected final boolean tryReleaseShared(int unused) {
+        Thread current = Thread.currentThread();
+        if (firstReader == current) {
+            // assert firstReaderHoldCount > 0;
+            if (firstReaderHoldCount == 1)
+                firstReader = null;
+            else
+                firstReaderHoldCount--;
+        } else {
+            HoldCounter rh = cachedHoldCounter;
+            if (rh == null || rh.tid != getThreadId(current))
+                rh = readHolds.get();
+            int count = rh.count;
+            if (count <= 1) {
+                readHolds.remove();
+                if (count <= 0)
+                    throw unmatchedUnlockException();
+            }
+            --rh.count;
+        }
+        for (;;) {
+            int c = getState();
+            int nextc = c - SHARED_UNIT;
+            if (compareAndSetState(c, nextc))
+                // Releasing the read lock has no effect on readers,
+                // but it may allow waiting writers to proceed if
+                // both read and write locks are now free.
+                return nextc == 0;
+        }
+    }
+
+    private IllegalMonitorStateException unmatchedUnlockException() {
+        return new IllegalMonitorStateException(
+            "attempt to unlock read lock, not locked by current thread");
+    }
+
+    protected final int tryAcquireShared(int unused) {
+        Thread current = Thread.currentThread();
+        int c = getState();
+        if (exclusiveCount(c) != 0 &&
+            getExclusiveOwnerThread() != current)
+            return -1;
+        int r = sharedCount(c);
+        if (!readerShouldBlock() &&
+            r < MAX_COUNT &&
+            compareAndSetState(c, c + SHARED_UNIT)) {
+            if (r == 0) {
+                firstReader = current;
+                firstReaderHoldCount = 1;
+            } else if (firstReader == current) {
+                firstReaderHoldCount++;
+            } else {
+                HoldCounter rh = cachedHoldCounter;
+                if (rh == null || rh.tid != getThreadId(current))
+                    cachedHoldCounter = rh = readHolds.get();
+                else if (rh.count == 0)
+                    readHolds.set(rh);
+                rh.count++;
+            }
+            return 1;
+        }
+        return fullTryAcquireShared(current);
+    }
+
+    final int fullTryAcquireShared(Thread current) {
+        HoldCounter rh = null;
+        for (;;) {
+            int c = getState();
+            if (exclusiveCount(c) != 0) {
+                if (getExclusiveOwnerThread() != current)
+                    return -1;
+                // else we hold the exclusive lock; blocking here
+                // would cause deadlock.
+            } else if (readerShouldBlock()) {
+                // Make sure we're not acquiring read lock reentrantly
+                if (firstReader == current) {
+                    // assert firstReaderHoldCount > 0;
+                } else {
+                    if (rh == null) {
+                        rh = cachedHoldCounter;
+                        if (rh == null || rh.tid != getThreadId(current)) {
+                            rh = readHolds.get();
+                            if (rh.count == 0)
+                                readHolds.remove();
+                        }
+                    }
+                    if (rh.count == 0)
+                        return -1;
+                }
+            }
+            if (sharedCount(c) == MAX_COUNT)
+                throw new Error("Maximum lock count exceeded");
+            if (compareAndSetState(c, c + SHARED_UNIT)) {
+                if (sharedCount(c) == 0) {
+                    firstReader = current;
+                    firstReaderHoldCount = 1;
+                } else if (firstReader == current) {
+                    firstReaderHoldCount++;
+                } else {
+                    if (rh == null)
+                        rh = cachedHoldCounter;
+                    if (rh == null || rh.tid != getThreadId(current))
+                        rh = readHolds.get();
+                    else if (rh.count == 0)
+                        readHolds.set(rh);
+                    rh.count++;
+                    cachedHoldCounter = rh; // cache for release
+                }
+                return 1;
+            }
+        }
+    }
+
+    final boolean tryWriteLock() {
+        Thread current = Thread.currentThread();
+        int c = getState();
+        if (c != 0) {
+            int w = exclusiveCount(c);
+            if (w == 0 || current != getExclusiveOwnerThread())
+                return false;
+            if (w == MAX_COUNT)
+                throw new Error("Maximum lock count exceeded");
+        }
+        if (!compareAndSetState(c, c + 1))
+            return false;
+        setExclusiveOwnerThread(current);
+        return true;
+    }
+
+    final boolean tryReadLock() {
+        Thread current = Thread.currentThread();
+        for (;;) {
+            int c = getState();
+            if (exclusiveCount(c) != 0 &&
+                getExclusiveOwnerThread() != current)
+                return false;
+            int r = sharedCount(c);
+            if (r == MAX_COUNT)
+                throw new Error("Maximum lock count exceeded");
+            if (compareAndSetState(c, c + SHARED_UNIT)) {
+                if (r == 0) {
+                    firstReader = current;
+                    firstReaderHoldCount = 1;
+                } else if (firstReader == current) {
+                    firstReaderHoldCount++;
+                } else {
+                    HoldCounter rh = cachedHoldCounter;
+                    if (rh == null || rh.tid != getThreadId(current))
+                        cachedHoldCounter = rh = readHolds.get();
+                    else if (rh.count == 0)
+                        readHolds.set(rh);
+                    rh.count++;
+                }
+                return true;
+            }
+        }
+    }
+
+    protected final boolean isHeldExclusively() {
+        return getExclusiveOwnerThread() == Thread.currentThread();
+    }
+
+    final ConditionObject newCondition() {
+        return new ConditionObject();
+    }
+
+    final Thread getOwner() {
+        return ((exclusiveCount(getState()) == 0) ?
+                null :
+                getExclusiveOwnerThread());
+    }
+
+    final int getReadLockCount() {
+        return sharedCount(getState());
+    }
+
+    final boolean isWriteLocked() {
+        return exclusiveCount(getState()) != 0;
+    }
+
+    final int getWriteHoldCount() {
+        return isHeldExclusively() ? exclusiveCount(getState()) : 0;
+    }
+
+    final int getReadHoldCount() {
+        if (getReadLockCount() == 0)
+            return 0;
+
+        Thread current = Thread.currentThread();
+        if (firstReader == current)
+            return firstReaderHoldCount;
+
+        HoldCounter rh = cachedHoldCounter;
+        if (rh != null && rh.tid == getThreadId(current))
+            return rh.count;
+
+        int count = readHolds.get().count;
+        if (count == 0) readHolds.remove();
+        return count;
+    }
+
+    private void readObject(java.io.ObjectInputStream s)
+        throws java.io.IOException, ClassNotFoundException {
+        s.defaultReadObject();
+        readHolds = new ThreadLocalHoldCounter();
+        setState(0); // reset to unlocked state
+    }
+
+    final int getCount() { return getState(); }
+}
+```
+
+
+
+#### 公平/非公平锁
+
+```java
+static final class NonfairSync extends Sync {
+    private static final long serialVersionUID = -8159625535654395037L;
+    final boolean writerShouldBlock() {
+        return false; // writers can always barge
+    }
+    final boolean readerShouldBlock() {
+        return apparentlyFirstQueuedIsExclusive();
+    }
+}
+
+static final class FairSync extends Sync {
+    private static final long serialVersionUID = -2274990926593161451L;
+    final boolean writerShouldBlock() {
+        return hasQueuedPredecessors();
+    }
+    final boolean readerShouldBlock() {
+        return hasQueuedPredecessors();
+    }
+}
+```
+
+
+
+#### 读锁的获取和释放流程
+
+静态内部类——读锁：
+
+```java
+public static class ReadLock implements Lock, java.io.Serializable {
+    private static final long serialVersionUID = -5992448646407690164L;
+    private final Sync sync;
+
+    protected ReadLock(ReentrantReadWriteLock lock) {
+        sync = lock.sync;
+    }
+	
+    // 读锁获取锁
+    public void lock() {
+        sync.acquireShared(1);
+    }
+
+    public void lockInterruptibly() throws InterruptedException {
+        sync.acquireSharedInterruptibly(1);
+    }
+	
+    // 读锁释放锁
+    public boolean tryLock() {
+        return sync.tryReadLock();
+    }
+
+    public boolean tryLock(long timeout, TimeUnit unit)
+        throws InterruptedException {
+        return sync.tryAcquireSharedNanos(1, unit.toNanos(timeout));
+    }
+
+    public void unlock() {
+        sync.releaseShared(1);
+    }
+
+    public Condition newCondition() {
+        throw new UnsupportedOperationException();
+    }
+
+    public String toString() {
+        int r = sync.getReadLockCount();
+        return super.toString() +
+            "[Read locks = " + r + "]";
+    }
+}
+```
+
+读锁获取锁：
+
+* 获取读锁时，会尝试判断当前对象是否拥有了写锁，如果拥有，则直接获取失败；
+* 如果没有，就尝试加锁；
+* 如果当前线程已经持有读锁，则直接读锁状态state+1。
+
+```java
+// AbstractQueuedSynchronizer
+// 获取共享锁
+public final void acquireShared(int arg) {
+    if (tryAcquireShared(arg) < 0)
+        doAcquireShared(arg);
+}
+
+// ReentrantReadWriteLock.ReadLock
+// 尝试获取共享锁
+protected final int tryAcquireShared(int unused) {
+    Thread current = Thread.currentThread();
+    int c = getState();
+    // 获取低16位，独占计数，即写锁的state状态
+    if (exclusiveCount(c) != 0 &&
+        getExclusiveOwnerThread() != current)
+        return -1;
+    // 读取高16位，共享计数，即读锁的state状态
+    int r = sharedCount(c);
+    // 公平锁排队，非公平锁先抢后排队
+    if (!readerShouldBlock() &&
+        r < MAX_COUNT &&
+        compareAndSetState(c, c + SHARED_UNIT)) {
+        if (r == 0) {
+            // 第一个获取读锁
+            firstReader = current;
+            firstReaderHoldCount = 1;
+        } else if (firstReader == current) {
+            // 如果当前线程已经持有读锁，则可重入
+            firstReaderHoldCount++;
+        } else {
+            HoldCounter rh = cachedHoldCounter;
+            if (rh == null || rh.tid != getThreadId(current))
+                cachedHoldCounter = rh = readHolds.get();
+            else if (rh.count == 0)
+                readHolds.set(rh);
+            rh.count++;
+        }
+        return 1;
+    }
+    return fullTryAcquireShared(current);
+}
+
+// AbstractQueuedSynchronizer
+// 获取共享锁的具体实现
+private void doAcquireShared(int arg) {
+    final Node node = addWaiter(Node.SHARED);
+    boolean failed = true;
+    try {
+        boolean interrupted = false;
+        for (;;) {
+            final Node p = node.predecessor();
+            if (p == head) {
+                int r = tryAcquireShared(arg);
+                if (r >= 0) {
+                    setHeadAndPropagate(node, r);
+                    p.next = null; // help GC
+                    if (interrupted)
+                        selfInterrupt();
+                    failed = false;
+                    return;
+                }
+            }
+            if (shouldParkAfterFailedAcquire(p, node) &&
+                parkAndCheckInterrupt())
+                interrupted = true;
+        }
+    } finally {
+        if (failed)
+            cancelAcquire(node);
+    }
+}
+```
+
+读锁释放锁：
+
+```java
+// AbstractQueuedSynchronizer
+// 释放共享锁
+public final boolean releaseShared(int arg) {
+    if (tryReleaseShared(arg)) {
+        doReleaseShared();
+        return true;
+    }
+    return false;
+}
+
+// ReentrantReadWriteLock.ReadLock
+// 尝试释放共享锁
+protected final boolean tryReleaseShared(int unused) {
+    Thread current = Thread.currentThread();
+    if (firstReader == current) {
+        // assert firstReaderHoldCount > 0;
+        if (firstReaderHoldCount == 1)
+            // 释放读锁计数
+            firstReader = null;
+        else
+            // 释放一次读锁计数
+            firstReaderHoldCount--;
+    } else {
+        HoldCounter rh = cachedHoldCounter;
+        if (rh == null || rh.tid != getThreadId(current))
+            rh = readHolds.get();
+        int count = rh.count;
+        if (count <= 1) {
+            // 清除ThreadLocal，防止内存泄漏
+            readHolds.remove();
+            if (count <= 0)
+                throw unmatchedUnlockException();
+        }
+        --rh.count;
+    }
+    for (;;) {
+        int c = getState();
+        int nextc = c - SHARED_UNIT;
+        if (compareAndSetState(c, nextc))
+            // CAS操作置换state，判断最终结果是否为0，若结果为0，则写线程可以参与竞争
+            return nextc == 0;
+    }
+}
+
+// AbstractQueuedSynchronizer
+// 释放共享锁的具体实现
+private void doReleaseShared() {
+    for (;;) {
+        Node h = head;
+        if (h != null && h != tail) {
+            int ws = h.waitStatus;
+            if (ws == Node.SIGNAL) {
+                if (!compareAndSetWaitStatus(h, Node.SIGNAL, 0))
+                    continue;            // loop to recheck cases
+                unparkSuccessor(h);
+            }
+            else if (ws == 0 &&
+                     !compareAndSetWaitStatus(h, 0, Node.PROPAGATE))
+                continue;                // loop on failed CAS
+        }
+        if (h == head)                   // loop if head changed
+            break;
+    }
+}
+```
+
+
+
+#### 写锁的获取和释放流程
+
+静态内部类——写锁：
+
+```java
+public static class WriteLock implements Lock, java.io.Serializable {
+    private static final long serialVersionUID = -4992448646407690164L;
+    private final Sync sync;
+
+    protected WriteLock(ReentrantReadWriteLock lock) {
+        sync = lock.sync;
+    }
+
+    // 写锁获取锁
+    public void lock() {
+        sync.acquire(1);
+    }
+
+    public void lockInterruptibly() throws InterruptedException {
+        sync.acquireInterruptibly(1);
+    }
+
+    public boolean tryLock( ) {
+        return sync.tryWriteLock();
+    }
+
+    public boolean tryLock(long timeout, TimeUnit unit)
+        throws InterruptedException {
+        return sync.tryAcquireNanos(1, unit.toNanos(timeout));
+    }
+	
+    // 写锁释放锁
+    public void unlock() {
+        sync.release(1);
+    }
+
+    public Condition newCondition() {
+        return sync.newCondition();
+    }
+
+    public String toString() {
+        Thread o = sync.getOwner();
+        return super.toString() + ((o == null) ?
+                                   "[Unlocked]" :
+                                   "[Locked by thread " + o.getName() + "]");
+    }
+
+    public boolean isHeldByCurrentThread() {
+        return sync.isHeldExclusively();
+    }
+
+    public int getHoldCount() {
+        return sync.getWriteHoldCount();
+    }
+}
+```
+
+写锁获取锁：
+
+* 在获取写锁时，会尝试判断锁是否已被占用（读锁或写锁），如果已被占用且占用的线程非当前线程，则直接获取失败，加入阻塞队列；
+* 如果锁没有被占用，则当前线程就会持有写锁，且写锁个数加1；
+
+```java
+public final void acquire(int arg) {
+    if (!tryAcquire(arg) &&
+        acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
+        selfInterrupt();
+}
+
+protected final boolean tryAcquire(int acquires) {
+    Thread current = Thread.currentThread();
+    int c = getState();
+    // 获取state低16位的写锁计数
+    int w = exclusiveCount(c);
+    if (c != 0) {
+        // (Note: if c != 0 and w == 0 then shared count != 0)
+        if (w == 0 || current != getExclusiveOwnerThread())
+            // 锁非当前线程持有
+            return false;
+        // 超过最大锁计数
+        if (w + exclusiveCount(acquires) > MAX_COUNT)
+            throw new Error("Maximum lock count exceeded");
+        // 可重入获取
+        setState(c + acquires);
+        return true;
+    }
+    if (writerShouldBlock() ||
+        !compareAndSetState(c, c + acquires))
+        // 竞争写锁失败
+        return false;
+    // 竞争成功
+    setExclusiveOwnerThread(current);
+    return true;
+}
+```
+
+写锁释放锁：
+
+```JAVA
+public final boolean release(int arg) {
+    if (tryRelease(arg)) {
+        Node h = head;
+        if (h != null && h.waitStatus != 0)
+            // 唤醒下一个线程
+            unparkSuccessor(h);
+        return true;
+    }
+    return false;
+}
+
+protected final boolean tryRelease(int releases) {
+    if (!isHeldExclusively())
+        // 当前线程不是持有锁的线程
+        throw new IllegalMonitorStateException();
+    int nextc = getState() - releases;
+    // 判断写锁的计数是否为0，为0则表示不被任何线程持有
+    boolean free = exclusiveCount(nextc) == 0;
+    if (free)
+        setExclusiveOwnerThread(null);
+    setState(nextc);
+    return free;
+}
+```
 
 
 
 ### Semaphore信号量
 
-与synchronized和ReetrantLock去区别是前两者都是一次只允许一个线程访问资源，而Semaphore可以指定多个线程同时访问某个资源。
+#### 基本概念
+
+Semaphore信号量与synchronized和ReetrantLock的区别是后两者都是一次只允许一个线程访问资源，而Semaphore可以指定多个线程同时访问某个资源。
+
+
+
+#### 使用示例
 
 ```JAVA
 public class SemaphoreExample {
@@ -2377,7 +3147,13 @@ public class SemaphoreExample {
 }
 ```
 
-当许可证已经发放完，多余线程会进入阻塞队列，当有许可证被释放后，Semaphore为队列种的线程提供两种模式去获取许可证：
+
+
+#### 源码分析
+
+当许可证已经发放完，多余线程会进入阻塞队列，当有许可证被释放后，Semaphore为队列种的线程提供两种模式去获取许可证。
+
+Semaphore与CoutDownLatch一样是共享锁的一种实现，默认初始化AQS的state为permits，当同时访问资源的线程超出permits，那么超出的线程会进入阻塞队列Park，并自旋判断state是否大于0，只有当state大于0时，阻塞的线程才能进行执行。
 
 ```JAVA
 public Semaphore(int permits) {
@@ -2391,243 +3167,463 @@ public Semaphore(int permits, boolean fair) {
 }
 ```
 
-Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初始化AQS的state为permits，当同时访问资源的线程超出permits，那么超出的线程会进入阻塞队列Park，并自旋判断state是否大于0，只有当state大于0时，阻塞的线程才能进行执行。
-
 
 
 ### CountDownLatch闭锁
 
-1. 概念：
-   
-   <img src="assets/4765686876.png" alt="4765686876" style="zoom:80%;" />
-   
-   1. 是共享锁的一种实现，默认构造AQS的state为count，当线程调用countDown()方法时，其底层是使用了tryReleaseShared()方法以CAS的操作来减少state；
-   2. 当调用await()方法时，若state不为0，就代表countDown()的操作没有全部执行完，则会进入阻塞队列自旋等待，直到state归0则继续执行。
-   
-2. 典型用法：
+#### 基本概念
 
-   1. **当某个线程在开始运行前需要等待n个前置线程执行完毕的场景**。主调线程通过`new CountDownLatch(n)`将计数器初始化为0，并且通过`countDownLatch.await() `阻塞，每当一个前置线程执行完毕就会通过`countDownLatch.countDown()`将计数器减1，直到计数器变为0，主调线程才会从``await()``返回继续执行。典型的场景就是扣款操作，若干个前置的身份认证、操作合法性认证、余额认证等完成后，主调线程再进行扣款操作。
-   2. **实现多个线程在某一时刻同时开始执行**。多个线程在某一时刻同时开始执行的场景，如赛跑，多个线程在起点初始化，然后等待发令枪响，最后同时执行。首先主线程初始化一个`new CountDownLatch(1)`，然后多个子线程通过`countDownLatch.await()`阻塞，最后主线程调用`countDownLatch.coutDown()`让所有阻塞的子线程同时执行。
+基于AQS实现的一种共享锁，锁状态state做为count计数器使用，计数器的初值对应任务的数量，每当完成一个任务后（`CountDownLatch.countDown()`），就会减1。当计数器归0时，在闭锁上等待的线程就会恢复执行（`CountDownLatch.await()`）。
 
-3. 使用示例：
-
-   ```JAVA
-   public class CountDownLatchExample {
-       
-       private static final int threadNum = 550;
-       
-       public static void main(String[] args) throws InterruptedException {
-           ExecutorService threadPool = Executors.newFixedThreadPool(300);
-           final CountDownLatch countDownLatch = new CountDownLatch(threadNum);
-           
-           threadPool.execute(() -> {
-               try {
-                   // 模拟请求的耗时操作
-                   Thread.sleep(1000);
-                   System.out.println("threadNum: " + threadNum);
-                   Thread.sleep(1000);
-               } catch (InterruptedException e) {
-                   e.printStackTrace();
-               } finally {
-                   countDownLatch.countDown();
-               }
-           });
-           
-           countDownLatch.await();
-           threadPool.shutdown();
-       }
-   } 
-   ```
-
-4. 不足之处和注意事项：
-
-   1. CountDownLatch是一次性的，计数器只能在构造方法种初始化一次，之后没有任何机制可以修改，当CountDownLatch使用完毕后，就不能再次被使用；
-   2. CountDownLatch的await()方法使用不当容易发生死锁，若是没有足够的线程去countDown()将state置为0，那么通过await()阻塞的线程会永久等待下去。
+<img src="assets/4765686876.png" alt="4765686876"  />
 
 
 
-### CyclicBarrier循环栅栏
+#### 使用场景
 
-1. 概念：![image-20201031165914108](assets/image-20201031165914108.png)
+**当某个线程在开始运行前需要等待多个前置线程执行完毕的场景**：主调线程通过 `new CountDownLatch(n)` 将计数器初始化为0，并且通过 `countDownLatch.await() ` 阻塞，每当一个前置线程执行完毕就会通过`countDownLatch.countDown()`将计数器减1，直到计数器变为0，主调线程才会从 ``await()`` 返回继续执行。典型的场景就是扣款操作，若干个前置的身份认证、操作合法性认证、余额认证等完成后，主调线程再进行扣款操作。
 
-   1. 与CountDownLatch类似，可以实现线程等待，但更为复杂强大。字面意思是可循环使用的屏障，就是让一组线程到一个屏障或同步点时被阻塞，直到最后一个线程到达时屏障才会放开，再让所有被拦截的的线程继续执行；
+**需要多个线程在某一时刻同时开始执行的场景**：多个线程在某一时刻同时开始执行的场景，如赛跑，多个线程在起点初始化，然后等待发令枪响，最后同时执行。首先主线程初始化一个`new CountDownLatch(1)`，然后多个子线程通过`countDownLatch.await()`阻塞，最后主线程调用`countDownLatch.coutDown()`让所有阻塞的子线程同时执行。
 
-      ![CyclicBarrier](assets/CyclicBarrier.png)
 
-   2. CountDownLatlansanch是基于AQS实现的，而CyclicBarrier是居于ReentrantLock和Condition实现的（ReentrantLock也是基于AQS实现的同步器）；
 
-2. 构造方法：
+#### 使用示例
 
-   ```JAVA
-   // parties表示屏障拦截的线程数，当拦截的线程数量达到该值时，就打开栅栏，放行所有线程
-   public CyclicBarrier(int parties) {
-       this(parties, null);
-   }
-   
-   public CyclicBarrier(int parties, Runnable barrierAction) {
-       if (parties <= 0) throw new IllegalArgumentException();
-       this.parties = parties;
-       this.count = parties;
-       this.barrierCommand = barrierAction;
-   }
-   ```
+```JAVA
+public class CountDownLatchExample {
+    
+    private static final int threadNum = 550;
+    
+    public static void main(String[] args) throws InterruptedException {
+        ExecutorService threadPool = Executors.newFixedThreadPool(300);
+        final CountDownLatch countDownLatch = new CountDownLatch(threadNum);
+        
+        threadPool.execute(() -> {
+            try {
+                // 模拟请求的耗时操作
+                Thread.sleep(1000);
+                System.out.println("threadNum: " + threadNum);
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                countDownLatch.countDown();
+            }
+        });
+        
+        countDownLatch.await();
+        threadPool.shutdown();
+    }
+} 
+```
 
-3. 应用场景（可用于多线程计算数据，最后合并结果的场景）：
 
-   1. 如要统计2010-2020年某银行账户的年平均流水，可以通过多个子线程去计算每一年的流水总和，等所有线程计算完毕后，放开栅栏，由主线程或是注册在栅栏上的方法合并这些数据求平均值；
-   2. 若在上例的基础上，还要统计2010-2020各年度的流水占总流水的比例，则栅栏之后还可以加逻辑，在统计总流水之后，即放行之后，所有线程各自再去计算比例。
 
-4. 使用示例：
+#### 源码分析
 
-   ```JAVA
-   public class CyclicBarrierExample {
-       
-       private static final int threadNum = 550;
-       // private static final CyclicBarrier cyclicBarrier = new CyclicBarrier(5);
-       private static final CyclicBayourrier cyclicBarrier = new CyclicBarrier(5, () -> {
-       	System.out.println("当线程数量满足后，优先执行的代码逻辑。。。");
-       });
-       
-       public static void main(String[] args) throws InterruptedException {
-           ExecutorService threadPool = Executors.newFixedThreadPool(10);
-           
-           for (int i = 0; i < threadNum; i++) {
-               final int threadNum = i;
-               Thread.sleep(1000);
-               threadPool.execute(() -> {
-                   try {
-                       // 进入屏障之前的逻辑
-                       System.out.println("threadNum: " + threadNum + " is ready");
-                       
-                       // 在屏障上阻塞，直到阻塞的线程数满足屏障的要求后才会继续执行
-                       cyclicBarrier.await();
-                       // 可以通过参数指定await的等待时间 
-                       // cyclicBarrier.await(60, TimeUnit.SECONDS);
-                       
-                       // 通过屏障之后的逻辑
-                       System.out.println("threadNum: " + threadNum + " is finish");
-                   } catch (InterruptedException e) {
-                       e.printStackTrace();
-                   } catch (BrokenBarrierException e) {
-                       e.printStackTrace();
-                   }
-               });
-           }
-           
-           threadPool.shutdown();
-       }
-   }
-   ```
+Sync同步器分析：
 
-5. 源码分析：
+```java
+/**
+ * 倒计时门闩的同步器，使用AQS的state状态表示计数
+ */
+private static final class Sync extends AbstractQueuedSynchronizer {
+    private static final long serialVersionUID = 4982264981922014374L;
 
-   ```java
-   public int await() throws InterruptedException, BrokenBarrierException {
-       try {
-           return dowait(false, 0L);
-       } catch (TimeoutException toe) {
-           throw new Error(toe); // cannot happen
-       }
-   }
-   ```
+    Sync(int count) {
+        setState(count);
+    }
 
-   ```JAVA
-   // 屏障拦截的线程数量
-   private int count;
-   
-   private int dowait(boolean timed, long nanos) 
-       throws InterruptedException, BrokenBarrierException,
-   		   TimeoutException {
-       final ReentrantLock lock = this.lock;
-       // 底层使用ReentrantLock保证同步
-       lock.lock();
-       try {
-           // 当前代（一组线程）
-           final Generation g = generation;
-           // 若这代损坏，则抛出异常
-           if (g.broken)
-               throw new BrokenBarrierException();
-   
-           // 若线程中断，则抛出异常
-           if (Thread.interrupted()) {
-               // 将损坏状态设置为true，并通知其他阻塞在次栅栏上的线程
-               breakBarrier();
-               throw new InterruptedException();
-           }
-           
-           // cout自减
-           int index = --count;
-           // 当count的数量减为0后，就说明最后一个线程已经到达栅栏，所有阻塞在栅栏上的线程都可以继续执行
-           if (index == 0) {  // tripped
-               boolean ranAction = false;
-               try {
-                   final Runnable command = barrierCommand;
-                   // 执行注册在栅栏上的任务
-                   if (command != null)
-                       command.run();
-                   ranAction = true;
-                   // 更新下一代，重置count，重置generation指针
-                   // 唤醒之前等待的线程
-                   nextGeneration();
-                   return 0;
-               } finally {
-                   if (!ranAction)
-                       breakBarrier();
-               }
-           }
-   
-           for (;;) {
-               try {
-                   // 如果没有时间限制，则直接等待，直到被唤醒
-                   if (!timed)
-                       trip.await();
-                   // 如果有时间限制，则等待指定的时间
-                   else if (nanos > 0L)
-                       nanos = trip.awaitNanos(nanos);
-               } catch (InterruptedException ie) {
-                   // g == generation >> 当前代
-                   // ! g.broken >>> 没有损坏
-                   if (g == generation && ! g.broken) {
-                       // 让栅栏失效
-                       breakBarrier();
-                       throw ie;
-                   } else {
-                       // 上面条件不满足，说明这个线程不是这代的
-                       // 就不会影响当前这代栅栏执行逻辑，所以打个标记就好
-                       Thread.currentThread().interrupt();
-                   }
-               }
-   			
-               // 当有任何一个线程中断了，就会调用breakBarrier方法
-               // 就会唤醒其他的线程，其他线程醒来后，也要抛出异常
-               if (g.broken)
-                   throw new BrokenBarrierException();
-   			
-               // g != generation >>> 正常换代了
-               // 一切正常，返回当前线程所在栅栏的下标
-               // 如果g == generation，说明还没有换代，那为什么会醒了？
-               // 因为一个线程可以使用多个栅栏，当别的栅栏唤醒了这个线程，就会走到这里，所以需要判断是否是当前代
-               // 正是因为这个原因，才需要generation来保证正确
-               if (g != generation)
-                   return index;
-   			
-               // 如果有时间限制，且时间小于等于0，销毁栅栏，并抛出异常
-               if (timed && nanos <= 0L) {
-                   breakBarrier();
-                   throw new TimeoutException();
-               }
-           }
-       } finally {
-           // 释放锁
-           lock.unlock();
-       }
-   }
-   ```
+    int getCount() {
+        return getState();
+    }
 
-6. 与CountDownLatch的区别：
+    protected int tryAcquireShared(int acquires) {
+        return (getState() == 0) ? 1 : -1;
+    }
 
-   1. CountDownLatch的计数器只能使用一次，在有些场合需要不停的创建CoutDownLatch的示例，存在浪费资源的现象；CyclicBarrier的计数器可以多次使用，并且能够通过 ``reset()`` 方法重置。
-   2. JavaDoc的描述：CountDownLatch是一个或多个线程，等待其他多个线程完成某些事情后才能执行；CyclicBarrier是多个线程互相等待，直达到达同一个同步点，再继续一起执行。
+    protected boolean tryReleaseShared(int releases) {
+        // 计数减量，变为0时会发出唤醒信号
+        for (;;) {
+            int c = getState();
+            if (c == 0)
+                return false;
+            int nextc = c-1;
+            if (compareAndSetState(c, nextc))
+                return nextc == 0;
+        }
+    }
+}
+
+private final Sync sync;
+```
+
+构造方法分析：
+
+```java
+// 初始化计数器的大小
+public CountDownLatch(int count) {
+    if (count < 0) throw new IllegalArgumentException("count < 0");
+    this.sync = new Sync(count);
+}
+```
+
+`await()` 方法分析：
+
+```java
+public void await() throws InterruptedException {
+    sync.acquireSharedInterruptibly(1);
+}
+
+public final void acquireSharedInterruptibly(int arg)
+    throws InterruptedException {
+    if (Thread.interrupted())
+        throw new InterruptedException();
+    if (tryAcquireShared(arg) < 0)
+        doAcquireSharedInterruptibly(arg);
+}
+
+// 尝试获取共享锁，计时器为0时不能获取
+protected int tryAcquireShared(int acquires) {
+    return (getState() == 0) ? 1 : -1;
+}
+
+// 以共享可中断模式获取锁
+private void doAcquireSharedInterruptibly(int arg)
+    throws InterruptedException {
+    final Node node = addWaiter(Node.SHARED);
+    boolean failed = true;
+    try {
+        for (;;) {
+            final Node p = node.predecessor();
+            if (p == head) {
+                int r = tryAcquireShared(arg);
+                if (r >= 0) {
+                    setHeadAndPropagate(node, r);
+                    p.next = null; // help GC
+                    failed = false;
+                    return;
+                }
+            }
+            if (shouldParkAfterFailedAcquire(p, node) &&
+                parkAndCheckInterrupt())
+                throw new InterruptedException();
+        }
+    } finally {
+        if (failed)
+            cancelAcquire(node);
+    }
+}
+```
+
+`countDown()` 方法分析：
+
+```java
+public void countDown() {
+    sync.releaseShared(1);
+}
+
+public final boolean releaseShared(int arg) {
+    if (tryReleaseShared(arg)) {
+        doReleaseShared();
+        return true;
+    }
+    return false;
+}
+
+protected boolean tryReleaseShared(int releases) {
+    // Decrement count; signal when transition to zero
+    for (;;) {
+        int c = getState();
+        if (c == 0)
+            return false;
+        int nextc = c-1;
+        if (compareAndSetState(c, nextc))
+            return nextc == 0;
+    }
+}
+
+/**
+ * Release action for shared mode -- signals successor and ensures
+ * propagation. (Note: For exclusive mode, release just amounts
+ * to calling unparkSuccessor of head if it needs signal.)
+ */
+private void doReleaseShared() {
+    /*
+     * Ensure that a release propagates, even if there are other
+     * in-progress acquires/releases.  This proceeds in the usual
+     * way of trying to unparkSuccessor of head if it needs
+     * signal. But if it does not, status is set to PROPAGATE to
+     * ensure that upon release, propagation continues.
+     * Additionally, we must loop in case a new node is added
+     * while we are doing this. Also, unlike other uses of
+     * unparkSuccessor, we need to know if CAS to reset status
+     * fails, if so rechecking.
+     */
+    for (;;) {
+        Node h = head;
+        if (h != null && h != tail) {
+            int ws = h.waitStatus;
+            if (ws == Node.SIGNAL) {
+                if (!compareAndSetWaitStatus(h, Node.SIGNAL, 0))
+                    continue;            // loop to recheck cases
+                unparkSuccessor(h);
+            }
+            else if (ws == 0 &&
+                     !compareAndSetWaitStatus(h, 0, Node.PROPAGATE))
+                continue;                // loop on failed CAS
+        }
+        if (h == head)                   // loop if head changed
+            break;
+    }
+}
+```
+
+
+
+#### 注意事项
+
+* CountDownLatch是一次性的，计数器只能在构造方法种初始化一次，之后没有任何机制可以修改，当CountDownLatch使用完毕后，就不能再次被使用。
+
+* CountDownLatch的await()方法使用不当容易发生死锁，若是没有足够的线程去countDown()将state置为0，那么通过await()阻塞的线程会永久等待下去。
+
+
+
+### CyclicBarrier循环屏障
+
+#### 基本概念
+
+CyclicBarrier的字面意思是可循环使用的屏障，就是让一组线程到一个屏障/同步点时被阻塞，直到最后一个线程到达后才会被放行，所有被拦截的线程才会继续执行。
+
+![image-20201031165914108](assets/image-20201031165914108.png)
+
+CountDownLatch是直接基于AQS实现的，而CyclicBarrier是基于ReentrantLock和Condition实现的。
+
+![CyclicBarrier](assets/CyclicBarrier.png)
+
+
+
+#### 应用场景
+
+主要适用于多线程计算数据，最后合并计算结果的场景。
+
+如：统计2010-2020年某银行账户的年平均流水，可以通过多个子线程去计算每一年的流水总和，等所有线程计算完毕后，屏障打开，由主线程或是注册在栅栏上的方法合并这些数据求平均值。
+
+若在上例的基础上，还要统计2010-2020各年度的流水占这10年总流水的比例，则屏障放开后还可以增加逻辑，在统计总流水之后，即放行之后，让线程各自再去计算比例。
+
+
+
+#### 使用示例
+
+```JAVA
+public class CyclicBarrierExample {
+    
+    private static final int threadNum = 550;
+    // private static final CyclicBarrier cyclicBarrier = new CyclicBarrier(5);
+    private static final CyclicBayourrier cyclicBarrier = new CyclicBarrier(5, () -> {
+    	System.out.println("当线程数量满足后，优先执行的代码逻辑。。。");
+    });
+    
+    public static void main(String[] args) throws InterruptedException {
+        ExecutorService threadPool = Executors.newFixedThreadPool(10);
+        
+        for (int i = 0; i < threadNum; i++) {
+            final int threadNum = i;
+            Thread.sleep(1000);
+            threadPool.execute(() -> {
+                try {
+                    // 进入屏障之前的逻辑
+                    System.out.println("threadNum: " + threadNum + " is ready");
+                    
+                    // 在屏障上阻塞，直到阻塞的线程数满足屏障的要求后才会继续执行
+                    cyclicBarrier.await();
+                    // 可以通过参数指定await的等待时间 
+                    // cyclicBarrier.await(60, TimeUnit.SECONDS);
+                    
+                    // 通过屏障之后的逻辑
+                    System.out.println("threadNum: " + threadNum + " is finish");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } catch (BrokenBarrierException e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+        
+        threadPool.shutdown();
+    }
+}
+```
+
+
+
+#### 源码分析
+
+基本属性和方法分析：
+
+```java
+// 分代（屏障和一组要共同通过屏障的线程就是一代）
+private static class Generation {
+    boolean broken = false;
+}
+
+// 控制同步的锁
+private final ReentrantLock lock = new ReentrantLock();
+// 等待跳闸的条件对象
+private final Condition trip = lock.newCondition();
+// 共同通过屏障的线程数
+private final int parties;
+// 屏障跳闸时执行的任务
+private final Runnable barrierCommand;
+// 当前代
+private Generation generation = new Generation();
+
+// 计数器
+private int count;
+
+// 创建屏障的下一代，并唤醒所有阻塞的线程，仅在同步锁中调用
+private void nextGeneration() {
+    // 发送上一代已经完成的信号
+    trip.signalAll();
+    // 建立下一代
+    count = parties;
+    generation = new Generation();
+}
+
+// 将屏障的当前代设置为损坏状态，并唤醒所有阻塞的线程，仅在同步锁中调用
+private void breakBarrier() {
+    generation.broken = true;
+    count = parties;
+    trip.signalAll();
+}
+```
+
+构造方法分析：
+
+```java
+// parties表示屏障拦截的线程数，当拦截的线程数量达到该值时，就打开栅栏，放行所有线程
+// barrierAction是在屏障打开时执行的任务
+public CyclicBarrier(int parties, Runnable barrierAction) {
+    if (parties <= 0) throw new IllegalArgumentException();
+    this.parties = parties;
+    this.count = parties;
+    this.barrierCommand = barrierAction;
+}
+
+public CyclicBarrier(int parties) {
+    this(parties, null);
+}
+```
+
+`await()` 方法分析：
+
+* 
+
+```JAVA
+public int await() throws InterruptedException, BrokenBarrierException {
+    try {
+        return dowait(false, 0L);
+    } catch (TimeoutException toe) {
+        throw new Error(toe); // cannot happen
+    }
+}
+
+private int dowait(boolean timed, long nanos) 
+    throws InterruptedException, BrokenBarrierException,
+		   TimeoutException {
+    final ReentrantLock lock = this.lock;
+    // 底层使用ReentrantLock获取和释放锁
+    lock.lock();
+    try {
+        // 当前代（一组线程）
+        final Generation g = generation;
+        // 若这代损坏，则抛出异常
+        if (g.broken)
+            throw new BrokenBarrierException();
+
+        // 若线程中断，则抛出异常
+        if (Thread.interrupted()) {
+            // 将损坏状态设置为true，并通知其他阻塞在该屏障上的线程
+            breakBarrier();
+            throw new InterruptedException();
+        }
+        
+        // 每到达一个线程时，计算器count就会减1
+        int index = --count;
+        // 当count的数量减为0后，就说明最后一个线程已经到达屏障（即跳闸了），所有阻塞在屏障上的线程都可以继续执行
+        if (index == 0) {  // tripped
+            boolean ranAction = false;
+            try {
+                final Runnable command = barrierCommand;
+                // 执行注册在屏障上的任务
+                if (command != null)
+                    command.run();
+                ranAction = true;
+                // 更新下一代，即重置count计数器，创建新的分代对象
+                // 并且通过Condition.signalAll()方法唤醒所有在屏障上等待的线程
+                nextGeneration();
+                return 0;
+            } finally {
+                if (!ranAction)
+                    breakBarrier();
+            }
+        }
+	
+        // 若count计数器不为0，则循环直到跳闸、损坏、中断或超时
+        for (;;) {
+            try {
+                // 如果没有时间限制，则通过Condition.await()直接等待，直到被唤醒
+                if (!timed)
+                    trip.await();
+                // 如果有时间限制，则等待指定的时间
+                else if (nanos > 0L)
+                    nanos = trip.awaitNanos(nanos);
+            } catch (InterruptedException ie) {
+                // 发生异常后，需要损坏当前代
+                // g == generation 是当前代
+                // ! g.broken 且没有损坏
+                if (g == generation && ! g.broken) {
+                    // 让屏障失效，即让当前代损坏，重置计数器，唤醒所有阻塞线程
+                    breakBarrier();
+                    throw ie;
+                } else {
+                    // 若上面的条件不满足，则说明当前线程不属于当前代
+                    // 就不会影响当前这代的执行逻辑，只会打上中断标记
+                    Thread.currentThread().interrupt();
+                }
+            }
+			
+            // 当有任何一个线程中断了，就会调用breakBarrier方法唤醒其他的线程，其他线程醒来后，也要抛出异常
+            if (g.broken)
+                throw new BrokenBarrierException();
+			
+            // 若g != generation，表示正常换代，返回当前线程所在的屏障的计数器个数
+            // 如果g == generation，说明还没有换代，线程被其他的屏障唤醒了
+            // 因为一个线程可以使用多个屏障，当别的屏障唤醒了这个线程，就会走到这里，所以需要判断是否是当前代
+            // 正是因为这个原因，才需要generation来保证正确
+            if (g != generation)
+                return index;
+			
+            // 如果有时间限制，且时间被设置为小于等于0，则破坏屏障，并抛出异常
+            if (timed && nanos <= 0L) {
+                breakBarrier();
+                throw new TimeoutException();
+            }
+        }
+    } finally {
+        // 释放锁
+        lock.unlock();
+    }
+}
+```
+
+
+
+#### CyclicBarrier与CountDownLatch的区别
+
+* CountDownLatch的计数器只能使用一次，在有些场合需要不停的创建CoutDownLatch的实例，存在浪费资源的现象。而CyclicBarrier的计数器可以多次使用，并且能够通过 ``reset()`` 方法重置。
+
+* JavaDoc的描述：CountDownLatch是一个或多个线程，等待其他多个线程完成某些事情后才能执行。而CyclicBarrier是多个线程为一组互相等待，直到达到某一个同步点，再继续一起执行。
 
 
 
@@ -2635,7 +3631,7 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 
 ### LockSupport
 
-**是什么？**
+#### 基本概念
 
 用于创建锁和其他同步类的基本线程阻塞原语。
 
@@ -2645,7 +3641,9 @@ Semaphore原理：与CoutDownLatch一样是共享锁的一种实现，默认初�
 
 三种形式的`park`每个也支持`blocker`对象参数。 在线程被阻塞时记录此对象，以允许监视和诊断工具识别线程被阻止的原因。 （此类工具可以使用方法[`getBlocker(Thread)`](https://www.apiref.com/java11-zh/java.base/java/util/concurrent/locks/LockSupport.html#getBlocker(java.lang.Thread))访问[阻止程序](https://www.apiref.com/java11-zh/java.base/java/util/concurrent/locks/LockSupport.html#getBlocker(java.lang.Thread)) 。）强烈建议使用这些表单而不是没有此参数的原始表单。 在锁实现中作为`blocker`提供的正常参数是`this` 。
 
-**为什么？**
+
+
+#### 出现的原因
 
 synchronized&wait&notify/notifyAll机制的限制：
 
@@ -2714,7 +3712,9 @@ public class AwaitSignalTest {
 }
 ```
 
-**怎么用？**
+
+
+#### 使用示例
 
 ```java
 public class LockSupport {
@@ -2726,14 +3726,14 @@ public class LockSupport {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            // 阻塞当前线程（凭证为0时阻塞，直到被发放了凭证后才会被唤醒）
+            // 阻塞当前线程（凭证为0时阻塞，直到被发放凭证后才会唤醒）
             LockSupport.park();
             System.out.println(Thread.currentThread().getName() + "\t线程已被唤醒");
         }, "A");
         a.start();
     	
         new Thread(() -> {
-            // 唤醒指定线程（为其发放1个凭证，凭证的上限为1）
+            // 唤醒指定线程（为指定线程发放1个凭证，凭证的上限为1）
             LockSupport.unpark(a);
             System.out.println(Thread.currentThread().getName() + "\t线程已发送通知唤醒等待线程");
         }).start();
@@ -2743,9 +3743,7 @@ public class LockSupport {
 
 
 
-
-
-### FutureTask
+### FutureTask异步任务
 
 用于异步获取执行结果或取消执行任务的场景。当一个计算任务需要执行很长时间，那么就可以用FutureTask来封装该任务，主线程可以在完成自己的任务后再去获取结果。
 
@@ -2780,12 +3778,31 @@ public class FutureTaskExample {
 
 
 
-### BlockingQueue
+### BlockingQueue阻塞队列
 
-java.util.concurrent.BlockingQueue 接口有以下阻塞队列的实现：
+#### 基本概念
 
-* FIFO队列：固定长度的 `LinkedBlockingQueue、ArrayBlockingQueue`；
-* 优先级队列：`PriorityBlockingQueue`。
+
+
+#### FIFO队列的实现
+
+`ArrayBlockingQueue`：
+
+`LinkedBlockingQueue`：
+
+二者的区别：
+
+
+
+#### 优先级队列的实现
+
+`PriorityBlockingQueue`：
+
+
+
+#### 使用示例
+
+阻塞队列实现生产者消费者模型：
 
 ```JAVA
 public class ProducerConsumer {
