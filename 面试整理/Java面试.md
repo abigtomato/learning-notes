@@ -6387,15 +6387,10 @@ JIT（ just in time）即时编译器。使用即时编译技术，加速Java程
 
 ### HotSpot编译
 
-当 JVM 执行代码时，它并不立即开始编译代码。这主要有两个原因：
+当JVM执行Java代码时，它并不立即开始编译代码。这主要有两个原因：
 
-首先，如果这段代码本身在将来只会被执行一次，那么从本质上看，编译就是在浪费精力。因为将代码翻译成 java 字节码相对于编译这段代码并执行代码来说，要快很多。
-
-当然，如果一段代码频繁的调用方法，或是一个循环，也就是这段代码被多次执行，那么编译就非常值得了。因此，编译器具有的这种权衡能力会首先执行解释后的代码，然后再去分辨哪些方法会被频繁调用来保证其本身的编译。其实说简单点，就是 JIT 在起作用，我们知道，对于 Java 代码，刚开始都是被编译器编译成字节码文件，然后字节码文件会被交由 JVM 解释执行，所以可以说 Java 本身是一种半编译半解释执行的语言。Hot Spot VM 采用了 JIT compile 技术，将运行频率很高的字节码直接编译为机器指令执行以提高性能，所以当字节码被 JIT 编译为机器码的时候，要说它是编译执行的也可以。也就是说，运行时，部分代码可能由 JIT 翻译为目标机器指令（以 method 为翻译单位，还会保存起来，第二次执行就不用翻译了）直接执行。
-
-第二个原因是最优化，当 JVM 执行某一方法或遍历循环的次数越多，就会更加了解代码结构，那么 JVM 在编译代码的时候就做出相应的优化。
-
-我们将在后面讲解这些优化策略，这里，先举一个简单的例子：我们知道 equals() 这个方法存在于每一个 Java Object 中（因为是从 Object class 继承而来）而且经常被覆写。当解释器遇到 b = obj1.equals(obj2) 这样一句代码，它则会查询 obj1 的类型从而得知到底运行哪一个 equals() 方法。而这个动态查询的过程从某种程度上说是很耗时的。
+* 首先，如果这段代码本身在将来只会被执行一次，那么从本质上看，编译就是在浪费精力。因为将代码翻译成 java 字节码相对于编译这段代码并执行代码来说，要快很多。当然，如果一段代码频繁的调用方法，或是一个循环，也就是这段代码被多次执行，那么编译就非常值得了。因此，编译器具有的这种权衡能力会首先执行解释后的代码，然后再去分辨哪些方法会被频繁调用来保证其本身的编译。其实说简单点，就是 JIT 在起作用，我们知道，对于 Java 代码，刚开始都是被编译器编译成字节码文件，然后字节码文件会被交由 JVM 解释执行，所以可以说 Java 本身是一种半编译半解释执行的语言。Hot Spot VM 采用了 JIT compile 技术，将运行频率很高的字节码直接编译为机器指令执行以提高性能，所以当字节码被 JIT 编译为机器码的时候，要说它是编译执行的也可以。也就是说，运行时，部分代码可能由 JIT 翻译为目标机器指令（以 method 为翻译单位，还会保存起来，第二次执行就不用翻译了）直接执行。
+* 第二个原因是最优化，当 JVM 执行某一方法或遍历循环的次数越多，就会更加了解代码结构，那么 JVM 在编译代码的时候就做出相应的优化。我们将在后面讲解这些优化策略，这里，先举一个简单的例子：我们知道 equals() 这个方法存在于每一个 Java Object 中（因为是从 Object class 继承而来）而且经常被覆写。当解释器遇到 b = obj1.equals(obj2) 这样一句代码，它则会查询 obj1 的类型从而得知到底运行哪一个 equals() 方法。而这个动态查询的过程从某种程度上说是很耗时的。
 
 
 
@@ -6411,12 +6406,12 @@ JIT（ just in time）即时编译器。使用即时编译技术，加速Java程
 int socket(int family, int type, int protocol);
 ```
 
-* 功能：创建套接字；
-* 参数：
-  * family：协议族，通常取值为PF_INET或AF_INET表示面向IPv4协议栈；
-  * type：套接字类型，**数据报套接字SOCK_DGRAM、流式套接字SOCK_STREAM**和原始套接字SOCK_RAW；
-  * protocol：协议，取值IPPROTO_TCP、IPPROTO_UDP分别表示TCP和UDP协议。
-* 返回：成功返回非负整数，为套接字描述符。失败，则返回-1。
+* **功能**：创建套接字；
+* **参数**：
+  * `family`：协议族，通常取值为PF_INET或AF_INET，表示面向IPv4或IPv6协议族；
+  * `type`：套接字类型，取值有数据报套接字SOCK_DGRAM、流式套接字SOCK_STREAM和原始套接字SOCK_RAW；
+  * `protocol`：协议，取值IPPROTO_TCP或IPPROTO_UDP，表示TCP和UDP协议。
+* **返回**：成功返回非负整数（即套接字描述符）。失败则返回-1。
 
 
 
@@ -6426,12 +6421,12 @@ int socket(int family, int type, int protocol);
 int bind(int sockfd, const struct sockaddr *myaddr, socklen_t addrlen);
 ```
 
-* 功能：为套接字绑定本地端口；
-* 参数：
-  * sockfd：本地套接字描述符；
-  * myaddr：本地端点地址；
-  * addrlen：端点地址长度。
-* 返回：成功返回0，失败返回-1。
+* **功能**：为套接字绑定本地端口；
+* **参数**：
+  * `sockfd`：本地套接字描述符；
+  * `myaddr`：本地端点地址；
+  * `addrlen`：端点地址长度。
+* **返回**：成功返回0，失败则返回-1。
 
 
 
@@ -6441,11 +6436,11 @@ int bind(int sockfd, const struct sockaddr *myaddr, socklen_t addrlen);
 int listen(int sockfd, int backlog);
 ```
 
-* 功能：将套接字置为监听状态；
-* 参数：
-  * sockfd：本地套接字描述符；
-  * backlog：连接请求队列大小。
-* 返回：成功返回0，失败返回-1。
+* **功能**：将套接字置为监听状态；
+* **参数**：
+  * `sockfd`：本地套接字描述符；
+  * `backlog`：连接请求的队列长度。
+* **返回**：成功返回0，失败则返回-1。
 
 
 
@@ -6455,12 +6450,12 @@ int listen(int sockfd, int backlog);
 int accept(int sockfd, struct socketaddr *cliaddr, socklen_t addrlen);
 ```
 
-* 功能：从监听状态的流套接字的客户连接请求队列中，取出排在最前的一个客户请求，并且创建一个新的套接字来与客户套接字建立TCP连接；
-* 参数：
-  * sockfd：本地流套接字描述符；
-  * cliaddr：用于存储客户端点地址；
-  * addrlen：端点地址长度。
-* 返回：成功返回非负整数，即新建与客户连接的套接字描述符。失败则返回-1。
+* **功能**：从监听状态的流式套接字的客户连接请求队列中，出队一个请求，并且创建一个新的套接字来与客户套接字建立TCP连接；
+* **参数**：
+  * `sockfd`：本地流套接字描述符；
+  * `cliaddr`：用于存储客户端点地址；
+  * `addrlen`：端点地址长度。
+* **返回**：成功返回非负整数，即新建的与客户连接的套接字描述符。失败则返回-1。
 
 
 
@@ -6470,13 +6465,13 @@ int accept(int sockfd, struct socketaddr *cliaddr, socklen_t addrlen);
 ssize_t send(int sockfd, const void *buff, size_t nbytes, int flags);
 ```
 
-* 功能：发送数据；
-* 参数：
-  * sockfd：本地套接字描述符；
-  * buff：指向存储待发送数据的缓存指针；
-  * nbytes：数据长度；
-  * flags：控制比特，通常取0。
-* 返回：成功返回发送的字节数，失败返回-1。
+* **功能**：发送数据（流式套接字）；
+* **参数**：
+  * `sockfd`：本地套接字描述符；
+  * `buff`：指向存储待发送数据的缓存指针；
+  * `nbytes`：数据长度；
+  * `flags`：控制比特，通常取0。
+* **返回**：成功返回发送的字节数，失败则返回-1。
 
 
 
@@ -6486,46 +6481,46 @@ ssize_t send(int sockfd, const void *buff, size_t nbytes, int flags);
 ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
 ```
 
-* 功能：接收数据；
-* 参数：
-  * sockfd：本地套接字描述符；
-  * buff：指向存储接收数据的缓存指针；
-  * nbytes：数据长度；
-  * flags：控制比特，通常取0。
-* 返回：成功返回接收到的字节数，失败返回-1。
+* **功能**：接收数据（流式套接字）；
+* **参数**：
+  * `sockfd`：本地套接字描述符；
+  * `buff`：指向存储接收数据的缓存指针；
+  * `nbytes`：数据长度；
+  * `flags`：控制比特，通常取0。
+* **返回**：成功返回接收到的字节数，失败则返回-1。
 
 
 
-## I/O模型-Linux的五种I/O模型
+## I/O模型-Linux的I/O模型
 
 ### I/O相关概念
 
 **同步和异步（消息的通知机制）**：
 
-* 所谓同步，就是发出一个功能调用时，在没有得到结果之前，该调用就不返回。如应用程序调用readfrom系统调度时，必须等待内核的I/O操作执行完成才能够返回；
-* 异步的概念和同步相对，当一个异步过程调用发出后，调用者不能立即得到结果。实际处理这个调用的部件在完成后，通过状态、通知和回调来通知调用者。如应用程序调用aio_read系统调用时，不必等到操作完成就可以直接返回，操作的结果通过信号通知调用者。
+* **同步**：所谓同步，就是发出一个功能调用时，在没有得到结果之前，该调用就不会返回。如应用程序调用 `readfrom` 系统调度时，必须等待内核的I/O操作执行完成后才能够返回；
+* **异步**：异步的概念和同步相对，当一个异步的功能调用发出后，调用者会立即得到返回，但不会立即得到结果。当这个调用被真正的处理完毕后，再通过状态、信号和回调来通知调用者。如：应用程序调用 `aio_read` 系统调用时，不必等到操作完成就可以直接返回，操作的结果会在真正完成后通过信号通知调用者。
 
 **阻塞和非阻塞（等待消息通知时的状态）**：
 
-* 阻塞调用是指调用结果返回之前，当前线程会被挂起，函数只有在得到结果之后才会返回。阻塞和同步是完全不同的概念，首先，同步是对于消息的通知机制而言，阻塞是针对等待消息通知时的状态来说的。而且对于同步调用来说，大部分情况下线程还是激活的，只是从逻辑上当前函数没有返回而已；
-* 非阻塞和阻塞的概念相对，指在不能立即得到结果时，该函数不会阻塞当前线程，而会立即返回，并设置相应的异常序号。虽然表面上看非阻塞的方式可以明显提高CPU的利用率，但也带来了另外一种后果就是系统的线程切换频率增加。所以增加的CPU利用率能不能补偿CPU频繁切换上下文带来的消耗需要好好的评估。
+* **阻塞**：阻塞调用是指调用结果返回之前，当前线程会被阻塞/挂起，只有在得到结果之后才会继续执行。阻塞和同步是完全不同的概念，同步是对于消息的通知机制而言，而阻塞是针对等待消息通知时的状态来说的；
+* **非阻塞**：非阻塞的概念和阻塞相对，即在不能立即得到调用结果时，不会阻塞当前线程，而会继续执行，并设置相应的异常序号。虽然表面上看非阻塞的方式可以明显提高CPU的利用率，但也带来了另外一种后果就是系统的线程切换频率增加。所以增加的CPU利用率能不能补偿CPU频繁切换上下文带来的消耗需要好好的评估。
 
-**事例描述（小明下载文件）：**
+**事例描述（小明下载文件）**：
 
-* 同步阻塞：小明一直盯着下载进度条，到100%的时候就完成。
+* **同步阻塞**：小明一直盯着下载进度条，直到100%的时候完成下载。
   * 同步：等待下载进度到100%；
   * 阻塞：等待下载完成的过程中，小明不干别的事。
-* 同步非阻塞：小明提交下载任务后就去干别的事，没过一段时间就去看一看进度条，看到100%就完成。
+* **同步非阻塞**：小明提交下载任务后就去干别的事，每过一段时间就去看一眼进度条，看到100%就完成下载。
   * 同步：等待下载进度到100%；
   * 非阻塞：等待进度条到底的过程中，干别的事，只是时不时的回来看一眼。即小明要在两个任务间来回切换，关注下载进度。
-* 异步阻塞：小明更换了一个带下载完成通知的下载器，当下载完成后会叮一声，不过小明一直等着叮声响起。
+* **异步阻塞**：小明更换了一个带下载完成通知的下载器，当下载完成后会叮一声，不过小明一直等着叮声响起。
   * 异步：下载完成叮一声通知；
   * 阻塞：等待通知声响起，不去做其他得事。
-* 异步非阻塞：小明提交任务后就去干别的事，直到听见叮的一声就完成。
+* **异步非阻塞**：小明提交任务后就去干别的事，直到听见叮的一声就完成。
   * 异步：下载完成叮一声通知；
   * 非阻塞：先去做其他事，只需要等通知即可。
 
-**Linux中的输入操作包括两个阶段：**
+**Linux中的输入操作包括两个阶段**：
 
 * 首先，等待数据准备好，即文件的状态发生变化，到达内核缓冲区；
 * 其次，从内核向进程复制数据，即从内核空间拷贝到用户空间；
@@ -6537,10 +6532,11 @@ ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
 
 <img src="assets/20180630234416208" alt="这里写图片描述" style="zoom:67%;" />
 
-* 最简单最常用的一种模型，在Linux中，默认情况下所有套接字都是阻塞的；
-* 上图是阻塞套接字recvfrom的系统调用流程图，进程调用一个recvfrom请求，但是不能立即收到回复，需要等待内核的操作执行完成返回成功提示，进程才能处理数据报；
-* 在IO执行的两个阶段中，进程都处于阻塞（blocked）状态，在等待数据返回的过程中不做其他任何工作，只能阻塞等待在那里；
-* 优点是简单、实时性高、相应及时无延迟。缺点是阻塞等待性能差。
+* 同步阻塞式I/O。最简单最常用的一种I/O模型。在Linux中，默认情况下所有套接字都是阻塞式的；
+* 上图是阻塞套接字 `recvfrom` 系统调用的流程图，进程调用一个 `recvfrom` 请求，但是不能立即收到回复，需要等待内核的操作执行完成返回成功提示后，进程才能处理数据报；
+* 在IO执行的两个阶段中，进程都处于阻塞（Blocked）状态，在等待数据返回的过程中不做其他任何工作，只能阻塞等待在那里。
+* **优点**：简单、实时性高、响应及时无延迟；
+* **缺点**：阻塞等待性能较差、CPU利用率较低。
 
 
 
@@ -6548,27 +6544,27 @@ ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
 
 <img src="assets/20180630234618392" alt="这里写图片描述" style="zoom:67%;" />
 
-* 与阻塞IO不同的是，非阻塞的recvfrom系统调用后，进程并没有被阻塞，内核会立即返回给进程消息，若是数据还未准备好，则返回一个error（EAGAIN或EWOULDBLOCK）；
-* 进程收到返回后，可以处理其他的事情，每过一段时间就会再次发起recvfrom系统调用，采用轮询的方式检查内核数据，直到数据准备好，再发起recvfrom系统调用，让数据拷贝到进程，再进行数据处理；
-* 上图是Linux下设置为非阻塞的套接字的recvfrom系统调用的流程图，前三次调用recvfrom请求，但是数据没有准备好，所以内核返回errno(EWOULDBLOCK)，并不会阻塞进程，但是当第四次调用recvfrom时数据已经准备好了，然后触发并等待数据被拷贝到用户空间，处理数据；
-* 在非阻塞状态下，IO执行的等待阶段并不是完全阻塞的，但第二个阶段等待数据从内核拷贝到用户空间时会处于阻塞状态；
+* 同步非阻塞式I/O。与阻塞I/O不同的是，非阻塞的 `recvfrom` 系统调用后，进程并没有被阻塞，内核会立即返回给进程消息，若是数据还未准备好，则返回一个error（EAGAIN或EWOULDBLOCK）；
+* 进程收到返回后，可以处理其他的事情，每过一段时间就会再次发起 `recvfrom` 系统调用，采用轮询的方式检查内核数据，直到数据准备好，最后等到数据被拷贝到进程，再进行数据处理；
+* 上图是Linux下设置为非阻塞套接字的 `recvfrom` 系统调用的流程图，前三次调用 `recvfrom` 请求，但是数据没有准备好，所以内核返回 `errno: EWOULDBLOCK`，但是当第四次调用 `recvfrom` 时数据已经准备好了，最后等待数据被拷贝到用户空间，处理数据；
+* 在非阻塞状态下，对于I/O执行的两个阶段进程并不是完全非阻塞的，第一个阶段等待数据准备完毕会采用轮询访问的非阻塞方式，而第二个阶段等待数据从内核拷贝到用户空间时会处于阻塞等待状态。
 * 同步非阻塞方式相对于同步阻塞方式：
-  * 优点：能够在等待任务完成得时间里做其他事，包括提交其他任务，也就是后台可以有多个任务在同时执行；
-  * 缺点：任务完成的响应延迟增大了，因为每过一段时间才去轮询一次read操作，而任务可能在两次轮询之间的任意时间完成，这样会导致整体数据吞吐量降低。
+  * **优点**：能够在等待任务完成的时间里做其他事，包括提交其他任务，也就是允许多个任务同时执行；
+  * **缺点**：任务完成的响应延迟增大了，因为每过一段时间才去轮询一次 read 操作，而任务可能在两次轮询之间的任意时间完成，这样会导致整体数据吞吐量降低。
 
 
 
 ### I/O多路复用
 
-![img](assets/166e31ccf057bd4d)
+<img src="assets/166e31ccf057bd4d" alt="img" style="zoom:80%;" />
 
-* 使用单个进程同时处理多个网络连接的IO。基本原理就是不再有应用程序自己监视连接，取而代之是由内核替应用程序监视文件描述符；
-* 以select为例，当用户进程调用了select，那么整个进程会被阻塞，而同时，kernel会监视所有select负责的socket，当任何一个socket中的数据准备好了，select就会返回，这时用户进程再通过recvfrom系统调用，触发并等待数据从内核拷贝到用户进程；
-* 上图就是Linux中使用select多路复用响应socket连接的流程图，需要使用两个系统调用（select和recvfrom），而阻塞IO只调用了一个system_call（recvfrom）。所以，如果处理的连接数不是很高的话，使用IO复用的服务器不一定比使用多线程+非阻塞/阻塞IO的性能更好，可以会有更大的延迟。IO复用的优势并不是对于单个连接能处理的更快，而是单个进程就可以同时处理多个网络连接的IO；
-* 实际使用时，对于每一个socket，都可以设置为非阻塞。但是用户进程其实是一直被阻塞的，只不过是被select这个函数所阻塞，而不是被IO操作阻塞。所以IO多路复用是阻塞在select、poll、epoll这样的系统调用上，而没有真正阻塞在IO系统调用recvfrom上；
-* 优势：与传统的多线程/多进程模型相比，IO多路复用的最大优势是系统开销小，不需要创建新的额外进程或线程，也不需要维护这些进程和线程的运行，降低了系统的维护工作量，节省了系统资源；
-* 应用场景：
-  * 服务器需要同时处理多个处于监听状态或者多个连接状态的套接字；
+* 同步非阻塞式I/O。所谓多路复用，即使用单个进程同时处理多个网络连接的I/O。基本原理就是不再由应用程序自己监听连接，取而代之是由内核替代应用程序监视文件描述符；
+* 以 `select` 为例，当用户进程调用了 `select` 系统调用，那么整个进程会被阻塞。同时Kernel会监听所有在 `select` 上注册的Socket，当任何一个Socket中的数据准备好了，`select` 就会返回可读条件。这时用户进程再通过 `recvfrom` 系统调用，触发并等待数据从内核拷贝到用户进程；
+* 上图就是Linux中使用 `select` 多路复用机制响应Socket连接的流程图。涉及到两个系统调用（`select` 和 `recvfrom`），而阻塞IO只调用了一个 `system_call(recvfrom)`。所以，如果处理的连接请求不是很多的话，使用I/O复用器不一定比使用多线程+非阻塞/阻塞IO的性能更好，可以会有更大的延迟。I/O复用的优势并不是对于单个连接能处理的更快，而是使用单个进程就可以同时处理多个网络连接的I/O；
+* 实际使用时，对于每一个Socket，都可以设置为非阻塞。用户进程在两个阶段都是阻塞的，只不过是阻塞在系统调用上，而是不阻塞在I/O操作上，即并不会阻塞等待I/O数据准备好，而是将非阻塞I/O的轮询访问交给了内核去做。
+* **优点**：与传统的并发模型相比，I/O多路复用的最大优势是系统开销小，不需要创建额外的进程或线程，也不需要维护这些进程和线程的运行，降低了系统的维护工作量，节省了系统资源。
+* **应用场景**：
+  * 服务器需要同时处理多个处于监听或连接状态的套接字；
   * 服务器需要同时处理多种网络协议的套接字，如：同时处理TCP和UDP请求；
   * 服务器需要监听多个端口或处理多种服务；
   * 服务器需要同时处理用户输入和网络连接。
@@ -6579,8 +6575,8 @@ ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
 
 <img src="assets/20180630234803839" alt="这里写图片描述" style="zoom:67%;" />
 
-* 通过sigaction系统调用，允许socket进行信号驱动IO，并在用户进程注册一个SIGIO的信号处理函数，用户进程会继续运行不阻塞。当数据准备好时，进程会收到一个SIGIO信号，可以在信号处理函数中调用IO操作函数处理数据；
-* 用户进程不会在IO操作的第一阶段阻塞，只会在第二阶段阻塞。
+* 同步非阻塞I/O。通过 `sigaction` 系统调用，允许Socket使用信号驱动I/O，并在用户进程注册一个SIGIO的信号处理函数，用户进程会继续运行而不阻塞。当数据准备好时，进程会收到一个SIGIO信号，然后可以在信号处理函数中调用I/O操作函数处理数据；
+* 用户进程不会在I/O操作的第一阶段阻塞，只会在第二阶段阻塞。
 
 
 
@@ -6588,13 +6584,13 @@ ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
 
 <img src="assets/20180630234859454" alt="这里写图片描述" style="zoom:67%;" />
 
-* 上述四种IO都是同步模型，相对于同步IO，异步IO不是顺序执行的。用户进程进行aio_read系统调用后，就可以去处理其他的逻辑了，无论内核数据是否准备好，都会直接返回给用户进程，不会对进程造成阻塞；
-* 等到数据准备完毕，内核直接复制数据到用户进程空间，然后从内核向进程发送通知信号，此时数据已经在用户空间了，可以对数据进行处理；
+* 异步非阻塞I/O。上述四种IO都是同步模型，相对于同步IO，异步IO不是顺序执行的。用户进程进行 `aio_read` 系统调用后，就可以去处理其他的逻辑了，无论内核数据是否准备好，都会直接返回给用户进程，不会对进程造成阻塞；
+* 等到数据准备完毕，内核直接复制数据到用户进程空间，然后从内核向进程发送通知信号，告知用户进程：此时数据已经在用户空间了，可以直接对数据进行处理；
 * 在Linux中，通知的方式是信号，分为三种情况：
-  * 如果这个进程正在用户态处理其他逻辑，那就强行中断，调用事先注册的信号处理函数，这个函数可以决定何时以及如何处理这个异步任务。由于信号处理函数是随机传递过来的，因此和中断处理程序一样，有很多事情是不能做的，为了保险起见，一般是把事件登记一下放进队列，然后返回该进程原来在做的事件；
-  * 如果这个进程正在内核态处理，如以同步阻塞的方式读写磁盘，那就把这个通知挂起，等到内核态的事件处理完毕，快要回到用户态时，再触发信号的通知；
-  * 如果这个进程现在被挂起了，如陷入睡眠，那就把这个进程唤醒，等待CPU调度，触发信号通知。
-* 在此模型下，IO的两个阶段均为非阻塞。
+  * 如果这个进程正在用户态处理其他逻辑，那就强行中断，调用事先注册的信号处理函数，这个函数可以决定何时以及如何处理这个异步任务。由于信号处理函数是随机触发的，因此和中断处理程序一样，有很多事情是不能做的，为了保险起见，一般是把事件登记一下放进队列，然后返回该进程原来在做的事；
+  * 如果这个进程正在内核态处理，如：正在以同步阻塞的方式读写磁盘，那就把这个通知挂起，等到内核态的事件处理完毕，快要回到用户态时，再触发信号的通知；
+  * 如果这个进程现在被阻塞/挂起了，那就把这个进程唤醒，等待CPU调度，触发信号通知。
+* 在此模型下，进程在I/O的两个阶段中均为非阻塞。
 
 
 
@@ -6602,18 +6598,22 @@ ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
 
 <img src="assets/2018063023500587" alt="这里写图片描述" style="zoom:67%;" />
 
-* 前四种IO模型都是同步模型，区别在于第一阶段，第二阶段都是一样的，都是在数据从内核复制到应用程序缓冲区期间（用户空间），进程阻塞于recvfrom调用；
-* 相反，异步IO模型在等待数据和接收数据这两个阶段都是非阻塞的，可以处理其他的逻辑，即用户进程将整个IO操作交给内核完成，内核完成后会发起通知，在此期间，用户进程不需要去检查IO状态，也不需要主动的去触发数据的拷贝。
+* 前四种I/O模型都是同步模型，至于阻塞和非阻塞的区别在于I/O执行的第一阶段，而第二阶段都是一样阻塞的，都是在数据从内核缓冲区复制到应用程序缓冲区期间，进程阻塞于 `recvfrom` 调用；
+* 相反，异步I/O模型在等待数据和接收数据这两个阶段都是非阻塞的，用户进程可以处理其他的逻辑，即用户进程将整个I/O操作交给内核完成，内核全部完成后才会发起通知，在此期间，用户进程不需要去检查I/O状态，也不需要主动的去触发数据的拷贝。
 
 
 
-## I/O模型-Linux的I/O多路复用模型
+## I/O模型-Linux的I/O多路复用
 
-**文件描述符（File Descriptor）：**用于表述指向文件引用的抽象化概念。fd在形式上是一个非负整数，实际上是一个索引值，指向内核为每一个进程所维护的该进程打开文件的记录表。当程序打开一个现有文件或创建一个新文件时，内核向进程返回一个文件描述符。
+### 基本概念
 
-**缓存I/O：**又称标准I/O，是大多数文件系统的默认I/O。在Linux中，OS会将I/O的数据缓存在文件系统的页缓存中，即数据会被先拷贝到OS内核的缓冲区中，然后才会从操作系统内核的缓冲区拷贝到应用程序的地址空间。
+* **文件描述符（File Descriptor）**：表示指向文件引用的抽象化概念。fd在形式上是一个非负整数，实际上是一个索引值，指向内核为每一个进程所维护的该进程打开文件的记录表。当程序打开一个现有文件或创建一个新文件时，内核向进程返回一个文件描述符。
 
-### select/poll
+* **缓存I/O**：又称标准I/O，是大多数文件系统的默认I/O。在Linux中，内核会将I/O的数据缓存在文件系统的页缓存中，即数据会被先拷贝到操作系统内核缓冲区中，然后才会从操作系统内核缓冲区拷贝到应用程序的地址空间中。
+
+
+
+### select
 
 ![img](assets/20190527213148418.png)
 
@@ -6621,33 +6621,37 @@ ssize_t recv(int sockfd, void *buff, size_t nbytes, int flags);
 int select(int maxfdp1, fd_set *readset, fd_set *writeset, fd_set *exceptset, const struct timeval *timeout);
 ```
 
-* 参数：
-  * `int maxfdp1`：指定待监听的文件描述符个数，它的值是待监听的最大描述符加1；
-  * `fd_set *readset, fd_set *writeset, fd_set *exceptset`：fd_set可以理解为存放fd的集合，三种不同的参数指定内核监听读、写和异常的fd集合；
-  * `const struct timeval *timeout`：超时参数，调用select会一直阻塞直到有fd事件发生或事件超时。
-* 返回值：若有就绪的fd则返回其数量，若超时则为0，出错则为-1；
-* 运行机制：select机制提供一种fd_set数据结构，是一个long类型的数组，数组中的每个元素都能于一个fd建立联系。当select()被调用时，由内核根据IO状态修改fd_set的内容，由此来通知执行了select()的进程哪一个Socket或文件可读/写或建立连接。TODO
-* 优点：在一个线程内可以同时处理多个Socket的IO请求。
-* 缺点：
+* **参数**：
+  * `int maxfdp1`：指定待监听的文件描述符个数，它的值是待监听的最大描述符加1。
+  * `fd_set *readset, fd_set *writeset, fd_set *exceptset`：fd_set可以理解为存放fd的集合，三种参数指定内核对fd集合的监听事件（读、写和异常）；
+  * `const struct timeval *timeout`：超时参数，调用select会一直阻塞直到有fd发生事件或等待超时。
+* **返回值**：若有就绪的fd则返回其数量，若超时则为0，出错则为-1。
+* **运行机制**：select机制提供一种fd_set数据结构，是一个long类型的数组，数组中的每个元素都能与一个fd建立联系。当 `select()` 被调用时，由内核根据I/O状态修改fd_set的内容，由此来通知执行了 `select()` 的进程哪一个Socket或文件可读/写或建立连接。
+* **优点**：在一个线程内可以同时处理多个Socket的I/O请求。
+* **缺点**：
   * 每次调用select，都需要将fd_set从用户空间拷贝到内核空间，若集合很大会造成很大的开销；
   * 每次调用select，都需要在内核遍历整个fd_set，若集合很大会造成很大的开销；
-  * 为了减少拷贝数据带来的性能消耗，内核对被监控的fd_set做了大小限制（1024），且是通过宏实现的，大小不可改变。
+  * 为了减少拷贝数据带来的性能消耗，内核对被监听的fd_set做了大小限制（1024），且是通过宏实现的，大小不可改变。
+
+
+
+### poll
 
 ```C
 int poll(struct pollfd *fds, nfds_t nfds, int timeout);
 
 typedef struct pollfd {
 	int fd;			// 需要被检测或选择的文件描述符
-	short events;	// 对文件描述符fd上感兴趣的事件
-    short revents;	// 文件描述符fd上当前实际发生的事件
+	short events;	// 文件描述符fd上感兴趣的事件
+    short revents;	// 文件描述符fd当前实际发生的事件
 } pollfd_t;
 ```
 
-* 参数：
-  * `struct pollfd *fds`：fds是一个pollfd类型的数组，用于存放需要检测其状态的fd，且调用poll后fds不会被清空。一个pollfd结构体用于表示一个被监视的fd，通过传递fds指示poll监视多个fd。其中，events域是监视该fd的事件掩码（由用户设置），revents域是fd的操作结果事件掩码（内核在调用返回时设置）；
+* **参数**：
+  * `struct pollfd *fds`：fds是一个pollfd类型的数组，用于存放需要检测其状态的fd和对应事件，且调用poll后fds不会被清空。一个pollfd结构体用于表示一个被监听的fd，通过传递fds指示poll监视多个fd。其中，events域是该fd对应的感兴趣的事件掩码（由用户设置），revents域是该fd实际发生的事件掩码（由内核在调用返回时设置）；
   * `nfds_t nfds`：记录数组fds中描述符的总数量。
-* 返回值：返回集合中已就绪的读写或异常的fd数量，返回0表示超时，返回-1表示异常。
-* 针对select的改进：改变了fd集合的结构，使用pollfd结构替代了select的fd_set结构，使得poll没有了最大fd数量的限制。
+* **返回值**：返回集合中已就绪的读写或异常的fd数量，返回0表示超时，返回-1表示异常。
+* **针对select的改进**：改变了fd集合的结构，使用pollfd链表结构替代了select的fd_set数组结构，使得poll没有了最大fd数量的限制。
 
 
 
@@ -6655,37 +6659,37 @@ typedef struct pollfd {
 
 ![img](assets/20190527231438974.png)
 
-* epoll是Linux内核对多路复用IO接口作出的改进版本，显著提高程序在大量并发连接中只有少量活跃的情况下CPU的利用率。即在监听事件就绪的过程中，不需要遍历整个被监听的描述符集，只要遍历那些被内核IO事件异步唤醒而加入Ready队列（链表）的描述符集合即可。
+* epoll是Linux内核对I/O多路复用接口的改进版本，显著提高程序在大量并发连接中只有少量活跃情况下CPU的利用率。在监听事件就绪的过程中，不需要遍历整个被监听的描述符集合，只需要遍历那些发生内核I/O事件被异步唤醒而加入Ready队列（链表）的描述符集合即可。
 
   ```c
   struct eventpoll{  
       ....  
-      /* 红黑树的根节点，这颗树中存储着所有添加到epoll中的需要监控的事件 */  
+      // 红黑树的根节点，这颗树中存储着所有添加到epoll中的需要监听的描述符
       struct rb_root  rbr;  
-      /* 双链表中则存放着将要通过epoll_wait返回给用户的满足条件的事件 */  
-      struct list_head rdlist;  
+      // 双向链表中则存放着将要通过 epoll_wait 返回给用户的发生事件就绪的数据
+      struct list_head rdlist;
       ....  
-  }; 
+  };
   ```
 
-* fd进入红黑树时会注册事件和回调函数，当网络连接和数据读写等事件发生时，由网卡驱动发出中断，产生事件然后调用call_back使fd加入就绪队列。
+* fd进入红黑树时会对应的注册事件和回调函数，当网络连接和数据读写等事件发生时，由网卡驱动发出中断，产生事件然后调用call_back使fd加入就绪队列。
 
   ```c
   struct epitem{  
-      struct rb_node  rbn;//红黑树节点  
-      struct list_head    rdllink;//双向链表节点  
-      struct epoll_filefd  ffd;  //事件句柄信息  
-      struct eventpoll *ep;    //指向其所属的eventpoll对象  
-      struct epoll_event event; //期待发生的事件类型  
-  }
+      struct rb_node rbn;			// 红黑树节点  
+      struct list_head rdllink;	// 双向链表节点  
+      struct epoll_filefd ffd;	// 事件句柄信息  
+      struct eventpoll *ep;		// 指向其所属的eventpoll对象  
+      struct epoll_event event;	// 期待发生的事件类型  
+  };
   ```
 
-![img](assets/285763-20180109161439722-2055589839.png)
+<img src="assets/285763-20180109161439722-2055589839.png" alt="img" style="zoom: 67%;" />
 
-* epoll没有描述符个数的限制，使用一个fd管理多个fd，将用户关心的fd的事件存放到内核的一个事件表中，这样在用户空间和内核空间的copy只需要一次。
+* epoll没有描述符个数的限制，会将整个描述符集合放入一块用户和内核空间的共享内存中。这样在用户空间和内核空间的copy只需要一次即可。
 * epoll提供了两种IO事件的触发方式：
-  * **水平触发（LT，Level Trigger）**：默认工作模式，即当epoll_wait检测到某描述符事件的就绪并通知应用程序时，应用程序可以不立即处理该事件，待下次调用epoll_wait时，会再次通知此事件；
-  * **边缘触发（ET，Edge Trigger）**：当epoll_wait检测到某描述符事件就绪并通知应用程序时，应用程序必须立即处理该事件。如果不处理，下次调用epoll_wait时，不会再次通知此事件，即边缘触发机制只会在状态由未就绪变为就绪时通知一次。
+  * **水平触发（LT，Level Trigger）**：默认工作模式，即当 `epoll_wait` 检测到某描述符事件的就绪并通知应用程序时，应用程序可以不立即处理该事件。等到下次调用 `epoll_wait` 时，会再次通知此事件；
+  * **边缘触发（ET，Edge Trigger）**：当 `epoll_wait` 检测到某描述符事件就绪并通知应用程序时，应用程序必须立即处理该事件。如果不处理，下次调用 `epoll_wait` 时，不会再次通知此事件，即边缘触发机制只会在状态由未就绪变为就绪时通知一次。
 
 ```C
 int epoll_create(int size);
@@ -6693,24 +6697,32 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
 int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout);
 ```
 
-* `epoll_create`：创建一个epoll句柄，参数size表示内核要监听的fd数量，调用成功时返回一个epoll句柄描述符，失败返回-1；
-* `epoll_ctl`：用于注册要监听的事件类型。
-  
-  * `epfd`：表示epoll的句柄；
-  
-  * `op`：表示对fd的操作类型：
-  
+* `epoll_create`：创建一个epoll的fd，参数size表示内核要监听的fd数量，调用成功时返回一个epoll文件描述符，失败返回-1；
+* `epoll_ctl`：用于注册要监听的fd和事件。
+
+  * `epfd`：表示epoll的fd；
+
+  * `op`：表示对fd的操作类型。
+
     * **EPOLL_CTL_ADD**：注册新的fd到epfd中；
     * **EPOLL_CTL_MOD**：修改已注册fd的监听事件；
     * **EPOLL_CTL_DEL**：从epfd中删除一个fd。
-  
+
   * `fd`：表示需要监听的描述符；
-  
+
   * `event`：表示需要监听的事件。
-  
+
+    * EPOLLIN：表示对应的文件描述符可以读（包括对端Socket正常关闭）；
+    * EPOLLOUT：表示对应的文件描述符可以写；
+    * EPOLLPRI：表示对应的文件描述符有紧急的数据可读（这里应该表示有带外数据到来）；
+    * EPOLLERR：表示对应的文件描述符发生错误；
+    * EPOLLHUP：表示对应的文件描述符被挂断；
+    * EPOLLET：将EPOLL设为边缘触发（Edge Triggered）模式，这是相对于水平触发（Level Triggered）来说的；
+    * EPOLLONESHOT：只监听一次事件，当监听完这次事件之后，如果还需要继续监听这个socket的话，需要再次把这个socket加入到EPOLL队列里。
+
     ```C
     struct epoll_event {
-        __uint32_t events;  /* Epoll events */
+        __uint32_t events;  /* 配置epoll监听的事件类型 */
         epoll_data_t data;  /* User data variable */
     };
     
@@ -6720,19 +6732,10 @@ int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout
         __uint32_t u32;
         __uint64_t u64;
     } epoll_data_t;
-    
-    // events可以是以下几个宏的集合
-    EPOLLIN ：表示对应的文件描述符可以读（包括对端SOCKET正常关闭）；
-    EPOLLOUT：表示对应的文件描述符可以写；
-    EPOLLPRI：表示对应的文件描述符有紧急的数据可读（这里应该表示有带外数据到来）；
-    EPOLLERR：表示对应的文件描述符发生错误；
-    EPOLLHUP：表示对应的文件描述符被挂断；
-    EPOLLET：将EPOLL设为边缘触发（Edge Triggered）模式，这是相对于水平触发（Level Triggered）来说的；
-    EPOLLONESHOT：只监听一次事件，当监听完这次事件之后，如果还需要继续监听这个socket的话，需要再次把这个socket加入到EPOLL队列里。
     ```
-* `epoll_wait`：等待事件的就绪，成功时返回就绪的事件数目，失败则返回-1，等待超时返回0。
+* `epoll_wait`：等待事件的就绪，成功时返回就绪的事件数量，失败则返回-1，等待超时返回0。
   
-  * `epfd`：表示epoll的句柄；
+  * `epfd`：表示epoll的fd；
   * `events`：表示从内核得到的就绪事件集合；
   * `maxevents`：通知内核events的大小；
   * `timeout`：表示等待的超时时间。
@@ -6755,9 +6758,13 @@ int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout
 
 ### mmap
 
+TODO
+
+
+
 ### sendfile
 
-**系统调用：**
+#### 系统调用
 
 ```c
 ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count)
@@ -6768,69 +6775,98 @@ ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count)
 * `offset`：在正式开始读取数据时向前偏移的byte数；
 * `count`：在两个fd直接移动的byte数。
 
-**传统IO发送文件到Socket的步骤：**
 
-* 硬盘 -> 内核buffer -> 用户buffer -> 内核Socket buffer -> 协议引擎。共经过2次陷入。
-* 硬件驱动到内核缓冲区的DMA拷贝（read()调用）-> 内核缓冲区到用户缓冲区的CPU拷贝（read()返回） -> 用户缓冲区到内核Socket缓冲区的CPU拷贝（write()调用） -> Socket缓冲区到协议引擎的DMA拷贝（write()返回）。共经过4次拷贝。
+
+#### 传统I/O发送文件到Socket的步骤
+
+* **两次系统调**：
+  * 进程调用 `sys_call(read)` 将文件从硬盘读入用户空间会陷入一次内核态；
+  * 接着调用 `sys_call(write)` 将文件从用户空间写入协议引擎也会陷入一次内核态。
+* **四次拷贝**：
+  * `read()` 调用：
+    * 通过硬件驱动从硬盘到内核缓冲区的DMA拷贝；
+    * 从内核缓冲区到用户缓冲区的CPU拷贝；
+  * `write()` 调用：
+    * 从用户缓冲区到内核Socket缓冲区的CPU拷贝；
+    * 从Socket缓冲区到协议引擎的DMA拷贝。
 
 ![img](assets/180879d0ee95d3b22f9061b46cdabb13_720w.jpg)
 
-**sendfile发送文件到Socket的步骤：**
 
-* 硬盘 -> 内核缓冲区 -> 内核Socket缓冲区 -> 协议引擎。不需要任何陷入，所有操作都在内核完成。
-* 硬件驱动到内核缓冲区的DMA拷贝、内核缓冲区到内核Socket缓冲区的CPU拷贝、内核Socket缓冲区到协议引擎的DMA拷贝。共经过3次拷贝。
+
+#### sendfile发送文件到Socket的步骤
+
+* **一次系统调用**：进程调用 `sendfile()` 直接由内核完成硬盘中的文件拷贝到协议引擎的全部操作。
+* **三次拷贝**：
+  * 通过硬件驱动从硬盘到内核缓冲区的DMA拷贝；
+  * 从内核缓冲区到Socket缓冲区的CPU拷贝；
+  * 从内核Socket缓冲区到协议引擎的DMA拷贝。
 
 ![img](assets/178a72ce66e40c8fc7743f28bdc63de9_720w.jpg)
 
 
 
-## I/O模型-高性能的I/O设计模式
+#### 和传统I/O相比的优势和区别
+
+* 更少的拷贝次数和更少的系统调用带来的上下文切换，即更小的性能损耗；
+* 传统I/O需要应用程序主动调用读和写这两次操作，而sendfile则直接将读写操作全部交给内核来完成。
+
+
+
+## I/O模型-高性能I/O设计模式
 
 ### Reactor反应器模式
 
-**模式结构：**
+#### 组成结构
 
 <img src="assets/4235178-2d83a09abf0a3436.png" alt="img" style="zoom:50%;" />
 
-* **文件描述符（Handle）：**由操作系统提供，用于表示一个事件，事件既可以来自外部，也可以来自内部。外部事件如Socket描述符的客户端连接请求、客户端发送的数据等。内部事件如操作系统的定时事件等；
-* **同步事件分离器（Synchronous Event Demultiplexer）：**是一个系统调用，用于等待一个或多个事件的发生。调用方会阻塞在它之上，直到分离器上有事件产生。Linux中该角色对应的就是I/O多路复用器，Java NIO中该角色对应的就是Selector；
-* **事件处理器（Event Handler）：**由多个回调方法构成，这些回调方法构成了与应用相关的对于某事件的反馈机制。Netty中该角色对应的就是ChannelHandler用于处理事件；
-* **具体事务处理器（Concrete Event Handler）：**事件处理器的具体实现，用于实现特定的业务逻辑，本质上就是开发者编写的针对各种不同事件的处理器；
-* **初始分发器/生成器（Initiation Dispatcher/Reactor）：**是模式的核心，定义了一些用于控制事件调度方式的规范，也提供了应用进行事件处理的注册、删除等机制。初始分发器会通过同步事件分离器来等待事件的发生，一旦事件发生，初始分发器会分离出事件，然后通过事件处理器和相应的处理方法处理该事件。Netty中ChannelHandler中的回调方法都是由BossGroup或WorkGroup中的某EventLoop来调用的。
+* **文件描述符（Handle）**：由操作系统提供，用于表示一个事件，事件既可以来自外部，也可以来自内部。外部事件如Socket描述符的客户端连接请求、客户端发送的数据等，内部事件如操作系统的定时事件等；
+* **同步事件分离器（Synchronous Event Demultiplexer）**：是一个系统调用，用于等待一个或多个事件的发生。调用方会阻塞在它之上，直到分离器上有事件产生。Linux中该角色对应的就是I/O多路复用器，Java NIO中该角色对应的就是Selector；
+* **事件处理器（Event Handler）**：由多个回调方法构成，这些回调方法构成了与应用相关的对于某事件的反馈机制。Netty中该角色对应的就是用于处理事件的ChannelHandler；
+* **具体事务处理器（Concrete Event Handler）**：事件处理器的具体实现，用于实现特定的业务逻辑，本质上就是开发者编写的针对各种不同事件的处理器函数；
+* **初始分发器/生成器（Initiation Dispatcher/Reactor）**：是Reactor模式的核心，定义了一些用于控制事件调度方式的规范，也提供了应用进行事件处理的注册、删除等机制。初始分发器会通过同步事件分离器来等待事件的发生，一旦事件发生，初始分发器会分离出事件，然后通过事件处理器和相应的处理方法处理该事件。如Netty中ChannelHandler的回调方法都是由BossGroup或WorkGroup中的某个EventLoop来调用的。
 
-![img](assets/166e31ccf0289b09)
+<img src="assets/166e31ccf0289b09" alt="img" style="zoom: 80%;" />
 
-**工作流程：**
+
+
+#### 工作流程
 
 ![img](assets/285763-20180109170700254-466571682.jpg)
 
-1. 首先初始化Reactor，由应用程序通过 `register_handle()` 将若干个具体事件处理器和其感兴趣的事件注册到Reactor中；
-2. 事件由Handle标识，Reactor会通过 `get_handle()` 获取所有事件处理器对应的描述符并关联起来；
-3. 当所有事件注册完成，应用程序会通过 `handle_events()` 触发Reactor的事件循环机制；
-4. Reactor会通过 `select()` 让同步事件分离器去执行具体的事件循环，同步阻塞的等待事件发生；
-5. 当与某个事件对应的Handle变为ready就绪状态时，同步事件分离器就会通知Reactor；
-6. Reactor会获取就绪事件对应的处理器，且通过 `handle_event()` 调用回调方法去执行相应的逻辑。
+* **注册事件处理器**：首先初始化Reactor，由应用程序通过 `register_handle()` 将若干个具体事件处理器和其感兴趣的事件注册到Reactor中；
+* **关联描述符**：事件由Handle标识，Reactor会通过 `get_handle()` 获取所有事件处理器对应的描述符并关联起来；
+* **事件循环**：当所有事件注册完成，应用程序会通过 `handle_events()` 触发Reactor的事件循环机制。Reactor会通过 `select()` 让同步事件分离器去执行具体的事件循环，然后以同步阻塞的方式等待事件的发生；
+* **事件就绪**：当与某个事件对应的Handle变为Ready就绪状态时，同步事件分离器就会通知Reactor；
+* **执行事件处理**：Reactor会获取就绪事件对应的处理器，且通过 `handle_event()` 让处理器去执行相应的逻辑。
 
-**单线程Reactor模式：**
 
-* 所谓的单线程，是指所有的I/O操作和业务操作都在同一个NIO线程上完成，一个NIO线程负责管理事件和处理器关联、事件循环、接收连接、分离事件和分配相应读写请求到处理器中执行。
-* 缺点：
-  * 所有的操作都在一个线程上处理，无法同时处理大量的连接，会出现性能瓶颈，或因为单个耗时操作导致所有的请求都会受到影响，大大延迟请求的响应或处理超时；
+
+#### 单线程Reactor模式
+
+* **概念**：所谓的单线程Reactor，是指所有的I/O操作和业务操作都在同一个线程上完成，该线程负责管理事件和处理器关联、事件循环、建立连接、分离事件和处理读/写操作。
+* **缺点**：
+  * 所有的操作都在单个线程上处理，无法同时处理大量的请求，会出现性能瓶颈，或因为单个耗时操作导致所有的请求都会受到影响，大大延迟了请求的响应或导致处理的超时；
   * 一旦这个单线程陷入死循环或其他问题，会导致整个系统无法对外提供服务，产生单点故障问题。
 
 <img src="assets/4235178-4047d3c78bb467c9.png" alt="img" style="zoom:50%;" />
 
-**多线程Reactor模式：**
 
-* 由一组NIO线程处理I/O和业务操作。有一个专门的NIO线程用于监听服务端，接收客户端的TCP连接请求。而网络读写、业务操作则交由一个NIO线程池负责。
-* Reactor多线程模型可以满足大部分场景的性能要求。但在小部分情况下，一个NIO线程负责监听和处理所有的客户端连接可能会存在性能问题，如百万级客户端并发连接，或者服务端对客户端的握手信息进行安全认证等消耗性能的操作。这些场景下一个线程处理连接就会存在性能不足的问题。
+
+#### 多线程Reactor模式
+
+* **概念**：多线程模式Reactor的会有一个专门的线程用于监听和建立客户端的连接，而读/写请求和业务操作则交由一个线程池负责。
+* **缺点**：Reactor多线程模型可以满足大部分场景的性能要求。但在小部分情况下，一个线程负责监听和处理所有的客户端连接可能会存在性能问题，如百万级客户端并发连接，或者服务端需要对客户端的握手信息进行安全认证等消耗性操作时。这些场景下一个线程处理连接就会存在性能不足的问题。
 
 <img src="assets/4235178-d570de7505817605.png" alt="img" style="zoom:50%;" />
 
-**主从多线程Reactor模式：**
 
-* 服务端用一个NIO线程池接收客户端的连接，即mainReactor。
-* 当接收连接请求并处理后（可能有接入认证等），将连接交付给另一个用于处理I/O和业务操作的NIO线程池负责后续工作，即subReactor。
+
+#### 主从多线程Reactor模式
+
+* **概念**：所谓主从模式是指将Reactor拆分成两个角色。其中mainReactor负责接受客户端请求、建立连接和接入认证等和连接相关的操作。当连接被建立后会将其交付给subReactor完成后续的读/写请求、编码解码和业务逻辑等操作。
+* **优点**：mainReactor也可以维护一个线程池来处理和连接相关的操作，避免了单个连接处理线程带来的问题。
 
 <img src="assets/4235178-929a4d5e00c5e779.png" alt="img" style="zoom:50%;" />
 
@@ -6840,7 +6876,9 @@ ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count)
 
 ![img](assets/285763-20180124094933006-703582910.png)
 
-**模式结构：**
+#### 组成结构
+
+TODO
 
 * 句柄（Handle）：
 * 异步操作处理器（Asynchronous Operation Processor）：
@@ -6852,20 +6890,24 @@ ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count)
 
 ![img](assets/285763-20180109170707910-135245243.jpg)
 
-**工作流程：**
+
+
+#### 工作流程
+
+TODO
 
 ![img](assets/285763-20180109170715004-1183147013.jpg)
 
 
 
-## I/O模型-Java的I/O API
+## I/O模型-Java的I/O模型
 
 ### BIO
 
-**Java角度：**
+#### 代码示例
 
 ```JAVA
-public class SocketBIO {
+public class SocketBIOExample {
     
     public static void main(String[] args) {
         ServerSocket server = new ServerSocket(9090);
@@ -6894,37 +6936,44 @@ public class SocketBIO {
 }
 ```
 
-**Kernel角度：**
+
+
+#### 系统调用分析
 
 ```shell
-/usr/java/j2sdk1.4.2_19/bin/javac SocketBIO.java
+# 编译为字节码
+/usr/java/j2sdk1.4.2_19/bin/javac SocketBIOExample.java
+# 追踪应用程序的系统调用，并重定向到以out开头的文件中，每个线程一个文件
+strace -ff -o out /usr/java/j2sdk1.4.2_19/bin/java SocketBIOExample
 ```
 
-```shell
-strace -ff -o out /usr/java/j2sdk1.4.2_19/bin/java SocketBIO	# 最终应用程序的系统调用，并重定向到以out开头的文件中，每个线程一个文件
-```
+* 通过 `socket(PF_INET6, SOCKET_STREAM, IPPROTO_IP) = 3` 创建TCP的流式套接字，返回套接字的文件描述符；
+* 通过 `bind(3, {sa_famliy=AF_INET6, sin6_port=htons(9090), inet_pton(AF_INET6, "::", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, 24) = 0` 为套接字绑定端口；
+* 通过 `listen(3, 50)` 将套接字置为监听状态；
+* 通过 `accept(3, {sa_family=AF_INET6, sin6_port=htons(53311), inet_pton(AF_INET6. "::1", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, [28]) = 5` 阻塞用户线程等待连接请求。
 
-* 通过`socket(PF_INET6, SOCKET_STREAM, IPPROTO_IP) = 3`创建TCP的流式套接字，返回套接字的文件描述符；
+此时开启一个本地客户端发送连接请求：`nc localhost 9090`。
 
-* 通过`bind(3, {sa_famliy=AF_INET6, sin6_port=htons(9090), inet_pton(AF_INET6, "::", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, 24) = 0`为套接字绑定端口；
+* 此时 `accept()` 会接收连接请求，并新建套接字，返回该套接字的文件描述符；
+* 通过 `clone(child_stack=0xea2bd494, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tidptr=0xea2bdbd8, tls=0xea2bdbd8, child_tidptr=0xffb2e44c) = 2386` 创建子线程去处理，每个线程处理一个连接，并返回其进程描述符（PID）；
+* 在子线程中，通过 `recv() `读取套接字输入流（阻塞等待），直到有数据到来，继续接下来的处理。
 
-* 通过`listen(3, 50)`将套接字置为监听状态；
 
-```SHELL
-nc localhost 9090	# 开启一个本地客户端
-```
 
-* 通过`accept(3, {sa_family=AF_INET6, sin6_port=htons(53311), inet_pton(AF_INET6. "::1", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, [28]) = 5`阻塞用户线程，等待连接请求并接收，新建套接字，返回该套接字的文件描述符；
-* 通过`clone(child_stack=0xea2bd494, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tidptr=0xea2bdbd8, tls=0xea2bdbd8, child_tidptr=0xffb2e44c) = 2386`创建子线程去处理，每个线程处理一个连接，返回进程描述符（PID）；
-* 在子线程中，通过`recv(5, `读取套接字输入流（阻塞等待）。
+#### BIO的缺点
 
-**BIO的缺点：**
+* 基于同步阻塞式I/O模型，服务端需要在建立客户端连接时阻塞等待，还会在连接建立后，阻塞等待客户端的数据到来；
+* 在BIO+多线程的编程模型下，每一个客户端连接就需要一个子线程去处理。若在大量连接的场景下，会造成大量的资源占用。即便使用线程池来处理连接，也会因为存在大量的线程而会将性能损耗在上下文切换上。
 
 
 
 ### NIO
 
-**Buffer**缓冲区本质是一个可以读写数据的内存块，可以理解为容器对象，除了基本的容器操作之外，还提供了记录缓冲区状态变化情况的功能。
+#### 基本概念
+
+* **Buffer**：缓冲区本质是一个可以读写数据的内存块，可以理解为容器对象，除了基本的容器操作之外，还提供了记录缓冲区状态变化情况的功能。
+
+* **Channel**：通道类似于流，可以同时进行读/写且能实现异步操作，通道以缓冲区为单位读写数据。
 
 |       属性       |                             描述                             |
 | :--------------: | :----------------------------------------------------------: |
@@ -6933,22 +6982,26 @@ nc localhost 9090	# 开启一个本地客户端
 | 位置（Position） | 下一个要被读写的元素的索引，每次读写缓冲区中数据时都会改变该值，为下次读写准备 |
 |   标记（Mark）   |                             标记                             |
 
-**Channel**：通道类似于流，可以同时进行读写且能实现异步操作。通道以缓冲区为单位读写数据。
 
-**代码示例**：
+
+#### 代码示例
 
 ```JAVA
-public class SocketNIO {
+public class SocketNIOExample {
     
     public static void main(String[] args) {
         LinkedList<SocketChannel> clients = new LinkedList<>();
         
+        // 服务端套接字的封装
         ServerSocketChannel ss = ServerSocketChannel.open();
+        // 绑定端口
         ss.bind(new InetSocketAddress(9090));
+        // 设置非阻塞
         ss.configureBlocking(false);
     	
         while (true) {
             Thread.sleep(1000);
+            // 等待连接建立，非阻塞
             SocketChannel client = ss.accept();
             if (client != null) {
                 client.configureBlocking(false);
@@ -6956,8 +7009,10 @@ public class SocketNIO {
                	clients.add(client);
             }
             
+            // 设置缓冲区
             ByteBuffer buffer = ByteBuffer.allocateDirect(4096);
             for (SocketChannel c : clients) {
+                // 读取客户端数据，非阻塞
                 int num = c.read(buffer);
                 if (num > 0) {
                     buffer.filp();
@@ -6974,47 +7029,53 @@ public class SocketNIO {
 }
 ```
 
-**系统调用分析**：
 
-* 首先通过`socket(PF_INET6, SOCK_STREAM, IPPROTO_IP) = 4`创建TCP的流式套接字，并返回套接字的文件描述符；
 
-* 通过`bind(4, {sa_famliy=AF_INET6, sin6_port=htons(9090), inet_pton(AF_INET6, "::", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, 28) = 0`为套接字绑定端口；
+#### 系统调用分析
 
-* 通过`listen(4, 50)`将套接字置为监听状态；
+* 通过 `socket(PF_INET6, SOCK_STREAM, IPPROTO_IP) = 4` 创建TCP的流式套接字，并返回套接字的文件描述符；
 
-* 通过`fcntl(4, F_SETFL, 0_RDWR|0_NONBLOCK) = 0`将套接字设置为非阻塞状态；
+* 通过 `bind(4, {sa_famliy=AF_INET6, sin6_port=htons(9090), inet_pton(AF_INET6, "::", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, 28) = 0` 为套接字绑定端口；
 
-* 通过`accept(4, 0x7f00580f0070, [28]) = -1`接收连接请求，但不会阻塞线程，若是当前没有连接建立，则返回-1；
+* 通过 `listen(4, 50)` 将套接字设置为监听状态；
 
-  ```SHELL
-  nc localhost 9090	# 开启一个本地客户端
-  ```
+* 通过 `fcntl(4, F_SETFL, 0_RDWR|0_NONBLOCK) = 0` 将套接字设置为非阻塞状态；
 
-* 通过`accept(4, {sa_family=AF_INET6, sin6_port=htons(53311), inet_pton(AF_INET6. "::1", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, [28]) = 5`接收连接建立，新建和连接对应的套接字，返回套接字的文件描述符；
-* 通过`fcntl(5, F_SETFL, 0_RDWR|0_NONBLOCK) = 0`将新的连接套接字设置为非阻塞；
-* 通过`read(5, 0x7f0003efcc10, 4096) = -1`读取套接输入流中的数据到大小为4096的缓冲区中，但不会阻塞线程，若是当前没有数据可读，则返回-1。
+* 通过 `accept(4, 0x7f00580f0070, [28]) = -1` 接收连接请求，但不会阻塞线程，若是当前没有连接建立，则返回-1；
 
-**NIO的优缺点**：
 
-* 优点：避免了BIO的一个连接一个线程而导致存在大量线程造成的资源消耗巨大的问题，即会把大量资源用在线程的上下文切换上；
-* 缺点：可能会存在大量无意义的系统调用，若是有1w个连接，但只有1个连接有数据读取，但NIO机制每次循环还是会发送1w次的read系统调用，即会把大量的资源用在用户态到内核态的切换上。
+此时开启一个本地客户端发送连接请求：`nc localhost 9090`。
+
+* 通过 `accept(4, {sa_family=AF_INET6, sin6_port=htons(53311), inet_pton(AF_INET6. "::1", &sin6_addr), sin6_flowinfo=0, sin6_scope_id=0}, [28]) = 5` 接收连接建立，新建和连接对应的套接字，返回套接字的文件描述符；
+* 通过 `fcntl(5, F_SETFL, 0_RDWR|0_NONBLOCK) = 0` 将新的连接套接字设置为非阻塞；
+* 通过 `read(5, 0x7f0003efcc10, 4096) = -1` 读取套接字输入流中的数据到大小为4096的缓冲区中，但不会阻塞线程，若是当前没有数据可读，则返回-1。
 
 
 
-### NIO多路复用
+#### NIO的优缺点
 
-**Selector**：选择器能够检测多个注册在其上的通道是否有事件发生，只有当真正发生事件时，才会对应的进行回调处理（连接、读/写）。
+* **优点**：避免了BIO的一个连接一个线程而导致存在大量线程造成的资源消耗巨大的问题，即会把大量资源用在线程的上下文切换上；
+* **缺点**：可能会存在大量无意义的系统调用，若是有1w个连接，但只有1个连接有数据读取，但NIO机制每次循环还是会发送1w次的read系统调用，即会把大量的资源用在用户态到内核态的切换上。
 
-**工作流程**：
 
-1. 服务端创建ServerSocketChannel并绑定端口，然后通过register()注册到Selector上和连接事件对应，最后通过Selector的select()开始轮询监听通道的状态；
-2. 当客户端连接时，会发生连接事件，Selector会回调方法给客户端建立对应的SocketChannel，然后将其注册到Selector上和读写事件对应；
-3. 当连接有读写事件发生时，返回SelectionKey（事件关系），反向获取对应的SocketChannel，最后进行相应的处理。
 
-**代码示例**：
+### NIO+Selector
+
+#### 基本概念
+
+* **Selector**：选择器能够检测多个注册在其上的通道是否有具体的事件发生，只有当真正发生事件时，才会对应的进行回调处理（连接、读/写请求）。
+
+* **工作流程**：
+  * 服务端创建 `ServerSocketChannel` 并绑定端口，然后通过 `register()` 注册到Selector上和连接事件对应，最后通过Selector 的 `select()` 开始轮询监听通道的状态；
+  * 当客户端连接时，会发生连接事件，Selector会通过回调方法给客户端建立对应的 `SocketChannel`，然后将其注册到Selector上和读/写事件对应；
+  * 当连接有读/写事件发生时，返回 `SelectionKey`，反向获取对应的 `SocketChannel`，最后进行相应的处理。
+
+
+
+#### 代码示例
 
 ```JAVA
-// JDK底层使用了epoll机制
+// Java底层使用了epoll机制
 public class SocketMultiplexingSingleThread {
     
     private ServerSocketChannel server = null;
@@ -7023,11 +7084,16 @@ public class SocketMultiplexingSingleThread {
     
     public void initServer() {
         try {
+            // 服务端套接字通道
             server = ServerSocketChannel.open();
+            // 非阻塞
             server.configureBlocking(false);
+            // 绑定端口
             server.bind(new InetSocketAddress(port));
             
+            // 开启多路复用器
             selector = Selector.open();
+            // 将服务端套接字和相应的连接事件关联并注册到复用器上
             server.register(selector, SelectionKey.OP_ACCEPT);
         } catch (IOException e) {
             e.printStackTrace();
@@ -7039,12 +7105,15 @@ public class SocketMultiplexingSingleThread {
         try {
             while (true) {
                 Set<SelectionKey> keys = selector.keys();
+                // 阻塞在select上500毫秒等待事件就绪
                 while (selector.select(500) > 0) {
+                    // 获取就绪事件
                     Set<SelectionKey> selectionKeys = selector.selectedKeys();
                     Iterator<SelectionKey> iter = selectionKeys.iterator();
                     while (iter.hasNext()) {
                         SelectionKey key = iter.next();
                         iter.remove();
+                        // 根据事件类型处理
                         if (key.isAcceptable()) {
                         	// 连接处理器
                             acceptHandler(key);
@@ -7085,7 +7154,7 @@ public class SocketMultiplexingSingleThread {
         int read = 0;
         try {
             while (true) {
-                
+             	// ...   
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -7094,116 +7163,86 @@ public class SocketMultiplexingSingleThread {
 }
 ```
 
-**select/poll系统调用分析**：
 
-* 通过`socket`创建套接字，返回文件描述符；
-* 通过`bind`为套接字绑定端口；
-* 通过`listen`将套接字置为监听状态；
-* 通过`select/poll`将所有套接字的文件描述符注册给多路复用器（select对文件描述符的个数有限制，poll取消了限制），并使用户线程阻塞在`select/poll`这个系统调用上；
-* 当内核遍历发现有文件描述符变为可连接或可读写等状态时，`select/poll`会返回，然后再通过`accept`或`read`去处理对应的事件。
 
-**select/poll的优缺点**：
+#### select/poll系统调用分析
 
-* 优点：通过一次系统调用，将所有文件描述符传递给内核，由内核进行遍历，直到相应事件的发生，这种方式相对于NIO减少了系统调用的次数，即避免了用户态到内核态的频繁切换，节省资源；
-* 缺点：
-  * 每次select/poll系统调用时都需要传递整个文件描述符集合；
-  * 每次select/poll系统调用时都会让内核遍历整个文件描述符集合。
+* 通过 `socket` 创建套接字，返回文件描述符；
+* 通过 `bind` 为套接字绑定端口；
+* 通过 `listen` 将套接字置为监听状态；
+* 通过 `select/poll` 将套接字的文件描述符注册给多路复用器（select对文件描述符的个数有限制，poll取消了限制），并使用户线程阻塞在 `select/poll` 这个系统调用上；
+* 当内核遍历发现有文件描述符变为可连接或可读/写等状态时，`select/poll` 会返回，然后再通过 `accept` 或 `read` 等调用去处理对应的事件。
 
-**epoll系统调用分析**：
+**优点**：通过一次系统调用，将所有文件描述符传递给内核，由内核进行遍历，直到相应事件的发生，这种方式相对于NIO减少了系统调用的次数，即避免了用户态到内核态的频繁切换，节省资源；
 
-* 通过`socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 4`创建套接字，并返回其文件描述符；
+**缺点**：
 
-* 通过`fcntl(4, F_SETFL, O_RDWR|O_NONBLOCK) = 0`将套接字设置为非阻塞；
+* 每次select/poll系统调用时都需要传递整个文件描述符集合；
+* 每次select/poll系统调用时都会让内核遍历整个文件描述符集合。
 
-* 通过`bind(4, {sa_family=AF_INET, sin_port=htons(9090)})`为套接字绑定端口；
 
-* 通过`listen(4, 50)`将套接字设置为监听状态；
 
-* 通过``epoll_create(256) = 7``初始化多路复用器，并在内核空间建立一块用于保留套接字文件描述符的红黑树结构；
+#### epoll系统调用分析
 
-* 通过`epoll_ctl(7, EPOLL_CTL_ADD, 4, {EPOLLIN, {u32=4, u64=13736798553693487108}}) = 0`将初始套接字的文件描述符加入红黑树；
+* 通过 `socket(PF_INET, SOCK_STREAM, IPPROTO_IP) = 4` 创建服务端套接字，并返回其文件描述符；
 
-* 通过`epoll_wait(7, {{EPOLLIN, {u32=4, u64=13736798553693487108}}}, 4096, -1) = 1`阻塞用户线程，交由内核监听rbtree上的fd，当fd的状态发生变化时，即发生连接和读写等事件后，返回事件的数量；
+* 通过 `fcntl(4, F_SETFL, O_RDWR|O_NONBLOCK) = 0` 将套接字设置为非阻塞；
 
-  ```SHELL
-  nc localhost 9090	# 开启一个本地客户端
-  ```
+* 通过 `bind(4, {sa_family=AF_INET, sin_port=htons(9090)})` 为套接字绑定端口；
 
-* 若发生的事件是连接请求，则通过`accept(4, {sa_family=AF_INET, sin_port=htons(53687), sin_addr=inet_addr("127.0.0.1")}, [16]) = 8`接收连接，为连接建立套接字，并返回其文件描述符； 
+* 通过 `listen(4, 50)` 将套接字设置为监听状态；
 
-* 接收连接后，接着通过`epoll_ctl(7, EPOLL_CTL_ADD, 8, {EPOLLIN, {u32=8, u64=13823012355644063752}}) = 0`将连接套接字的文件描述符添加到红黑树上；
+* 通过 ``epoll_create(256) = 7`` 初始化多路复用器，并在内核空间建立一块用于保存套接字文件描述符的红黑树结构；
 
-* 循环去通过epoll_wait监听事件、接收连接、添加套接字fd、处理读写请求，以此构建出使用epoll多路复用机制的服务器。
+* 通过 `epoll_ctl(7, EPOLL_CTL_ADD, 4, {EPOLLIN, {u32=4, u64=13736798553693487108}}) = 0` 将服务端套接字的文件描述符和对应的连接事件挂入红黑树；
+
+* 通过 `epoll_wait(7, {{EPOLLIN, {u32=4, u64=13736798553693487108}}}, 4096, -1) = 1` 阻塞用户线程，交由内核监听rbtree上的fd，当fd的状态发生变化时，即发生连接和读/写等事件后，返回事件的数量；
+
+此时开启一个本地客户端发送连接请求：`nc localhost 9090`。
+
+* 通过 `accept(4, {sa_family=AF_INET, sin_port=htons(53687), sin_addr=inet_addr("127.0.0.1")}, [16]) = 8` 接收连接，为连接建立套接字，并返回其文件描述符； 
+
+* 接收连接后，接着通过 `epoll_ctl(7, EPOLL_CTL_ADD, 8, {EPOLLIN, {u32=8, u64=13823012355644063752}}) = 0` 将新套接字的文件描述符和其感兴趣的事件挂到红黑树上；
+
+* 循环去通过 `epoll_wait` 监听事件、接收连接、添加套接字fd和处理读写请求，以此构建出使用epoll多路复用机制的服务器。
 
 
 
 ## 计算机网络-层次结构
 
+![0_1325744597WM32](assets/0_1325744597WM32.gif)
+
+
+
 ![image-20201103090119536](assets/image-20201103090119536.png)
 
-### 应用层（application layer）
+### 应用层（Application Layer）
 
-为用户的应用程序之间的交互提供网络服务。该层的协议是应用进程间的通信和交互的规则，对于不同的网络应用需要定义不同的应用层协议。运行在应用层的协议有很多，如域名系统DNS、支持Web应用的HTTP、支持电子邮件的SMTP协议等。应用层之间交互的数据单位称为报文。
-
-1. DNS域名系统：
-2. HTTP超文本传输协议：
-3. SMTP电子邮件传输协议：
-4. FTP文件传输协议：
-5. P2P点对点传输协议：
+**该层为应用程序之间的交互提供网络通信和交互规则**。对于不同的网络应用需要定义不同的应用层协议，如：域名系统DNS、支持Web应用的HTTP和支持电子邮件的SMTP协议等。应用层之间交互的数据单位被称为报文。
 
 
 
-### 传输层（transport layer）
+### 传输层（Transport Layer）
 
-为主机进程间的通信提供端到端的通用（所谓通用就是为上层应用提供复用和分解功能）数据传输服务。应用程序就是通过运行在该层的协议传输应用层的报文/报文段的。同时该层还会提供端到端数据传输的差错控制和流量控制。
-
-1. 复用与分解：
-2. ARQ自动重传请求协议（停等协议）：
-3. 滑动窗口协议：
-4. UDP用户数据报协议：
-5. TCP传输控制协议：
+**该层为主机进程间提供端到端的通用的（复用和分解）数据传输服务**。应用程序就是通过该层的协议传输应用层的数据报/报文段的。
 
 
 
-### 网络层（network layer）
+### 网络层（Network Layer）
 
-为源主机到目的主机提供分组交付、逻辑寻址、路由选择和分组转发服务。由于在网络中通信的两台主机之间可能会经过很多节点、数据链路和通信子网，所以该层就是针对这一过程提供主机间可靠的数据传输服务。该层会将传输层产生的报文段或数据报封装成分组或包进行传送，在TCP/IP体系中，分组也叫做IP数据报。
-
-互联网是由大量异构网络通过路由器相互连接起来的，互联网使用的网络层协议是无连接的网际协议和许多路由选择协议，因此互联网的网络层也叫做网际层或IP层。
-
-1. 拥塞控制策略：
-2. IPv4协议：
-3. DHCP动态主机配置协议：
-4. NAT网络地址转换协议：
-5. ICMP互联网控制报文协议：
-6. IPv6协议：
-7. RIP路由信息协议：
-8. OSPF开放式最短路径优先协议：
-9. BGP边界网关协议：
+**该层为源主机到目的主机提供分组交付、分组转发、路由寻址和路由选择的服务**。由于在网络中通信的两台主机之间可能会经过很多节点、数据链路和通信子网，所以该层就是针对这一过程提供主机间可靠的数据传输服务。该层会将传输层产生的报文段或数据报封装成分组或包进行传送，在TCP/IP体系中，分组也叫做IP数据报。互联网是由大量异构网络通过路由器相互连接起来的，互联网使用的网络层协议是无连接的网际协议和许多路由选择协议组成的，因此互联网的网络层也叫做网际层或IP层。
 
 
 
-### 数据链路层（data link layer）
+### 数据链路层（Data Link Layer）
 
-为网络中相邻节点间的数据传输提供可靠的逻辑链路服务。在两个相邻节点间传输数据时，链路层会将网络层交付下来的IP数据报组装成帧结构，并在节点间建立逻辑链路传输，并通过差错控制为数据的正确传输提供保障。
-
-1. 差错编码-奇偶校验码：
-2. 差错编码-汉明码：
-3. 差错编码-CRC循环冗余校验码：
-4. 信道划分MAC协议：
-5. 随机访问MAC协议：
-6. 受控接入MAC协议：
+**该层为网络中相邻节点间的数据传输提供可靠的逻辑链路服务**。在两个相邻节点间传输数据时，链路层会将网络层交付下来的IP数据报组装成帧结构，并在节点间建立逻辑链路传输，并通过差错控制为数据的正确传输提供保障。
 
 
 
-### 物理层（physical layer）
+### 物理层（Physical Layer）
 
-为相邻节点间的比特流传输提供屏蔽物理设备和传输介质差异的服务。从而使上层的链路层不需要考虑具体的物理介质问题，即透明传输（表示经过实际电路传送后的比特流没有发生变化，对比特流来说，这些电路好像是看不见的）。
-
-1. 物理介质：
-2. 通信基础：
-3. 基带传输：
-4. 频带传输：
+**该层为相邻节点间的比特流传输提供屏蔽物理设备和传输介质差异的服务**。从而使上层的链路层不需要考虑具体的物理介质问题，透明传输，即经过实际电路传输后的比特流没有发生变化，对比特流来说，这些电路好像是看不见的。
 
 
 
@@ -7217,6 +7256,12 @@ public class SocketMultiplexingSingleThread {
 
 ### 浏览器输入URL到显示主页的过程
 
+* DNS解析：
+* TCP连接：
+* 发送HTTP请求：
+* 服务器处理请求并返回HTTP响应：
+* 浏览器解析渲染页面：
+
 
 
 ### 各协议与HTTP协议的关系
@@ -7225,58 +7270,103 @@ public class SocketMultiplexingSingleThread {
 
 
 
-### HTTP长/短连接
-
-* HTTP/1.0默认使用短连接，即客户端和服务器每进行一次HTTP操作，就建立一次连接，传输任务结束后就断开连接。当浏览器访问的某个HTML或其他类型的Web页中包含其他Web资源（如JS脚本、图像、CSS文件等），每遇到这样一个Web资源，浏览器就会重新建立一个HTTP会话。
-* HTTP/1.1开始默认使用长连接，用以保持连接特性。使用长连接的HTTP协议，会在响应头加入`Connection:keep-alive`，在使用长连接的情况下，当一个网页打开完成后，客户端和服务器之间用于传输HTTP数据的TCP的连接不会关闭，客户端再次访问这个服务器时，会继续使用这一条已经建立的连接。Keep-Alive不会永久保持连接，而是存在一个保持时间，该时间可以设置。
-
-
-
 ### HTTP如何保存用户状态
 
-* HTTP是无状态（stateless）协议，即HTTP协议自身不对请求和响应之间的通信状态进行保存。一般使用Session机制解决这个问题，Session的主要作业就是通过服务端记录用户的状态，典型的例子就是购物车，服务端给特定的用户创建特定的Session，之后就可以标识用户并跟踪用户。
-* 一般Session会存放在服务端（Redis或数据库），并设置超时时间。大部分情况下，都是通过Cookie中附加Session ID的方式完成浏览器请求对Session的跟踪。
+* HTTP是无状态（stateless）协议，即HTTP协议自身不对请求和响应之间的通信状态进行保存。
+* 一般会使用存放在服务端持久化存储器中的Session来保存用户的某些状态，如：登录状态，服务器存储用户登录状态并设置超时，客户端通过请求携带Cookie附加Session ID的方式完成身份证明，之后就可以继续跟踪用户。
 * 若Cookie被禁用，最常用的方式就是通过URL携带Session ID。
 
 
 
 ### Cookie和Session的区别
 
-* Cookie一般用来保存用户标识，如Token，Session主要作用是通过服务端记录用户信息，如购物车；
-* Cookie的数据保存在浏览器端，Session的数据保存在服务器端；
-* Session相对于Cookie安全性更高，如果要在Cookie中存储关键信息，可以先加密后存储，最后在服务端解密。
+* **作用**：Cookie一般用来保存用户标识，如：Token。Session主要作用是通过服务端记录用户信息，如：登录状态。
+* **存储**：Cookie的数据一般保存在浏览器端。Session的数据一般保存在服务器端。
+* **安全性**：Session相对于Cookie安全性更高。如果需要在Cookie中存储关键信息，可以加密后传输，在服务端解密。
 
 
 
 ### HTTP/1.0和HTTP/1.1的区别
 
-1. **长/短连接**：短连接是每次请求都需要重新建立一次连接，每次都需要重新三次握手，开销大。长连接可以维持一段时间，分为流水和非流水方式，流水方式是客户端不需要等待收到响应就是继续发送新的请求，非流水方式就是客户端必须在收到响应后才能发送下一个请求；
-2. **错误状态响应码**：HTTP/1.1新增了24个错误状态响应码，如409表示请求的资源与资源的当前状态发生冲突，如410表示服务器上的某个资源被永久性删除；
-3. **缓存处理**：在HTTP/1.0中主要使⽤header⾥的`If-Modified-Since，Expires`来做为缓存判断的标准。HTTP/1.1则引⼊了更多的缓存控制策略例如`Entity tag，If-Unmodified-Since，If-Match，If-None-Match`等更多可供选择的缓存头来控制缓存策略；
-4. **带宽优化及网络连接的使用**：在HTTP/1.0中，存在一些浪费带宽的现象，例如客户端只是需要某个对象的一部分，而服务器却将整个对象送过来了，并且不支持断点续传功能。HTTP/1.1则在请求头引入了range头域，它允许只请求资源的某个部分，即返回码是206，这样方便了开发者自由选择以便充分利用带宽和连接。
+* **长/短连接**：
+  * **HTTP/1.0默认使用短连接**：即客户端和服务器每进行一次HTTP操作，就建立一次TCP连接，传输任务结束后就断开连接。当浏览器访问的某个HTML或其他类型的Web页中包含其他Web资源（如js脚本、图像、CSS文件等），每遇到这样一个Web资源，浏览器就会重新建立一个HTTP请求。
+  * **从HTTP/1.1开始默认使用长连接**：使用长连接的HTTP协议，会在响应头加入 `Connection:keep-alive`。当一个网页打开完成后，客户端和服务器之间用于传输HTTP数据的TCP的连接不会关闭，客户端再次访问这个服务器时，会继续使用这一条已经建立的连接。Keep-Alive不会永久保持连接，而是存在一个保持时间，该时间可以设置。
+
+* **错误状态响应码**：HTTP/1.1新增了24个错误状态响应码，如：409表示请求的资源与资源的当前状态发生冲突、410表示服务器上的某个资源被永久性删除；
+
+* **缓存处理**：在HTTP/1.0中主要使⽤header⾥的 `If-Modified-Since，Expires` 来做为缓存判断的标准。HTTP/1.1则引⼊了更多的缓存控制策略如： `Entity tag，If-Unmodified-Since，If-Match，If-None-Match` 等更多可供选择的缓存头来控制缓存策略；
+
+* **带宽优化及网络连接的使用**：在HTTP/1.0中，存在一些浪费带宽的现象，如：客户端只是需要某个对象的一部分，而服务器却将整个对象送过来了，并且不支持断点续传功能。HTTP/1.1则在请求头引入了range头域，它允许只请求资源的某个部分，即返回码是206，这样方便了开发者自由选择以便充分利用带宽和连接。
 
 
 
 ### URI和URL的区别
 
-1. **URI**：是统一资源标志符，可以唯一标识一个资源，类似于身份证号；
-2. **URL**：是统一资源定位符，可以提供该资源的路径，类似于家庭住址。是一种具体的URI，即URL不仅能用来标识一个资源，而且还可以通过其获取这个资源。
+* **URI**：是统一资源标志符，可以唯一标识一个资源，类似于身份证号；
+
+* **URL**：是统一资源定位符，可以提供该资源的路径，类似于家庭住址。是一种具体的URI，即URL不仅能用来标识一个资源，而且还可以通过其获取这个资源。
 
 
 
 ### HTTP和HTTPS的区别
 
-1. **端口**：HTTP的URL有``http://``起始且默认使用端口80，而HTTPS的URL由`https://`起始且默认使用端口443；
-2. **安全性和资源消耗**：HTTP协议运行在TCP之上，所有的传输内容都是明文，客户端和服务器都无法验证对方的身份。HTTPS是运行在SSL/TLS之上的HTTP协议，SSL/TLS运行在TCP之上，所有的传输内容都使用对称加密，密码使用了服务器的证书进行了非对称加密。所以HTTP安全性比HTTPS低，但消耗的资源更少。
+* **端口**：HTTP的URL以 ``http://`` 起始且默认使用80端口。而HTTPS的URL由 `https://` 起始且默认使用443端口；
+* **安全性和资源消耗**：HTTP协议运行在TCP之上，所有的传输内容都是明文，客户端和服务器都无法验证对方的身份。HTTPS是运行在SSL/TLS之上的HTTP协议，SSL/TLS运行在TCP之上，所有的传输内容都使用对称加密，密钥使用了服务器的证书进行了非对称加密。所以HTTP安全性比HTTPS低，但消耗的资源更少。
+
+
+
+### DNS域名系统
+
+DNS将用户使用的域名映射为计算机使用的IP地址的过程称为域名解析，由域名服务器提供域名解析服务。DNS使用UDP的53号端口；
+
+域名服务器：
+
+* 本地域名服务器（默认DNS，首先查询）；
+* 根域名服务器（13个不同IP地址的根域名服务器，由英文字母a-m命名）；
+* 顶级域名服务器；
+* 权威域名服务器（保存一个区内所有主机的域名到IP地址的映射）；
+* 中间域名服务器。
+
+迭代解析：
+
+* 首先请求本地DNS；
+* 本地DNS没有则代为请求根DNS；
+* 若是根DNS也没有则由本地DNS依次代为请求顶级DNS和权威DNS，直到成功解析返回或无法解析。
+
+<img src="assets/image-20200828104341639-1602254894754.png" alt="image-20200828104341639" style="zoom:80%;" />
+
+递归解析：
+
+* 首先请求本地DNS；
+* 没有则由本地DNS代为请求根DNS；
+* 也没有则由根DNS代为请求顶级DNS；
+* 若依旧没有则依次向高层的顶级和权威域名服务器递归请求，直到解析结果依次返回。
+
+<img src="assets/image-20200828104327511-1602254894754.png" alt="image-20200828104327511" style="zoom:80%;" />
 
 
 
 ## 计算机网络-传输层
 
+### 传输层的复用与分解
+
+支持多个应用进程共用同一个传输层协议，并能够将接收到的数据准确交付给不同的应用进程：
+
+* **复用**：在同一主机上，多个应用进程同时利用同一个传输层协议进行通信，此时该传输层协议就被多个应用进程复用；
+
+* **分解**：传输层将同时接收到的不同应用进程的数据交付给正确的应用进程就叫做分解。
+
+TCP与UDP实现复用分解的方法：
+
+* **UDP**：通过数据报套接字（目的IP地址，目的端口号）实现分解；
+* **TCP**：通过流式套接字（源IP地址，源端口号，目的IP地址，目的端口号）实现分解。
+
+
+
 ### TCP和UDP的区别
 
-* 用户数据报协议（UDP，User Datagram Protocol）：是无连接的，尽最大可能交付，没有拥塞控制，面向报文，支持一对一、一对多和多对多的通信协议。
-* 传输控制协议（TCP，Transmission Control Protocol）：是面向连接的，提供可靠交付，提供流量控制、拥塞控制，提供全双工通信，面向字节流，只支持一对一的通信协议。
+* **用户数据报协议（UDP，User Datagram Protocol）**：是无连接的，尽最大可能交付，没有拥塞控制，面向报文，支持一对一、一对多和多对多的通信协议；
+* **传输控制协议（TCP，Transmission Control Protocol）**：是面向连接的，提供可靠交付，提供流量控制、拥塞控制，提供全双工通信，面向字节流，只支持一对一的通信协议。
 
 
 
@@ -7284,22 +7374,27 @@ public class SocketMultiplexingSingleThread {
 
 首部字段占8byte，包括源端口、目的端口、长度、校验和。12byte的伪首部是为了计算校验和临时添加的。
 
-![UDP首部](assets/UDP首部.jpg)
+**校验和计算**：
+
+* 对所有参与运算的校验和内容按二进制16位对齐求和，求和过程中的任何溢出都会被回卷（即进位与和的最低位再加），最后得到的和取反码，就是UDP首部校验和；
+* 参与校验和运算的内容包括：UDP伪首部，UDP首部，应用层数据。
+
+<img src="assets/UDP首部.jpg" alt="UDP首部" style="zoom: 50%;" />
 
 
 
 ### TCP的首部格式
 
-* 序号：用于对字节流中的每个字节进行编号；
-* 确认号：期望收到的下一个报文段的序号；
-* 数据偏移：指数据部分距离报文段起始位置的偏移量，实际上指的就是首部长度；
-* 保留关键字：
-  * ACK：ACK=1表示确认报文；
-  * SYN：SYN=1表示连接请求报文；
-  * FIN：FIN=1表示连接释放报文。
-* 窗口：流量窗口值，标识接收方的最大缓存能力。
+* **序号**：序号是对应用层数据的每个字节进行编号，因此TCP报文段的序号应该是该段所封装的应用层数据首字节的序号；
+* **确认号**：期望从对方接收的下一个字节的序号，即该序号之前的字节已经全部正确接收；
+* **数据偏移**：指数据部分距离报文段起始位置的偏移量，实际上指的就是首部长度；
+* **保留关键字**：
+  * **ACK**：`ACK=1` 表示确认报文；
+  * **SYN**：`SYN=1` 表示连接请求报文；
+  * **FIN**：`FIN=1` 表示连接释放报文。
+* **窗口**：流量窗口值，标识接收方的最大缓存能力。
 
-![TCP首部](assets/TCP首部.png)
+<img src="assets/TCP首部.png" alt="TCP首部" style="zoom:50%;" />
 
 
 
@@ -7307,19 +7402,19 @@ public class SocketMultiplexingSingleThread {
 
 ![三次握手](assets/aHR0cDovL2ltZy5ibG9nLmNzZG4ubmV0LzIwMTcwNjA3MjA1NzA5MzY3)
 
-1. 第一次握手：客户端发起连接建立的请求，初始序号置为x，发送（SYN=1，seq=x）的SYN段，客户端状态由CLOSE（初始）进入SYN_SEND（同步已发送）状态，等待服务器确认；
-2. 第二次握手：服务器收到客户发送的SYN段后，初始序号置为y，发送（SYN=1，ACK=1，seq=y，ack_seq=x+1）的SYNACK段，这时服务器的状态由LISTEN（监听）进入SYN_RCVD（同步已接收）状态；
-3. 第三次握手：客户端收到服务器的SYNACK段后，发送（ACK=1，seq=x+1，ack_seq=y+1）的ACK段，这时客户端进入ESTABLISHED（已建立）状态，服务器收到ACK段后也进入ESTABLISHED（已建立）状态，至此连接建立。
+* **第一次握手**：客户端主动发起连接建立的请求，设置初始序号为x，发送SYN段 `(SYN=1，seq=x)` 。客户端状态由CLOSE进入 SYN_SEND状态，等待服务器确认；
+* **第二次握手**：服务端收到客户端发送的SYN段后，设置初始序号为y，发送SYN_ACK段 `(SYN=1，ACK=1，seq=y，ack_seq=x+1)` 。这时服务端的状态由LISTEN进入 SYN_RCVD状态；
+* **第三次握手**：客户端收到服务端的SYN_ACK段后，发送ACK段 `(ACK=1，seq=x+1，ack_seq=y+1)` 。这时客户端进入ESTABLISHED状态，服务器收到ACK段后也进入ESTABLISHED状态，至此连接建立。
 
-**为什么要握手三次？**目的是为了建立可靠的通信信道，握手三次则是为了确认双方的发送和接收是正常的：
+**为什么要握手三次？**目的是为了建立可靠的通信信道，握手三次则是为了确认双方的发送和接收是正常的。
 
-1. 第一次握手能让服务端确认对方的发送和自己的接收都是正常的；
-2. 第二次握手能让客户端确认自己的发送和接收正常且对方的发送和接收也正常的；
-3. 第三次握手能让服务端确认自己的发送和对方的接收是正常的。
+* 第一次握手能让服务端确认对方的发送和自己的接收都是正常的；
+* 第二次握手能让客户端确认自己的发送和接收正常且对方的发送和接收也正常的；
+* 第三次握手能让服务端确认自己的发送和对方的接收是正常的。
 
-**为什么要回传SYN？**接收端回传发送端发送的SYN是为了通知发送端，我接收到的确实是你发送的连接请求（SYN=1表示连接建立请求）。
+**为什么要回传SYN？**接收端回传SYN是为了通知发送端，本次的ACK是正对SYN连接请求的确认。
 
-**为什么要回传ACK？**回传ACK确认报文是TCP可靠传输机制的一种手段，当发送方接收到接收方发送的ACK后，才能确认自己上一次是正确发送并且对方正确接收了。
+**为什么要回传ACK？**回传ACK是TCP可靠传输机制的一种手段，当发送方接收到接收方发送的ACK后，才能确认自己上一次是正确发送并且对方正确接收了。
 
 
 
@@ -7327,13 +7422,14 @@ public class SocketMultiplexingSingleThread {
 
 ![四次挥手](assets/aHR0cDovL2ltZy5ibG9nLmNzZG4ubmV0LzIwMTcwNjA3MjA1NzU2MjU1)
 
-1. 第一次挥手：当客户端发送完最后一个数据段后，可以发送FIN段（FIN=1，seq=u）请求断开客户端到服务器的连接，其状态由ESTABLISHED进入FIN_WAIT_1，在该状态下只能接收服务器发送的数据但不能再发送数据了；
-
-2. 第二次挥手：服务器收到FIN段后，向客户端发送ACK段（ACK=1，seq=v，ack_seq=u+1），服务器状态由ESTABLISHED进入CLOSE_WAIT，在该状态下服务器仍可发送数据但不能接收数据了。当客户端收到ACK段，其状态由FIN_WAIT_1进入FIN_WAIT_2，仍然可以接收服务器的数据，此时TCP连接已经关闭了客户端向服务器方向的数据传输，也称半关闭；
-
-3. 第三次挥手：当服务器向客户端发送完最后一个数据段后，服务器向客户端发送FIN段（FIN=1，ACK=1，seq=w，ack_seq=u+1），该数据段也不携带应用层数据，此时服务器状态由CLOSE_WAIT进入LAST_ACK并不再发送数据；
-
-4. 第四次挥手：当客户端收到服务器发送的FIN段后，向服务器发送ACK段（ACK=1，seq=u+1，ack_seq=w+1），其状态由FIN_WAIT_2进入TIME_WAIT，再等待2MSL时间后进入CLOSED状态，最终释放连接。服务器收到该ACK后，状态由LAST_ACK进入CLOSED，最终释放连接。
+* **第一次挥手**：当客户端发送完最后一个数据段后，可以发送FIN段 `(FIN=1，seq=u)` 请求断开客户端到服务器的连接。客户端状态由ESTABLISHED进入FIN_WAIT_1，在该状态下只能接收服务器发送的数据但不能再发送数据了；
+* **第二次挥手**：
+  * 服务端收到FIN段后，向客户端发送ACK段 `(ACK=1，seq=v，ack_seq=u+1)`。服务端状态由ESTABLISHED进入CLOSE_WAIT，在该状态下服务端可发送数据但不能接收数据；
+  * 当客户端收到ACK段，其状态由FIN_WAIT_1进入FIN_WAIT_2，仍然可以接收服务端的数据，此时TCP连接已经关闭了客户端向服务器方向的数据传输，也称半关闭。
+* **第三次挥手**：当服务端向客户端发送完最后一个数据段后，才会发送FIN_ACK段 `(FIN=1，ACK=1，seq=w，ack_seq=u+1)`。此时服务端状态由CLOSE_WAIT进入LAST_ACK并不再发送数据；
+* **第四次挥手**：
+  * 当客户端收到服务端发送的FIN_ACK段后，向服务端发送ACK段 `(ACK=1，seq=u+1，ack_seq=w+1)`，其状态由FIN_WAIT_2进入TIME_WAIT，再等待2MSL时间后自动进入CLOSED状态，最终释放连接；
+  * 服务器收到该ACK后，状态由LAST_ACK进入CLOSED，最终释放连接。
 
 **为什么要挥手四次？**任何一方都可以在数据传输结束后发送连接释放的通知，待对方确认后进入半关闭状态。当另一方也没有数据需要发送的时候，则主动发送连接释放通知，接收方确认后就完全关闭了TCP连接。
 
@@ -7343,57 +7439,87 @@ public class SocketMultiplexingSingleThread {
 
 ### TCP的可靠传输
 
-1. 差错编码：即首部校验和，可以检测数据在传输过程中的任何变化，若接收方收的段校验和有差错，则会直接丢弃该报文段并且不发送确认报文；
-2. 序号：TCP会将所有数据以有序字节流的形式，依次对每个字节进行编号，并将整个应用层报文划分为若干报文段，每个报文段的序号就是该段所封装的数据的首字节序号。序号还能够保障报文段的顺序重组和防重复。
-3. 确认：即确认报文，通过首部的确认序号（期望从对方那里接收到的下一个字节的序号，即表示该序号之前的字节已经全部正确接收）通知发送方自己正确接收了什么，下一次你需要传什么；
-4. 计时器重传：发送方在发送一个报文段后会维护一个计时器，若计时器超时，表示报文段丢失接收方未收到或差错检测失败而被接收方丢弃，则重传报文段；
-5. 快速重传：当接收方未正确接收到上一次自己发送的ACK报文中确认序号标识的数据时，则会在接下来的3次ACK中，重复确认那个未收到的序号，发送方发现接收方的3次重复确认后，就会立即重传；
-6. 滑动窗口：TCP就是基于滑动窗口协议实现可靠传输机制的。发送方和接收方都会维护一个窗口，用于表示发送方可以发送且未被确认的分组最大数量和接收方可以接收并缓存的正确到达的分组最短数量。所谓滑动，是指当发送方收到确认或接收方向上提交数据后，窗口将后移将之后的数据容纳进来；
-7. 流量控制：用于协调发送方和接收方的数据发送和接收速度，避免发送方发送数据过快，超出了接收方的缓存和处理能力。接收方通过窗口（缓冲区）来控制发送方发送数据大小，每次在确认时都会将缓冲区的剩余尺寸一并交付给发送方，这样发送方每次发送的数据量大小都会根据接收方缓冲区的大小而适当调整。
-8. 拥塞控制：采用拥塞窗口机制，通过动态调节窗口大小来实现对发送速率的调整，避免在网络拥堵的情况下，发送数据过快而导致丢失。发送方维护一个拥塞窗口，表示在未收到确认的情况下，可以连续发送的字节数。整个拥塞控制分为慢启动和拥塞避免两个阶段，慢启动阶段窗口会成倍增加，拥塞避免阶段窗口会加性增加。
+* **差错编码**：即首部校验和，可以检测数据在传输过程中的任何变化，若接收方收的报文段校验和有差错，则会直接丢弃该报文段并且不发送确认报文；
+* **序号**：TCP会将应用层数据以有序字节流的形式对每个字节进行编号，并将整个报文划分为若干报文段，每个报文段的序号就是该段所封装的数据的首字节序号。序号还能够保障报文段的顺序重组和防重复。
+* **确认**：即确认报文，通过首部的确认序号通知发送方自己正确接收了什么，下一次你需要传什么。即期望从对方那里接收到的下一个字节的序号，表示该序号之前的字节已经全部正确接收；
+* **计时器重传**：发送方在发送一个报文段后会维护一个计时器，若计时器超时，表示报文段丢失接收方未收到或差错检测失败而被接收方丢弃，则重传报文段；
+* **快速重传**：当接收方未正确接收到上一次自己发送的ACK报文中被确认序号标识的段时，则会在接下来的3次ACK中，重复确认那个未收到的序号，发送方发现接收方的3次重复确认后，就会立即重传；
+* **滑动窗口**：TCP就是基于滑动窗口协议实现可靠传输机制的。发送方和接收方都会维护一个窗口，用于表示发送方可以发送且未被确认的分组最大数量和接收方可以接收并缓存的正确到达的分组最短数量。所谓滑动，是指当发送方收到确认或接收方向上提交数据后，窗口后移将之后的数据容纳进来；
+* **流量控制**：用于协调发送方的数据发送速度，避免发送方发送数据过快，超出了接收方的缓存和处理能力。接收方通过窗口（缓冲区）来控制发送方发送数据大小，每次在确认时都会将缓冲区的剩余尺寸一并交付给发送方，这样发送方每次发送的数据量大小都会根据接收方缓冲区的大小而适当调整；
+* **拥塞控制**：采用拥塞窗口机制，通过动态调节窗口大小来实现对发送速率的调整，避免在网络拥堵的情况下，数据发送过快而导致丢失。发送方维护一个拥塞窗口，表示在未收到确认的情况下，可以连续发送的字节数。整个拥塞控制分为慢启动和拥塞避免两个阶段，慢启动阶段窗口会乘性增加，拥塞避免阶段窗口会加性增加。
 
 
 
-### TCP的滑动窗口
+### 停-等协议
 
-窗口是缓存的一部分，用于暂时存放字节流。发送方和接收方各维护一个窗口，接收方通过TCP报文段中的窗口字段通知发送方自己窗口的大小，发送方根据这个值和其它信息设置自己的窗口大小。
+* 停-等协议也称ARQ自动重传请求协议；
+* 发送方发送经过差错编码和编号后的报文段，等待接收方确认；
+* 接收方如果正确接收报文段，即差错控制无误且序号正确，则接收报文段并向发送ACK，否则丢弃报文段并发送NAK；
+* 发送方若收到ACK，则继续发送后续报文段，否则重新发送失败的报文段；
+* 发送窗口Ws=1，接收窗口Wr=1，即停等协议的接收两端均无缓存能力。
 
-发送窗口内的字节都允许被发送，接收窗口内的字节都允许被接收。如果发送窗口左部的字节已经发送并且收到确认，那么就将发送窗口向右滑动一定距离，直到左部第一个字节不是已发送且已确认的状态。接收窗口的滑动类似，若左部字节已经发送确认并交付主机，就向右滑动接收窗口。
 
-接收窗口只会对窗口内最后一个按序到达的字节进行确认，如：接收窗口已经收到的字节为 {31，34，35}，其中31按序到达，而 34和35就不是，因此只对31字节进行确认。发送方得到一个字节的确认后，也就知道这个字节之前的所有字节都已被接收。
 
-![TCP滑动窗口](assets/TCP滑动窗口.jpg)
+### 滑动窗口协议
+
+* **窗口**：窗口是缓存的一部分，用于暂时存放字节流。发送方和接收方各维护一个窗口，接收方通过TCP报文段中的窗口字段通知发送方自己窗口的大小，发送方根据这个值和其它信息设置自己的窗口大小。
+* **滑动规则**：发送窗口内的字节都允许被发送，接收窗口内的字节都允许被接收。如果发送窗口左部的字节已经发送并且收到确认，那么就将发送窗口向右滑动一定距离，直到左部第一个字节不是已发送且已确认的状态。接收窗口的滑动类似，若左部字节已经发送确认并向上交付，就向右滑动接收窗口。
+* 接收窗口只会对窗口内最后一个按序到达的字节进行确认，如：接收窗口已经收到的字节为31、34和35，其中31按序到达，而34和35就不是，因此只对31字节进行确认。发送方得到一个字节的确认后，也就知道这个字节之前的所有字节都已被接收。
+
+<img src="assets/TCP滑动窗口.jpg" alt="TCP滑动窗口" style="zoom: 80%;" />
+
+
+
+### GBN回退N帧协议
+
+* 当接收方检测出失序的信息帧后，要求发送方重发最后一个正确接受的信息帧之后的所有未被确认的帧；
+* 或当发送方发送了n个帧后，若发现该n帧的前一帧在计时器超时区间内仍未返回其确认信息，则该帧被判定为出错或丢失，此时发送方不得不重新发送该出错帧及其后的n帧；
+* 发送窗口Ws>1，接收窗口Wr=1，接收窗口缓存能力为1，所以只能累计确认最后一个正确接收的信息帧；
+* 累积确认：只会确认最后一个正确接收的信息帧，回退也是从最后一个确认的信息帧向后回退。
+
+![image-20200826113638272](assets/image-20200826113638272-1602246339662.png)
+
+
+
+### SR选择重传协议
+
+* 发送方仅重传那些未被接收方确认（出错或丢失）的分组，从而避免了不必要的重传；
+* 发送窗口Ws>1，接收窗口Wr>1；
+* 接收方对每个正确接收的分组逐个确认。
+
+![image-20200826113502027](assets/image-20200826113502027-1602246348818.png)
 
 
 
 ### TCP的流量控制
 
-流量控制是为了控制发送方的发送速率，保证不会超过接收方的接收、缓存和处理能力。
+* 流量控制是为了控制发送方的发送速率，保证不会超过接收方的接收、缓存和处理能力。
+* **TCP使用窗口机制进行流量控制**：连接建立时，接收方分配一块缓存区用于存储接收的数据，并在每次发送的确认报文中通过窗口字段将缓冲区的尺寸通知给发送端。
 
-TCP使用窗口机制进行流量控制：连接建立时，接收方分配一块缓存区用于存储接收的数据，并在每次发送的确认报文中通过窗口字段将缓冲区的尺寸通知给发送端；
-
-![TCP流量控制](assets/TCP流量控制.png)
+<img src="assets/TCP流量控制.png" alt="TCP流量控制" style="zoom: 67%;" />
 
 
 
 ### TCP的拥塞控制
 
-拥塞：就是大量主机高速向网络发送大量数据，超出网络的处理能力，导致大量分组拥挤在网络中间设备的队列中等待转发，网络性能下降的现象。
+**基本概念**：
 
-拥塞控制：即通过合理调度、规范和调整向网络发送数据的主机数量、发送速率或数据量，以避免拥塞或尽快消除已发生的拥塞。
+* **拥塞**：就是大量主机高速向网络发送大量数据，超出网络的处理能力，导致大量分组拥挤在网络中间设备的队列中等待转发，网络性能显著下降的现象。
 
-![TCP拥塞控制](assets/TCP拥塞控制.jpg)
+* **拥塞控制**：即通过合理的调度、规范和调整网络中的主机数量、主机的发送速率或数据量，以避免拥塞或消除已发生的拥塞。
 
-拥塞控制算法：慢启动、拥塞避免、快速重传、快速恢复。
+<img src="assets/TCP拥塞控制.jpg" alt="TCP拥塞控制" style="zoom: 67%;" />
 
-拥塞窗口：发送方维护的一个表示连接发送报文段的数量的窗口。发送方通过动态调整拥塞窗口以实现对发送速率的控制。
+* **拥塞控制算法**：慢启动、拥塞避免、快速重传、快速恢复。
 
-拥塞控制的变化情况：
+* **拥塞窗口**：发送方维护的一个表示可以连续发送报文段数量的窗口。发送方通过动态调整拥塞窗口以实现对发送速率的控制。
 
-* 拥塞窗口默认从慢启动阶段开始，每经过一次RTT（传输轮次）都会让拥塞窗口cwnd扩大一倍，即每一个ACK都会增加1；
+**拥塞控制流程**：
+
+* 拥塞窗口默认从慢启动阶段开始，每经过一次RTT都会让拥塞窗口扩大一倍，即每一个ACK都会增加1；
 * 直到窗口大小达到阈值，拥塞控制会进入拥塞避免阶段，此时每经过一次RTT拥塞窗口只会增加1；
-* 当TCP通信过程中发生了计时器超时的情况，此时拥塞控制会在下一次RTT重新进入慢启动阶段，拥塞窗口还原为初值，阈值随之更新；
-* 当TCP通信过程中发生了快速重传的情况（3次ACK），此时拥塞控制会在下一次RTT重新进入拥塞避免阶段，拥塞窗口变为拥塞发生时的一半，阈值随之更新，即发生了快速恢复。
+* **当TCP通信过程中发生了计时器超时的情况**：此时拥塞控制会在下一次RTT重新进入慢启动阶段，拥塞窗口还原为初值，阈值更新为拥塞发生时的一半；
+* **当TCP通信过程中发生了快速重传的情况**：此时拥塞控制会在下一次RTT重新进入拥塞避免阶段，拥塞窗口变为拥塞发生时的一半，即发生了快速恢复。
 
 ![TCP拥塞控制2](assets/TCP拥塞控制2.png)
 
@@ -7401,37 +7527,156 @@ TCP使用窗口机制进行流量控制：连接建立时，接收方分配一�
 
 ## 计算机网络-网络层
 
+### 网络层拥塞控制
+
+* **拥塞**：在分组交换网络中，由于众多的用户随机的将信息发送到网络中，使网络中需要传输的信息总量大于其传输能力，以至于某些网络结点因为缓冲区已满，从而无法接收新到达的分组，此时就发送了拥塞现象。
+
+* **拥塞控制**：根据网络的通过能力或网络拥挤程度，来调整数据发送速率和数据量的过程，叫做拥塞控制。拥塞控制主要考虑端系统之间的网络环境，目的是使网络负载不超过网络的传送能力。
+
+* **拥塞控制策略**：
+  * **流量感知路由**：链路的权值根据网络负载动态调整，将网络流量引导到不同的链路上，均衡网络负载。流量感知路由是一种拥塞的预防措施，可以在一定程度上缓解或预防拥塞的发生；
+  * **准入控制**：是一种广泛应用于虚电路网络的拥塞预防技术，对新建的VC进行审核，若新建的VC会导致网络拥塞（基于瞬时流量和平均流量来判断），则拒绝新VC的建立；
+  * **流量调节**：在网络发生拥塞时，通过调整发送方向的网络发送数据的速率来消除拥塞。
+    * **抑制分组**：当感知到拥塞的路由器选择一个被拥塞的数据报时，给发送该数据报的源主机返回一个抑制分组。同时对被拥塞的数据报的首部的一个标志位进行修改，从而使该数据报在后续传输过程中不会被后续路由器再次选择来发送抑制分组；
+    * **背压策略**：如果因发送速率过快而导致拥塞结点与源节点的距离或跳数较远，那么在抑制分组的发送过程中又会有新的分组进入网络。这时让抑制分组从拥塞结点到源节点的路径上的每一跳都发挥作用，这样从上游第一跳时就能立即降低分组的发送速率。
+  * **负载脱落**：主动丢弃一些数据报来减轻网络负载，从而缓解或消除拥塞。当任何方法都不能消除通信子网的拥塞现象时，负载脱离是路由器的最后手段。
+
+
+
 ### IP数据报格式
 
-![IP数据报](assets/IP数据报.jpg)
+<img src="assets/IP数据报.jpg" alt="IP数据报" style="zoom: 80%;" />
 
-![IP数据包分片](assets/IP数据包分片.png)
+* **版本号**（4位）：IP版本号，路由器根据该字段确定版本规则来解析数据报；
+* **首部长度**（4位）：IP数据报的首部长度，包括可变长度的选项字段。固定首部长度为20字节；
+* **区分服务**（8位）：用于指示期望获得哪种类型的服务（只有在网络提供区分服务时，该字段才有效）；
+* **数据报长度**（16位）：IP数据报的总字节数，包括首部和数据部分。16位可以表示最大IP数据报的总长度65535个字节，除去IP数据报首部的20字节，最大IP数据报可封装65515字节数据；
+* **标识**（16位）：用于标识一个IP数据报，IP协议使用计数器，每产生一个数据报计数器就会加1，作为该数据报的ID标识。不同主机产生的数据报又可能存在相同的标识字段，IP协议是依靠标识字段+源IP+目的IP+协议等字段共同唯一标识一个IP数据报。标识字段的最重要用途是在IP数据报的分片和重组过程中，用于标识属于同一原IP数据报；
+* **标志**（3位）：DF是禁止分片标志，MF是更多分片标志。DF=0表示允许数据报分片，DF=1表示禁止数据报分片。MF=0表示该数据报未被分片或者是分片的最后一个，MF=1表示该数据报是一个分片数据报但不是最后一个；
+* **片偏移**（13位）：表示一个IP数据报分片与原IP数据报的相对偏移量，即封装的数据分片从整个原数据报的哪个字节开始；
+* **生存时间**（8位）：表示IP数据报在网络中可以通过的路由器数，即跳数。该字段用于确保一个IP数据报不会永远在网络中游荡（如：错误的路由选择算法选择了一个环形路由）。源主机在生成IP数据报时设置TTL初值，每经过一跳路由TTL就减1，为0则会被路由器丢弃。TTL占8为位，因此一个IPv4数据报最多能经过256跳；
+* **上层协议**（8位）：表示该IP数据报封装的是哪个上层协议的报文段。IP就是利用该字段实现了多路复用和多路分解；
+* **首部校验和**（16位）：对IP数据报首部的差错检验。计算时，该字段置全0，整个首部以16位对齐，采用反码算数运算（按位加，最高位进位回卷）求和，最后得到的和取反码就是校验和字段。接收IP分组检验校验和时，将首部按相同算法求和，结果为16位1则无差错，存在不为1的任意位，则差错丢弃。首部校验和是逐跳校验、逐跳计算的；
+* **源IP地址**（32位）：是发出IP数据报的源主机地址；
+* **目的IP地址**（32位）：是IP数据报需要送达的主机IP地址；
+* **选项**（1\~40字节）：对IP首部进行扩展，可以携带安全、源选路径、时间戳、路由记录等内容。之后还可能有一个填充字段，长度为0~3字节，取值全0。填充字段的目的是补齐首部，符合32位对齐，即保证首部长度是4字节的倍数；
+* **数据**：存放IP数据报所封装的传输层报文段，到目的主机后会将其所承载的数据交付给相应的上层协议。
+
+<img src="assets/IP数据包分片.png" alt="IP数据包分片" style="zoom:80%;" />
+
+* **MTU**：IP数据报是封装在数据链路层帧中进行传输的。一个数据链路层协议帧所能承载的最大数据量称为该链路的最大传输单元（MTU）；
+* **分片的目的**：当路由器要将一个IP数据报转发至某个输出端口，而该数据报的总长度大于该输出端口所连接链路的MTU时，路由器将IP数据报进行分片（DF=0时），或者将其丢弃（DF=1时）。IP分片的重组任务由目的主机完成。
 
 
 
 ### IP地址编址方式
 
-![IP地址分类](assets/IP地址分类.png)
+<img src="assets/IP地址分类.png" alt="IP地址分类" style="zoom: 67%;" />
+
+**IP地址格式**：IP地址由32位二进制数组成，采用点分十进制表示法。
+
+|       方法       |              表示方法               |
+| :--------------: | :---------------------------------: |
+|   二进制标记法   | 11000000 10101000 00000001 01100101 |
+| 点分十进制标记法 |            192.168.1.101            |
+|  十六进制标记法  |             0xC0A80165              |
+
+|             类              |            前缀长度            |                         前缀                          |              首字节               |
+| :-------------------------: | :----------------------------: | :---------------------------------------------------: | :-------------------------------: |
+| <font color ='red'>A</font> | <font color ='red'>8位</font>  |          <font color ='red'>0xxxxxxx</font>           |  <font color ='red'>0~127</font>  |
+| <font color ='red'>B</font> | <font color ='red'>16位</font> |     <font color ='red'>10xxxxxx  xxxxxxxx</font>      | <font color ='red'>128~191</font> |
+| <font color ='red'>C</font> | <font color ='red'>24位</font> | <font color ='red'>110xxxxx  xxxxxxxx xxxxxxxx</font> | <font color ='red'>192~223</font> |
+|          D（组播）          |             不可用             |         1110xxxx  xxxxxxxx xxxxxxxx xxxxxxxx          |              224~239              |
+|          E（保留）          |             不可用             |         1111xxxx  xxxxxxxx xxxxxxxx xxxxxxxx          |              240~255              |
+
+* A类地址：网络前缀长度为8位，第1位固定0，后7位用于表示网络地址，即共有2^7^=128个A类网络，每个A类网络中的IP地址总数为2^24^=16777216；
+
+* B类地址：网络前缀长度为16位，前2位固定为10，后14位用于表示网络地址，即共有2^14^=16384个B类网络，每个B类网络的IP地址总数为2^16^=65536；
+* C类地址：网络前缀长度为24位，前3位为110，后21位用于表示网络地址，即共有2^21^=2097152个C类网络，每个C类网络的IP地址总数为2^8^=256。
+
+* 特殊地址：
+
+  * 本地主机地址：0.0.0.0/32。当主机需要发送一个IP数据报时，需要将自己的地址作为源地址，但是在某些情况下，主机还不知道自己的IP地址，此时可以使用本地主机地址来填充IP数据报的源地址字段。另外，在路由表中0.0.0.0/0用于表示默认路由。
+  * 有限广播地址：255.255.255.255/32<。当主机或路由器某接口需要向其所在网络中的所有设备发送数据报时，用该地址作为IP数据报的目的IP。注：使用有限广播地址广播的数据，只限于发送数据报的主机所在的子网范围内。
+  * 回送地址：127.0.0.0/8。如果IP数据报的目的地址位于这个地址块中，那么该数据报将不会被发送到源主机之外，如：127.0.0.1。
+
+**私有地址（用于内部网络，不能在公共互联网上使用）**：
+
+| 私有地址类别 |                     范围                      |
+| :----------: | :-------------------------------------------: |
+|     A类      |     10.0.0.0~10.255.255.255 或 10.0.0.0/8     |
+|     B类      |  172.16.0.0~172.31.255.255 或 172.16.0.0/12   |
+|     C类      | 192.168.0.0~192.168.255.255 或 192.168.0.0/16 |
 
 
 
-### 地址解析协议ARP
+### 子网划分与子网掩码
+
+**子网划分**：为了缓解地址空间的不足，提高IP地址的空间利用率。
+
+![image-20200901145214176](assets/image-20200901145214176.png)
+
+**子网掩码**：网络号和子网号全部为1，主机号全部为0。
+
+* A类地址的子网掩码：255.0.0.0；
+* B类地址的子网掩码：255.255.0.0；
+* C类地址的子网掩码：255.255.255.0。
+
+**已知子网中的IP地址和子网掩码**：
+
+* **求子网ID（子网地址）**：将IP地址与子网掩码做按位与运算。或网络位子网位不变，主机位全写为0；
+* **求网络广播地址**：将IP地址与子网掩码的反码做按位或运算。或网络子网位不变，主机位全写为1。
+
+
+
+### 动态主机配置协议DHCP
+
+DHCP动态主机配置协议，为网络中的新加入的主机自动分配IP地址。
+
+**工作过程**：
+
+<img src="assets/image-20200904144226436.png" alt="image-20200904144226436" style="zoom:80%;" />
+
+* DHCP客户广播（因为不知道DHCP服务器的IP地址）DHCP发现报文（DHCP Discover），以便发现DHCP服务器。报文中的目的IP字段会填入255.255.255.255，表明这个一次广播；
+* DHCP服务器广播（因为新接入网络的主机不具有可用IP）发送一个DHCP提供报文（DHCP Offer），用于响应主机，报文中包含为新主机分配的IP地址等信息；
+* DHCP客户收到一个或多个DHCP提供报文后，选择其中一个后广播（因为DHCP可能存在多个，在响应选中的DHCP的同时也要广而告之未被选择的DHCP）发送DHCP请求报文（DHCP Request）报文；
+* 被选定的DHCP服务器以DHCP确认报文（DHCP ACK）来对DHCP请求报文进行响应。
+
+
+
+### 网络地址转换协议NAT
+
+NAT网络地址转换协议，实现将私有地址转换成公有地址，从而访问Internet。NAT协议通常运行在私有网络的边缘路由器或专门服务器上，同时连接内部私有网络和公共互联网，拥有公共IP地址。
+
+![image-20200904150135459](assets/image-20200904150135459.png)
+
+**工作原理**：
+
+![网络地址转换](assets/网络地址转换.png)
+
+* 对于从内网进入公共互联网的IP数据报，将其源IP地址替换为NAT服务器拥有合法的公共IP地址，同时替换源端口号，并将替换关系记录到NAT转换表中；
+* 对于从公共互联网返回的IP数据报，依据其目的IP地址与目的端口号检索NAT转换表，并利用检索到的内部私有IP地址和目的端口号，然后将IP数据报转发到内部网络。
 
 
 
 ### 网际控制报文协议ICMP
 
+ICMP网际控制报文协议，进行主机或路由器间的网络层差错报告与网络探测。
+
+**差错控制报文**：
+
+![image-20200904162339577](assets/image-20200904162339577.png)
+
+* **目的不可达**：当路由器或主机不能将IP数据报成功交付到目的网络、主机、端口时，会丢弃数据报并向源主机发送目的不可达ICMP报文；
+* **源点抑制**：如果路由器由于拥塞导致丢弃了IP数据报，则可以通过向IP数据报的源主机发送源点抑制ICMP报文，反馈该异常情况，告知其拥塞现象；
+* **路由重定向**：如果默认网关路由器认为主机向某目的网络发送的IP数据报，应选择其他更好的路由时，则向主机发送路由重定向ICMP报文，主机收到后会将更好的路由信息更新到路由表中，以便后续发送时选择更好的路由；
+* **时间超时**：当路由器收到IP数据报的TTL为1，减1后变为0时，则不再继续转发该IP数据报，而是将其丢弃，同时向该IP数据报的源主机发送时间超时报文。
+
 
 
 ### 虚拟专用网VPN
 
-![虚拟专用网](assets/虚拟专用网.jpg)
-
-
-
-### 网络地址转换NAT
-
-![网络地址转换](assets/网络地址转换.png)
+<img src="assets/虚拟专用网.jpg" alt="虚拟专用网" style="zoom: 50%;" />
 
 
 
@@ -7439,29 +7684,1002 @@ TCP使用窗口机制进行流量控制：连接建立时，接收方分配一�
 
 ![路由器结构](assets/路由器结构.jpg)
 
+* **输入端口**：负责从物理接口接收信号，还原数据链路层帧，提取IP数据报（或其他网络层协议分组），根据IP数据报的目的IP地址检索路由表，决策需要将该IP数据报交换到哪个输出端口；
+* **交换结构**：将输入端口的IP数据报交换到指定的输出端口，基于内存交换（性能最差）、总线交换、网络交换（性能最佳）；
+* **输出端口**：首先提供缓存队列功能，让交换到该端口的待发送分组排队，并从队列中不断的取出分组进行数据链路层数据帧的封装，最后通过物理线路端发送出去；
+* **路由处理器**：路由器的CPU，负责执行路由器的各种指令，包括路由协议的运行、路由计算、路由表的更新与维护等；
+* **路由表**：路由器是根据路由表来进行分组的转发。由目的网络、下一跳地址和接口组成。
 
-
-### 路由器的分组转发
+**路由器的分组转发**：
 
 ![分组转发](assets/分组转发.jpg)
 
 
 
+### 路由算法
+
+#### 链路状态路由选择算法LS
+
+是与一种全局式路由选择算法，每个路由器在计算路由时需要构建出整个网络的拓扑图。
+
+* 为了构建整个网络的拓扑图，每个路由器周期性检测、收集与其直接相连链路的费用，以及与其直接相连的路由器ID等信息，构造链路状态分组并向全网扩散；
+* 于是网络中的每个路由器都会周期性的收到其他路由器广播的链路状态分组，并将链路状态分组存储到自己的链路状态数据库中；
+* 当数据库中收集到足够的链路状态信息后，路由器就可以基于数据库中的链路状态信息，构建出网络拓扑图；
+
+
+
+#### 距离向量路由选择算法DV
+
+是一种异步的、迭代的分布式路由选择算法。
+
+* 网络中的每个结点x，估计从自己到网络中所有结点y的最短距离，记为Dx(y)，称为结点x的距离向量，即该向量维护了从结点x出发到达网络中所有结点的最短距离（最低费用）的估计；
+* 每个结点向其邻居结点发送它的距离向量的一个拷贝；
+* 当结点收到来自邻居的一份距离向量或是观察到相连的链路上的费用发生变化后。根据B-F方程对自己的距离向量进行计算更新；
+* 如果结点的距离向量得到了更新，那么该结点会将更新后的距离向量发生给它的所有邻居节点。
+
+
+
+#### 层次化路由
+
+将大规模的互联网按组织边界、管理边界、网络技术边界或功能边界划分为多个自治系统（AS），层次化路由将网络路由选择分为自治系统内路由选择和自治系统间路由选择两个层次。解决了大规模网络路由选择问题。
+
+
+
 ### 路由选择协议
 
-TODO
+#### 路由信息协议RIP
+
+* 基于距离向量路由选择算法的IGP（也就是自治系统内的路由选择协议，也就是内部网关协议），主要用于较小规模的AS，RIP在度量路径时采用的是跳数，即每条链路的费用都为1；
+* 路由器周期性的向其相邻路由器广播自己知道的路由信息（路由表），用于通知相邻路由器自己可以到达的网络以及到达该网络的距离（跳数），相邻路由器可以根据收到的路由信息修改和刷新自己的路由表；
+* RIP被限制在网络直径不超过15跳的自治系统内使用，即分组从一个子网到另一个子网穿越的最多子网数目不超过15，因此RIP中一条路径的最大费用不超过15，路径费用16表示无穷大，即目的网络不可达；
+* 相邻的路由器通过RIP响应报文来交换距离向量，交换频率约为30s一次，RIP响应报文中包含了从该路由器到达其他目的子网的估计距离的列表，RIP响应报文也称RIP通告。
+
+![image-20200908154044137](assets/image-20200908154044137.png)
+
+![image-20200908155010268](assets/image-20200908155010268.png)
+
+上图展示了一个使用RIP的自治系统，与路由器相连的线表示子网，虚线表示子网的其它部分：
+
+* 在某一时刻，路由器B收到路由器A的RIP通告，通告内容如4.12，路由器B根据DV算法计算更新其转发表4.11，更新的结果如表4.13所示；
+* RIP规定若超过180s仍未从某个邻居接收到任何RIP响应报文，那么将认为该邻居已经不可达，修改本地转发表，并将此信息通过RIP响应报文通告给邻居；
+* RIP是应用进程实现的，所以RIP报文的传输也需要封装到传输层的UDP报文中，但RIP完成的是网络层的功能，仍然称RIP是网络层协议，网络分层的划分是按功能，而不是具体实现。
+
+
+
+#### 开放式最短路径优先协议OSPF
+
+* 基于链路状态路由选择算法（使用Dijkstra算法求解最短路径）的IGP，应用于较大规模的AS；
+* 不论是RIP还是OSPF都是将网络抽象成无向图，但RIP将无向图中边的权值（即费用）固定为跳数，而OSPF对权值表示的意义没有限制，可以是跳数，也可以是链路的带宽等，OSPF只关心在给定的结点、边和边的权值的集合下，如何求解最短路径；
+* 在运行OSPF的自治系统内，每台路由器需要向与其同处一个自治系统内的所有路由器广播链路状态分组。为了使路由器能够更好的适应网络拓扑以及流量的变化情况，路由器需要在其相连链路上的费用发生变化时，及时广播链路状态分组。
+
+**优点**：
+
+* **安全**，所有OSPF报文都是经过认证的，这样可以预防恶意入侵者将不正确的路由信息注入到路由器的转发表中；
+
+* **支持多条相同费用的路径**，OSPF允许使用多条具有相同费用的路径，这样可以防止在具有多条从源到目的的费用相同的路径时，所有流量都发往其中一条路径，有利于实现网络流量均衡；
+
+* **支持区别化费用度量**，OSPF支持对于同一条链路，根据IP数据报的TOS不同，设置不同的费用度量，从而可以实现不同类型网络流量的分流；
+
+* **支持单播路由与多播路由**，OSPF综合支持单播路由与多播路由，多播路由只是对OSPF的简单扩展，使用OSPF的链路状态数据库就可以计算多播路由；
+
+* **分层路由**，OSPF支持在大规模自治系统内进一步进行分层路由。
+
+  ![image-20200909161141792](assets/image-20200909161141792.png)
+
+  * 区域边界路由器，如上图C、D、E，主要负责为发送到区域之外的分组进行路由选择；
+  * 主干路由器，在主干区域中运行OSPF路由算法的路由器被称为主干路由器；
+  * AS边界路由器，如上图A，负责连接其他AS。
+
+* OSPF报文直接封装到IP数据报中进行传输。
+
+
+
+#### 边界网关协议BGP
+
+BGP实现跨自治系统的路由信息交换，功能：
+
+* 从相邻AS获取某子网的可达性信息；
+* 向本AS内部的所有路由器传播跨AS的某子网可达性信息；
+* 基于某子网可达性信息和AS路由策略，决定到达该子网的最佳路由。
+
+BGP主要有4种报文：
+
+* OPEN（打开）报文，用来与BGP对等方建立BGP会话；
+* UPDATE（更新）报文，用来通告某一路由可达性信息，或者撤销已有路由；
+* KEEPALIVE（保活）报文，用于对打开的报文进行确认，或周期性的证实会话的有效；
+* NOTIFICATION（通知）报文，用来通告差错。
+
+![image-20200909171334291](assets/image-20200909171334291.png)
 
 
 
 ## 计算机网络-数据链路层
 
-TODO
+### 数据链路层服务
+
+#### 基本概念
+
+数据链路层负责通过一条数据链路，从一个结点向另一个物理链路直接相连的相邻结点，传送网络层数据报，中间通常不经过任何其他交换结点。所谓的数据链路是在物理线路上，基于通信协议来控制数据帧传输的逻辑数据通路。从数据链路层来看，无论主机或是路由器等网络设备统称为结点，因为它们通常都是一条数据链路的端点。沿着通信链路连接的相邻结点的通信信道称为链路。
+
+
+
+#### 组帧
+
+![image-20200917215422887](assets/image-20200917215422887-1608789452351.png)
+
+* 将要传输的数据封装成帧结构的操作，称为组帧或成帧；
+* 在网络层的数据报基础上增加帧头帧尾，帧头包含发送结点和接收结点的地址信息，帧尾包含用于差错检查的差错编码；
+* 组帧过程增加的帧头尾中还有一部分用于帧定界的信息，即确保接收结点从物理层收到的比特流中，能够依据定界字符或比特串成功识别帧的开始和结束，如：帧头帧尾都加上01111110。
+
+
+
+#### 链路接入
+
+* **点对点链路**：发送结点和接收结点独占通信链路，只要链路空闲就能发送和接收帧；
+* **广播链路**：通信链路被多个结点共享，任意两个结点同时通过链路发送帧，都会彼此干扰，导致帧传输失败，因此各个结点需要运行MAC媒介访问控制协议，来协调各阶段使用共享物理传输媒介，完成帧的传输。
+
+
+
+#### 可靠交付
+
+并不是所有数据链路层协议都需要设计成可靠传输协议，高出错的链路如无线链路会适用可靠传输，低出错的链路如光纤双绞线等实施可靠传输没有太大的必要。
+
+
+
+#### 差错控制
+
+* 帧在物理媒介传输会产生比特翻转的差错；
+* 一段时间内，出现差错的比特占总比特的比率称为误比特率。
+
+
+
+### 差错控制
+
+#### 差错类型
+
+差错控制就是通过差错编码技术，实现对信息传输差错的检测，并基于某种机制进行差错纠正和处理。信号在信道中传输，会受到各种噪声的干扰，从而导致传输差错：
+
+* 随机噪声：如热噪声、传输介质引起的噪声，具有典型的随机性。随机噪声引起的传输差错称为随机差错或独立差错，具有独立性、稀疏性和非相关性，二进制的传输通常为随机比特差错；
+* 冲击噪声：如雷声、电机启停等，具有很强的突发性。突发差错通常是连续或成片的信息差错，具有相关性，通常集中发生在某段信息。
+
+
+
+#### 控制机制
+
+* **检错重发**：典型的差错控制方式，发送端对数据进行差错编码，接收端利用差错编码检测数据是否出错，对于出错的数据需要重复发送，直到正确为止；
+
+* **前向纠错**：接收端进行差错纠正的方法，需要利于纠错编码（能检测也能纠正），即发送端进行纠错编码，接收端利用纠错编码进行差错检测，发送错误直接纠正（适用于单工链路或实时性要求高的链路）；
+* **反馈校验**：接收端将收到的数据原样发回发送端，发送端通过比对反馈可以确认是否正确发送，若发现不同则立即重发，直到比对反馈结果相同为止（缺点：效率低，实时性差）；
+* **检错丢弃**：不纠正错误，直接丢弃数据。只适用于容许一定比例差错或实时性要求较高的系统（如多媒体播报应用）。
+
+
+
+#### 差错编码
+
+发送端在待传输数据信息的基础上，附加一定的冗余信息，该冗余信息建立起数据信息的某种关联关系，将数据信息以及附加的冗余信息一起发送到接收端，接收端可以检测冗余信息表示的数据信息的关联信息是否存在，若存在则正确，否则出错。
+
+* 奇偶校验码：按位异或（XOR）运算，符号⊕，即参与运算的两个位值，相同则0，不同则1；
+* 汉明码：线性分组码，可以实现单个比特的差错纠正，当信息为足够长时，执行效率会很高；
+* CRC循环冗余码：将二进制位串看成是系数为0或1的多项式的系数。一个k为二进制数可以看作是一个k-1次多项式的系数列表，该多项式共有k项，从x^k-1^到x^0^。这样的多项式被认为是k-1阶多项式。高次（最左边）位是x^k-1^项的系数，接下来的位是x^k-2^项的系数，以此类推。
+
+
+
+### 多路访问-信道划分MAC协议
+
+#### 基本概念
+
+数据链路层使用的信道分类：
+
+* 点对点信道：一对一通信，信道被通信双方共享；
+* 广播信道：一对多广播通信，广播信道上连接的结点很多，信道被所有结点共享，因此需要使用多路访问控制MAC协议来协调结点的数据发送。
+
+基本思想是将信道资源划分后，分配给不同的结点，各结点通信时只使用其分配到的资源，从而实现了信道共享，并避免了多结点通信时的相互干扰。
+
+
+
+#### 频分多路复用FDM
+
+频域划分制，即在频域内将信道带宽划分为多个子信道，并利用载波调制技术，将原始信号调制到对应某个子信道的载波信号上，使同时传输的多路信号在整个物理信道带宽允许的范围内频谱不重叠，从而共用一个信道；
+
+FDM系统的接收端，利用带通滤波器对信号进行分离、复原；
+
+FDM常用于模拟传输的宽带网络种。
+
+![image-20200919134039524](assets/image-20200919134039524.png)
+
+频分多路复用的主要优点是分路方便，是目前模拟通信中常采用的一种复用方式，特别是在有线和微波通信系统中应用广泛。
+
+
+
+#### 时分多路复用TDM
+
+时域划分制，即将通信信道的传输信号在时域内划分为多个等长的时隙，每路信号占用不同的时隙，在时域上互不重叠，使多路信号合用单一的通信信道，从而实现信道共享；
+
+TDM系统的接收端根据各路信号在通信信道上所占用的时隙分离并还原信息；
+
+分为同步时分多路复用STDM和异步时分多路复用ATDM两种：
+
+* STDM按照固定的顺序把时隙分配给各路信号；
+* ATDM为有大量数据要发送的用户分配较多的时隙，数据量小的用户分配相对较小的时隙，没有数据的用户不再分配时隙，可以提高信道的利用率，主要应用于高速远程通信。
+
+![image-20200919134257757](assets/image-20200919134257757.png)
+
+
+
+#### 波分多路复用WDM
+
+本质是频分多路复用，广泛应用于在光纤通信中，光载波频率很高，通常用光的波长来代替频率讨论；
+
+波分多路复用是指在一根光纤中，传输多路不同波长的光信号，由于波长不同，所以各路光信号互不干扰，最后再用波长解复用器将各路波长的光载波分解出来。
+
+密集波分复用DWDM：
+
+* 波长更密集，复用度更高，信道利用率更高，通信容量更大；
+* 其关键技术是光放大器，运行在特定光谱频带上，并根据现有的光纤进行优化，无须将光信号转换为电信号，直接放大光波信号；
+* DWDM是现代光纤通信网络的基础，有效支持IP、ATM等承载的电子邮件、视频、多媒体、语言等数据通过统一的光纤层进行高速传输。
+
+![image-20200919134313253](assets/image-20200919134313253.png)
+
+
+
+#### 码分多路复用CDM
+
+通过利用更长的相互正交的码组分别编码各路原始信息的每个码元，使得编码后的信号在同一信道中混合传输，接收端利用码组的正交特性分离各路信号，从而实现信道共享；
+
+CDM的实质是基扩频技术，即将需要传输的、具有一定信号带宽的信息用一个带宽远大于信号带宽的码序列进行调制，使原始信号的带宽得到扩展，经载波调制后再发送出去，接收端则利用不同码序列之间的相互正交特性，分离特定信号。
+
+
+
+### 多路访问-随机访问MAC协议
+
+#### 基本概念
+
+所有的用户都根据自己的意愿随机的向信道上发送消息，如果一个用户在发送信息期间没有其他用户发送信息，则该用户信息发送成功，如果两个或以上用户都在共享信道中发送信息，则产生冲突或碰撞，导致发送失败，每个用户随机退让一段时间后再次尝试，直至成功；
+
+随机访问的实质就是争用接入，竞争胜利者暂时占用信道发送信息，失败者随机等待一段时间再次竞争，直到成功。
+
+
+
+#### ALOHA协议
+
+任一站点有数据要发送时就可以直接发送至信道，发送站在发出数据后需要对信道侦听一段时间，通常这个时间为电波传到最远端的站再返回本站所需的时间，如果这段时间内收到接收站发来的应答信号，说明发送成功，否则就是发生了冲突，则等待一段随机时间再进行重发，直到成功为止。
+
+![image-20200919142032296](assets/image-20200919142032296.png)
+
+* 纯ALOHA协议：
+  * 吞吐量 ^*^S：在一个帧时内成功发送的平均帧数；
+  * 网络负载 G：在一个帧时内发送的平均帧数，包括发送成功的帧和因冲突未发送成功而重发的帧，纯ALOHA协议的网络负载不能大于0.5；
+* 时隙ALOHA协议：
+  * 把信道时间分为**离散的时隙**，每个时隙为发送一帧所需的发送时间，每个通信站只能在每个时隙开始时刻发送帧，如果在一个时隙内发送帧出现冲突，下一个时隙以概率P重发该帧，以概率（1-P）不发该帧（等待下一个时隙），直到帧发送成功；
+  * 需要所有通信站在时间上同步，降低了产生冲突的概率，最大信道利用率为36.8%。
+
+
+
+#### CSMA载波监听多路访问协议
+
+ALOHA协议的根本缺点：就是发送前无论信道是否空闲都会进行发送，这会大大增加冲突的可能性，在发送帧之前先判断信道是否空闲，若空闲则发送否则推迟发送，能够减少发生冲突的可能性；
+
+CSMA就是为解决这一问题而提出的，通过载波监听装置，使通信站在发送数据前，监听信道上其他站点是否发送数据，若有站点在发送则暂时不发，从而减少发生冲突的概率，CSMA可以理解为先听后说。
+
+非坚持CSMA：
+
+* 通信站有数据发送，先侦听信道；
+* 若发现信道空闲，则立即发送数据；
+* 若发现信道忙，则等待一个随机时间，然后重新开始侦听信道，尝试发送数据；
+* 若发送数据时产生冲突，则等待一个随机时间，然后重新开始侦听信道，尝试发送数据。
+
+1-坚持CSMA：
+
+* 通信站有数据发送，先侦听信道；
+* 若发现信道空闲，则立即发送数据；
+* 若发现信道忙，则继续侦听信道直至发现信道空闲，然后立即发送数据。
+
+P-坚持CSMA：
+
+* 通信站有数据发送，先侦听信道；
+* 若发现信道空闲，则以P概率在最近时隙开始时刻发送数据，以概率Q=1-P延迟到下一个时隙发送；
+* 若下一个时隙仍空闲，重复此过程直到数据发出或时隙被其他通信站占用；
+* 若信道忙，则等待下一个时隙，重新开始发送数据；
+* 若发送数据时发生冲突，则等待一个随机时间，然后重新开始发送过程。
+
+
+
+#### CSMA/CD带冲突检测的载波监听多路访问协议
+
+CSMA即使监听后再发也会出现数据冲突问题，当两个帧冲突时，不仅双方都会被破坏，也会使信道无法被其他站使用，因此发生冲突时继续传输数据帧会造成信道的浪费；
+
+CSMA/CD就是为解决这一问题而提出的，即一旦发现有冲突发生，所有通信站都立即停止继续发送数据，这就需要通信站在发送数据的同时，还要监听信道，其中CD表示冲突检测，CSMA/CD可以理解为先听后说，边听边说。
+
+![image-20200919150758432](assets/image-20200919150758432.png)
+
+CSMA/CD的基本原理是：通信站使用CSMA协议进行数据发送，在发送期间如果检测到碰撞，立即终止发送，并发出一个冲突强化信号，使所有通信站都知道冲突的发生，信号发出后随机等待一段时间，再重复上述过程。
+
+信道状态：
+
+* 传输状态：一个通信站使用信道，其他站禁止使用；
+* 竞争状态：所有通信站都有权尝试获取对信道的使用权；
+* 空闲状态：没有通信站使用信道。
+
+CSMA/CD发生冲突的原因：信号传播时延的问题，一个通信站发出的信号，需要经过一定的延迟才能到达其他站，而在信号到达其他站之前，如果某通信站此时也有数据发送，那么侦听信道的结果则依然为空闲状态，于是发送数据产生了冲突。
+
+CSMA/CD冲突检测方法：通过检测信道中信号的强度来判断是否发生冲突的，适用于有线而不适用于无线信道。为了精确检测冲突，需要在发送数据的同时检测冲突，数据发送结束的同时也结束冲突检测，也就是**边发边听，不发不听**。
+
+
+
+### 多路访问-受控接入MAC协议
+
+#### 基本概念
+
+特点是各个用户不能随意接入信道而必须服从一定的控制。
+
+
+
+#### 集中式控制
+
+系统中有一个主机负责调度其他通信站接入信道，从而避免冲突，主要方法是轮询技术，又分为轮叫轮询和传递轮询。
+
+轮叫轮询：设有N个通信站连接共享线路，主机按顺序从站1开始逐个轮询，站1如有数据即可发送，若无则发送控制帧给主机，表示无数据可发，然后主机轮询站2，完成一轮后重复询问1站；
+
+传递轮询：
+
+* 轮叫轮询的缺点就是轮询帧在共享线路上不停的循环往返，形成较大的开销，增加帧发送的等待时延；
+* 传递轮询可以解决这样的问题，主机先向站N发出轮询帧，站N在发送数据后或在告诉主机没有数据发送时，即将其相邻站（N-1）的地址附上，从站1到站N-1都各有两条输入线，一条接收主机发来的数据，另一条接收允许该站发送数据的控制信息。
+
+![image-20200919161047652](assets/image-20200919161047652.png)
+
+缺点是一旦主机出现了问题，那么整个网络都会陷入瘫痪。
+
+
+
+#### 分散式控制
+
+令牌技术是典型的分散式控制方法，令牌是一种特殊的帧，代表了通信站使用信道的许可，在信道空闲时一直在信道上传输，一个通信站如果想发送数据就首先要获得令牌，然后在一定时间内发送数据，在发送完数据后重新产生令牌并发送到信道上，以便其他通信站使用信道。最典型的使用令牌实现多路访问控制的是令牌环网。
+
+![image-20200919163226376](assets/image-20200919163226376.png)
+
+令牌丢失和数据帧无法撤销，是环网上最严重的错误：
+
+* 令牌本身是位串，绕环传递的过程种可能受干扰出错，另外，当某站点发送数据帧后，由于故障而无法将所发的数据帧从网上撤销时，又会造成网上数据帧持续循环的错误；
+* 通过在环路上指定一个站点作为主动令牌管理站，以此来解决问题，通过超时机制来检测令牌是否丢失，若丢失则清除环路上的数据碎片，并发出一个令牌；
+* 通过在经过的任何一个数据帧上置其监控位为1，来管理无法撤销的数据。
 
 
 
 ## 计算机网络-物理层
 
-TODO
+物理层在实现为数据终端设备提供数据传输通路、传送数据以及物理层管理等功能的过程中，<font color='red'>定义了建立、维护和拆除物理链路的规范和标准，同时也定义了物理层接口通信的标准</font>。
+
+<font color='red'>物理层接口标准</font>的定义主要包括四大特性：<font color='red'>机械特性、电气特性、功能特性以及规程特性</font>。
+
+<font color='red'>物理层接口协议主要任务就是解决主机、工作站等数据终端设备与通信线路上通信设备之间的接口问题</font>。
+
+### 数据通信基础
+
+#### 基本概念
+
+**信息与消息**：信息是对事物状态或存在方式的不确定性表述，而人类能够感知的描述称为消息；
+
+**数据**：对客观事物的符号表示，用于表示客观事物的未经加工的原始素材；
+
+**信号**：数据的电子或电磁编码，信号是信息的载体（模拟信号、数字信号）；
+
+**通信**：通信的本质就是在一点精确或近似的再生另一点的信息；
+
+**信道**：<font color='red'>信号在通信系统中传输的通道（物理信道、逻辑信道）</font>；
+
+**码元**：<font color='red'>单位时间内代表不同离散值的波形</font>；
+
+**波特率**：<font color='red'>码元速率（Baud）即最大信号传输速率，描述信道单位时间内传输码元的能力，即2倍的带宽</font>；
+
+**比特率**：<font color='red'>数据速率（bps）描述信道单位时间内传输</font>；
+
+**带宽**：<font color='red'>指能够有效通过该信道的信号最大频带宽度（HZ）</font>。
+
+
+
+#### 数据通信系统
+
+系统的构成：通信系统的作用是将消息从信源传递到一个或多个目的地，能够实现信息传输的一切技术设备和传输介质的集合称为通信系统。
+
+![image-20200920225359786](assets/image-20200920225359786.png)
+
+* 信源：将信息转换为信号的设备，如电话、摄像机、计算机；
+* 发送设备：将信源产生的信号进行适当变换的装置，使之适用于信道中传输，主要通过编码和调制的方式变换；
+* 信道：<font color='red'>即信号的传输媒介，分为有线和无线信道两类，具体类型如双绞线、同轴电缆、光纤、大气层、外层空间</font>；
+* 接收设备：完成发送设备的发变换，即进行译码和解调，还原原始的发送信号；
+* 信宿：信号的终点，并将信号转换为供人们能识别的消息；
+* 噪声：自然界和通信设备所固有的，对通信信号产生干扰和影响的各种信号，噪声对通信系统是有害的，但无法完全避免。
+
+模拟通信和数字通信：通信系统根据信号种类分为模拟通信和数字通信系统，区别在于信道中传输的是模拟还是数字信号。
+
+![image-20200920225451906](assets/image-20200920225451906.png)
+
+* <font color='red'>模拟信号是指信号的因变量完全随连续消息的变换而变化的信号</font>，自变量可以是连续的，也可以是离散的，但因变量一定是连续的，如电视图像信号、电话语言信号、传感器的输出信号；
+
+* <font color='red'>数字信号是指表示信息的因变量是离散的并且状态有限，自变量时间的取值也是离散的信号</font>，如计算机数据、数字电话、数字电视等都是数字信号；
+
+* <font color='red'>二者在一定条件下可以相互转换，模拟信号通过采样、量化、编码等步骤变成数字信号。数字信号通过解码、平滑等步骤恢复成模拟信号</font>。
+
+数据通信方式：
+
+* <font color='red'>单向通信（单工）、双向交替通信（半双工）、双向同时通信（全双工）</font>：单工通信就是任何时间都只有一个方向的通信，而没有反方向的交互；半双工通信就是通信双方都可以发送信息，但不能双方同时发送或接收，一方发另一方收，如对讲机系统；全双工通信就是双方可以同时发送和接收信息，如电话网、计算机网络；
+* <font color='red'>并行通信、串行通信</font>：并行通信是为字节的每一位都设置传输通道，全部位同时进行传输，传输速度快但成本高，适用于计算机内元器件的传输，如CPU与存储器的总线传输；串行通信只为信息传输设置一条通道数据字节中的每一位依次传输，传输速度慢但成本低，适用于长距离通信，如计算机与外置设备的数据传送；
+* <font color='red'>异步通信、同步通信</font>：
+  * 异步通信以字符为单位发送，依次传输一字符，每个字符5~8位，字符前加上起始位指明开始，后面加上1或2个停止位指明结束，当无字符发送时就一直发送停止位，接收方就可以根据停止位判断范围。异步传输不需要传输时钟信号，实现简单，效率低下，适用于低速系统；
+  * 同步通信以数据块为单位发送，内部包含多个字符，每个字符5~8位，在前面加上起始标志，后面加上结束标志，接收方以此判断范围。同步传输效率高，但需要双方建立同步时钟，实现复杂，适用于高速系统。
+
+数据通信系统的功能：
+
+![image-20200920225522380](assets/image-20200920225522380.png)
+
+
+
+### 物理介质
+
+<font color='red'>在进行数据通信时，信号需要通过某种介质才能进行传输，即物理介质</font>。
+
+#### 引导型传输介质
+
+又称有限信道，以导线为传输介质，信号沿导线进行传输，能量集中在导线附近，因此效率高，但部署不够灵活。
+
+* 架空明线：指平行且相互分离或绝缘的架空裸线线路，通常采用铜线或铝线等金属导线；
+
+* <font color='red'>双绞线</font>：主要用于基带传输。
+
+  ![image-20200921165429246](assets/image-20200921165429246.png)
+
+  将两根相互绝缘的铜线并排绞合在一起可以减少对相邻导线的电磁干扰，这样的一对线称为双绞线；
+
+  屏蔽双绞线STP：在护套与线对间增加一层金属丝编制的屏蔽层，可以提高双绞线的抗电磁干扰能力，性能更优、价格高、安装复杂；
+
+  非屏蔽双绞线UTP：没有屏蔽层的双绞线电缆，价格便宜、安装简单、局域网更普遍使用的是UTP。
+
+* <font color='red'>同轴电缆</font>：
+
+  ![image-20200921170225164](assets/image-20200921170225164.png)
+
+  主要用于频带传输，如有线电视网络，具有较好的抗电磁干扰性能；
+
+  由同轴的两个导体构成，外导体是空心圆柱型网状编织金属导体，内导体是金属导线，两者之间填充绝缘实心介质；
+
+* <font color='red'>光纤</font>：
+
+  ![image-20200921170302195](assets/image-20200921170302195.png)
+
+  基本原理是利用了光的全反射现象；
+
+  分为多模光纤和单模光纤；
+
+  优点： 
+
+  1. <font color='red'>通信容量大，最高可达100Gbps</font>；
+  2. <font color='red'>传输损耗小，中继距离长，特别适合远距离传输</font>；
+  3. <font color='red'>抗雷电和抗电磁干扰性能好</font>；
+  4. <font color='red'>无串音干扰，保密性好</font>；
+  5. <font color='red'>体积小，重量轻</font>。
+
+#### 非引导型传输介质
+
+适合距离特别远的自由空间的传播通信；
+
+电磁波按频率划分为若干频段，用于不同目的或场合的无线通信；
+
+电磁波在外层空间的传播，如两艘飞船间的通信，为自由空间传播，在近地空间传播会受到地面和大气层的影响，更加电磁波频率、通信距离和位置的不同，电磁波的传播可以分为<font color='red'>地波、天波和视线传播</font>。
+
+
+
+### 信道与信道容量
+
+#### 信道分类
+
+狭义信道：即为信号传输介质；
+
+广义信道，包括信号传输介质和通信系统的一些变换装置，如发送设备、接收设备、天线、调制器等：
+
+* <font color='red'>调制信道：信号从调制器的输出端传输到解调器的输入端经过的部分（恒参信道、随参信道）</font>；
+* <font color='red'>编码信道：数字信号由编码器输出端传输到译码器输入端经过的部分，包括调制信道及调制器、解调器</font>。
+
+![image-20200921171032352](assets/image-20200921171032352.png)
+
+#### 信道传输特性
+
+不同类型的信道对信号传输的影响差异较大，恒参信道的传输特性变化小、缓慢，可以视为恒定，不随时间变化；随参信道的传输特性是时变的。
+
+恒参信道传输特性：
+
+* 各种有线信道和部分无线信道，如微波视线传播链路和卫星链路等，都属于恒惨信道；
+* 对信号幅值产出固定的衰减；
+* 对信号输出产生固定的时延。
+
+随参信道传输特性：
+
+* 随参信道的传播特性随时间随机快速变化，如依靠地波和天波传播的无线电信号；
+* 信号的传输衰减随时间随机变化；
+* 信号的传输时延随时间随机变化；
+* 存在多径传播现象，多径现象是指发射天线发出的电磁波可能经过多条路径到达接收端。
+
+#### 信道容量
+
+信道容量是指信道无差错传输信息的最大平均速率。广义信道可以分为调制信道和编码信道，信息论中将信道分为连续和离散信道；调制信道是一种连续信道，即输入和输出信号都是取值连续的；编码信道是离散信道，输入与输出信号都是取值离散的时间函数。
+
+
+
+### 基带传输
+
+#### 系统结构
+
+在信道中直接传输基带信号，称为基带传输；
+
+在信道中直接传输数字基带信号，称为数字基带传输。
+
+![image-20200921222156981](assets/image-20200921222156981.png)
+
+#### 传输编码
+
+将二进制数字数据映射为脉冲信号的编码：
+
+* 单极不归零码：
+
+  二进制数字符号0和1分别用零电平和正电平表示，脉冲幅值只有零或正，只有一个极性，故称为单极；
+
+  不归零是指整个脉冲持续时间内，电平保持不变，且脉冲持续时间结束时也不要求回归0电平；
+
+  即：相邻两个脉冲区间如果表示的是同样的二进制符号，不要求回归0电平，幅值可以保持不变直到下一个脉冲区间表示的是不同的二进制符号。
+
+  
+
+  ![image-20200922141728695](assets/image-20200922141728695.png)
+
+* 双极不归零码：
+
+  二进制数符号0和1分别用负电平和正电平表示。
+
+  ![image-20200922141742680](assets/image-20200922141742680.png)
+
+* 单极归零码：
+
+  二进制数符号0和1分别用零电平和正电平表示；
+
+  归零就是在每个正脉冲区间的中间时刻，电平要回归到零电平；
+
+  即：不论下一个脉冲区间是相同还是不同，都需要在本次脉冲持续期中回归零电平，下一个脉冲信号再重新调整幅值。
+
+  ![image-20200922141757481](assets/image-20200922141757481.png)
+
+* 双极归零码：
+
+  二进制数符号0和1分别用负电平和正电平表示。
+
+  ![image-20200922141810966](assets/image-20200922141810966.png)
+
+* 差分码：
+
+  <font color='red'>利用电平的变化与否来表示信息，相邻脉冲用电平跳变表示1，无跳变表示0；</font>
+
+  即：相邻的区脉冲区间若电平发生跳变则代表后者是1，若相邻脉冲区间幅值不变，则表示后者是0。
+
+  ![image-20200922141820300](assets/image-20200922141820300.png)
+
+将数字基带信号的基本码型变换为数字基带传输码型的编码：
+
+* AMI码：
+
+  <font color='red'>信号交替反转码，用3种电平进行编码，零电平编码0，正负电平交替编码1</font>；
+
+  即：若前一个1用正电平表示，那接下来又出现的1就用负电平表示，反之亦然。
+
+  ![image-20200922141840738](assets/image-20200922141840738.png)
+
+* 双相码：
+
+  <font color='red'>曼彻斯特码，只有正负两种电平，每位脉冲持续时间的中间时刻要进行电平跳变，利用该跳变编码信息，正（高）电平跳到负（低）电平表示1，负电平跳到正电平表示0；</font>
+
+  即：每段脉冲区间都是从中间位置开始跳变，从上往下跳表示1，从下往上跳表示0。
+
+  <font color='red'>差分曼彻斯特编码，每位脉冲周期也要进行中间时刻跳变，但仅用于同步，而利用每位开始处是否存在电平跳变编码信息，其中，开始有跳变表示1，无跳变表示0</font>；
+
+  即：以区间的中间时刻为分界线，前一个脉冲周期的后半段和后一个脉冲周期的前半段之间，然后发生了电平跳变，则后一个脉冲周期表示的就是1，若无跳变，则表示0。
+
+  ![image-20200922141856410](assets/image-20200922141856410.png)
+
+* 米勒码：
+
+  是双相码的变形，也称延迟调制码，米勒码的编码规范如下：
+
+  * <font color='red'>信息码中的1编码为双极非归零码的01或10</font>；
+  * <font color='red'>信息码连着是1时，后面的1要交替编码，即前面的1如果编码为01，后面的1就要编码为10，反之亦然</font>；
+  * <font color='red'>信息码中的0编码为双极不归零码的00或11，即码元中间不跳变</font>；
+  * <font color='red'>信息码单个0时，其前沿、中间时刻、后沿均不跳变</font>；
+  * <font color='red'>信息码连着是0时，两个0码元的间隔跳变（即前一个0的后沿，后一个0的前沿）</font>。
+
+  ![image-20200922141910318](assets/image-20200922141910318.png)
+
+* CMI码：
+
+  即信号反转码，是一种双极性二电平码，也是将信息码的1为映射为双极不归零码的2位；
+
+  编码规则是信息码的0编码为双极不归零码的01，1交替编码为双极不归零码的11和00。
+
+  ![image-20200922141920828](assets/image-20200922141920828.png)
+
+* nBmB码：
+
+  将n位二进制信息码作为一组，映射成m位二进制新码组，其中m>n。再光纤数字传输系统中，通常选择m=n+1构造编码；
+
+  具有良好的同步和检错能力；
+
+  例如：4B/5B编码，编码效率为80%，常用于100M以太网（快速以太网）、FDDI。8B/10B编码，编码效率80%，常用于千兆以太网。
+
+* nBmT码：将n为二进制信息码作为一组，映射成m为三进制新码组，且m<=n。
+
+### 频带传输
+
+<font color='red'>基带信号可以在具有低通特性的信道中传输，然而许多信道如无线信道不具有低通特性，因此不能再这些信道中之间传输基带信号</font>；
+
+<font color='red'>基带信号去调制与对应信道传输特性相匹配的载波信号，通过在信道中传送经过调制的载波信号实现将基带信号所携带信息传送出去</font>，因此需要使用频带传输这一信号传输方式。
+
+#### 基本结构
+
+将实现调制、传输与解调的传输系统称为数字频带传输系，也称为通带传输或载波传输；
+
+利用模拟基带信号调制载波，称为模拟调制；<font color='red'>利用数字基带信号调制载波，称为数字调制</font>。
+
+![image-20200922162314473](assets/image-20200922162314473.png)
+
+#### 数字调制与解调
+
+调制：利用数字基带信号控制载波信号的某些特征参数，使载波信号这些参量的变化反映数字基带信号的信息，进而将数字基带信号变换为数字通信信号的过程；
+
+解调：在接收端需要将调制到载波信号中的数字基带信号卸载下来，还原数字基带信号，这一个过程称为解调；
+
+二进制数字调制：
+
+|                调制技术                |                         说明                         | 码元种类 | 比特位 |                特点                |
+| :------------------------------------: | :--------------------------------------------------: | :------: | :----: | :--------------------------------: |
+|                  2ASK                  |         用恒定的载波振幅值表示1，无载波表示0         |    2     |   1    | 抗干扰性最差、误码率最高、性能最差 |
+| 2FSK（应用较多）  （中、低速数据传输） |    选择两个不同频率的载波f1和f2表示两个不同值0和1    |    2     |   1    | 频带利用率最低，抗干扰性较2ASK更强 |
+|                  2PSK                  |         用载波的相位变化来表示两个不同值0和1         |    2     |   1    |      抗干扰性最好、误码率最低      |
+|   2DPSK（应用较多）（高速数据传输）    | 用相邻两个码元载波间的相对相位变化表示两个不同值0和1 |    2     |   1    |      抗干扰性最好、误码率最低      |
+
+**正交幅值调制QAM**：
+
+QAM是对载波信号的<font color="red">幅值</font>和<font color="red">相位</font>同时进行调制的二维调制技术，其信号矢量端点图称为星座图，星座间最小距离越大，抗噪性能就越好；
+
+QAM调制技术具有频带利用率高、抗噪能力强、调制解调系统简单等优点，适用于频带资源有限的通信场合，在实际通信系统中得到了广泛的应用。
+
+
+
+## 计算机网络-网络安全
+
+### 基本概念
+
+* **概念**：网络安全是指网络系统的硬件、软件及其系统中的数据受到保护，不因偶然的或者恶意的原因而遭到破坏、更改、泄密，系统连续可靠的正常运行，网络服务不中断。
+
+* **属性**：机密性、消息完整性、可访问与可用性、身份认证。  
+
+* **网络安全威胁**：
+  * 报文传输方面，主要包括窃听、插入、假冒、劫持等安全威胁；
+  * 常见的网络攻击包括拒绝服务Dos以及分布式拒绝服务DDos等；
+  * 映射；
+  * 分组嗅探；
+  * IP欺骗。
+
+
+
+### 数据加密
+
+#### 基本概念
+
+* **概念**：密码技术是保障信息安全的核心基础，解决数据的机密性、完整性、不可否认性以及身份识别等问题均需要以密码为基础；
+
+* **密码体制的5个要素**：1. M 明文空间、2. C 密文空间、3. K 密钥空间、4. E 加密算法、5. D 解密算法；
+
+* **密码学**：分为密码编码学和密码分析学。
+
+
+
+#### 传统加密方式
+
+**替代密码**：将明文字母表M中的每个字母用密文字母表C中的相应字母代替，常见的加密模型有移位密码、乘数密码、仿射密码等。
+
+* 凯撒密码：是移位密码的典型应用，通过将字母按顺序推后3位起到加密的作用。
+
+**换位密码**：又称置换密码，是根据一定的规则重新排列明文，以便打破明文的结构特性。置换密码的特点是保持明文的所有字符不变，只利用置换打乱明文字符的位置和次序。置换密码可以分为列置换密码和周期置换密码。
+
+* 简单列置换密码：
+
+  * 将明文P按密钥K的长度n分组，每组一行按行排列，即每行n个字符；
+  * 若长度不足n的整数倍，则按双方约定的方式填充（如用字符x填充）；
+  * 设最后得到的字符矩阵为M__mn__，m为明文划分的行数，n为列数；
+  * 然后按照密钥规定的次序将M__mn__对应的列输出，即可得到密文C；
+  * 密钥K中每个字母在字母表中的顺序，规定了M__mn__的列输出顺序。
+
+
+
+#### 对称密钥加密
+
+对称加密的加密和解密所使用的密钥是相同的。
+
+* **DES**：分组密码，使用56位密钥，明文位64位分组序列，进行16轮加密，每轮加密都会进行复杂的替代和置换操作，并且每轮都会使用一个56位密钥导出的48位子密钥，最终输出与明文等长的64位密文；
+* **3DES**：执行3次DES算法，加密过程是加密-解密-加密，解密过程是解密-加密-解密；
+* **AES**：涉及4种操作，字节替代、行移位、列混淆、轮密钥加，解密过程就是逆操作。
+
+
+
+#### 非对称/公开密钥加密
+
+非对称加密的加密和解密所使用的密钥是不同的，分为公钥和私钥。公加私解，私加公解。
+
+![image-20200928145048349](assets/image-20200928145048349.png)
+
+* **Diffie-Hellman**：基于数学中的素数原根理论设计的公开密钥密码系统；
+
+* **RSA**：也是基于数论设计的，其安全性建立在大数分解的难度上；
+* **椭圆曲线**：TODO。
+
+
+
+### 消息完整性与数字签名
+
+#### 基本概念
+
+报文/消息完整性，也称为报文/消息认证，主要目的是：
+
+* 证明报文确定来自声称的发送方； 
+* 验证报文在传输过程中没有被篡改；
+* 预防报文的时间、顺序被篡改；
+* 预防报文持有期被篡改；
+* 预防抵赖，如发送方否认已发送的消息或接收方否认已接收的消息。
+
+
+
+#### 消息完整性检测方法
+
+为了实现消息完整性检测，需要用到密码散列函数H(m)，表示对报文m进行散列化。
+
+密码散列函数应具备的主要特性：
+
+* 一般的散列函数具有算法公开；
+* 能快速计算；
+* 对任意长度的报文进行多对一映射均能产生定长输出；
+* 对于任意报文无法预知其散列值；
+* 不同报文不能产生相同的散列值。
+* 具有单向性、抗弱碰撞性、抗强碰撞性。
+
+典型的散列函数：
+
+* **MD5**：产生128位的散列值；
+* **SHA-1**：产生160位的散列值，典型的用于数字签名的单向散列函数；
+* **SHA-2**：TODO。
+
+
+
+#### 报文认证
+
+消息完整性检测的一个重要的目的就是要完成报文认证的任务。报文认证是使消息的接收者能够检验收到的消息是否真实的认证方法。
+
+报文认证的目的：
+
+* 消息来源的认证：验证消息的来源是真实的；
+* 消息的认证：验证消息在传送过程中未篡改。
+
+认证方式：简单报文认证和报文认证码MAC。
+
+![image-20200928154818558](assets/image-20200928154818558.png)
+
+![image-20200928154825423](assets/image-20200928154825423.png)
+
+**报文摘要**：对报文m应用散列函数H，得到一个固定长度的散列码，称为报文摘要，记为H(m)，可以作为报文m的数字指纹。
+
+
+
+#### 数字签名
+
+概念：数字签名用来**核实发送方的身份**，是实现认证的重要工具。
+
+过程：**用发送方的私钥签名，用发送方的公钥核实签名**。
+
+数字签名应该满足以下要求：
+
+* <font color='red'>接收方能够确认或证实发送方的签名，但不能伪造</font>；
+* <font color='red'>发送方发出签名消息给接收方后，就不能再否认其所签发的消息</font>；
+* <font color='red'>接收方对已经收到的签名消息不能否认，即有收报认证</font>；
+* <font color='red'>第三者可以确认收发双方之间的消息传送，但不能伪造这一过程</font>。
+
+![image-20200928155105694](assets/image-20200928155105694.png)
+
+![image-20200928155112816](assets/image-20200928155112816.png)
+
+
+
+### 身份认证
+
+概念：身份认证又称身份鉴别，是一个实体经过计算机网络向另一个实体证明其身份的过程。鉴别应当在通信双方的报文和数据交换的基础上，作为某鉴别协议的一部分独立完成。鉴别协议通常在两个通信实体运行其他协议之前运行。
+
+基于共享对称密钥的身份认证：
+
+![image-20200928155414925](assets/image-20200928155414925.png)
+
+* A向B发送报文；
+* B选择一个一次性随机数R发送给A；
+* A使用其与B共享的对称密钥来加密这个随机数，然后把密文发送给B；
+* B解密收到的报文，若结果和自己发送的随机数相同，则确认A的身份。
+
+基于公开密钥的身份认证：
+
+![image-20200928155427364](assets/image-20200928155427364.png)
+
+* A向B发送报文；
+* B选择一个一次性随机数R发送给A；
+* A使用自己的私钥来加密R，并把密文发送给B；
+* B向A请求获取A的公钥；
+* A发送自己的公钥给B；
+* B用公钥解密收到的报文，若结果和自己发送的随机数相同，则确认A的身份。
+
+存在中间人攻击的问题：
+
+![image-20200928162336636](assets/image-20200928162336636.png)
+
+
+
+### 密钥分发中心与证书认证机构
+
+#### 密钥分发中心KDC
+
+概念：对称密钥分发的典型解决方案是通信各方建立一个大家都信赖的密钥分发中心KDC，并且每一方和KDC都保持一个长期的共享密钥。通信双方借助KDC建立一个临时的会话密钥，在会话密钥建立之前，通信双方与KDC之间的长期共享密钥，用于KDC对通信方进行验证以及双方间的验证。
+
+基于KDC实现对称密钥分发的过程：
+
+![image-20200928161932329](assets/image-20200928161932329.png)
+
+方式一：通信发起方生成会话密钥。
+
+* A要与B进行保密通信，A先随机选择一个会话密钥，并标明通信目的B后用A与KDC的共享密钥加密，然后发送给KDC；
+* KDC收到后，用与A的共享密钥解密，会获得会话密钥和A的通信目的B，KDC将会话密钥和通信来源A用与B的共享密钥加密，并发送给B；
+* B接收到后，用于KDC的共享密钥解密，从而得知希望于自己通信的是A，并获取会话密钥开始保密通信。
+
+![image-20200928161941464](assets/image-20200928161941464.png)
+
+方式二：由KDC为A和B生成通信的会话密钥。
+
+* A在希望与B通信时，首先向KDC发送请求消息；
+* KDC收到来自A的消息后，随机选择一个会话密钥，并通过与A和B的共享密钥分别加密，然后将加密的密文分别发送给A和B；
+* A和B收到KDC的密文后，用自己与KDC的共享密钥解密，获取会话密钥开始保密通信。
+
+
+
+#### 证书认证机构CA
+
+将公钥与特定实体绑定，通常是由认证中心CA完成的。
+
+CA的作用：
+
+* CA可以证实一个实体的真实身份，当通信方与CA打交道时，需要信任这个CA能够执行严格的身份认证；
+* 一旦CA验证了某个实体的身份，CA会生成一个把其身份和实体的公钥绑定起来的证书，其中包含该实体的公钥及其全局唯一的身份识别信息等，并由CA对证书进行数字签名。
+
+基于CA的公钥认证过程：
+
+![image-20200928165129553](assets/image-20200928165129553.png)
+
+* 由CA为B签发证书，包含B的公钥和全局唯一的身份识别信息，最后由CA数字签名；
+* A想要B的公钥时，首先获取B的证书，用CA的公钥解密签名获取B的公钥，然后保密通信。
+
+基于KDC或CA避免身份认证的中间人攻击的基本原理：之所以会存在中间人攻击的安全隐患，跟密钥的可信性有很大关系，接收方没有验证公钥的真实性，于是中间人攻击就成功了。解决这一问题的关键就是要解决**对称密钥的分发**和**公钥的认证**问题。
+
+
+
+### 防火墙与入侵检测系统
+
+#### 基本概念
+
+<font color='red'>防火墙是能够隔离组织内部网络与公共互联网，允许某些分组通过，而阻止其他分组进入或离开内部网络的软件、硬件或者软件与硬件结合的一种设施</font>。
+
+防火墙发挥作用的基本前提是需要保证从外部到内部和从内部到外部的所有流量都经过防火墙，并且仅被授权的流量允许通过，防火墙能够限制对授权流量的访问。
+
+
+
+#### 防火墙分类
+
+<font color='red'>无状态分组过滤器</font>：典型的<font color='red'>部署在内部网络和网络边缘路由器上的防火墙</font>，分组过滤是网关路由器的重要功能。在路由器中通常使用访问控制列表ACL实现防火墙规则；
+
+<font color='red'>有状态分组过滤器</font>：使用连接表跟踪每个TCP连接，分组过滤器跟踪连接建立SYN，拆除FIN，根据状态确定是否放行进入或外出的分组；
+
+<font color='red'>应用网关</font>：进行身份鉴别，授权用户开发特定服务。
+
+进行分组过滤时通常基于以下参数进行决策：
+
+* IP数据报的源IP和目的IP；
+* TCP/UDP报文段的源端口号和目的端口号；
+* ICMP报文类型；
+* TCP报文段的SYN和ACK标志位等。
+
+
+
+#### 入侵检测系统IDS
+
+<font color='red'>入侵检测系统IDS是当观察到潜在的恶意流量时，能够产生警告的设备或系统</font>；
+
+IDS不仅仅针对TCP/IP首部进行操作，而且会进行**深度包检测**，并检测多个数据之间的相关性；
+
+IDS能够检测多种攻击，例如：网络映射、端口扫描、TCP栈扫描、Dos拒绝服务攻击。
+
+
+
+### 网络安全协议
+
+#### 安全电子邮件PGP
+
+提供邮件加密、报文完整性等安全服务，满足电子邮件对网络安全的需求。PGP是一种安全电子邮件标准。
+
+**电子邮件对网络安全的需求**：
+
+* 机密性：传输过程中不被第三方阅读到邮件内容，只有真正的接收方才可以阅读邮件；
+* 完整性：支持在邮件传输过程中不被篡改，若发生篡改，通过完整性验证可以判断出邮件被篡改过；
+* 身份认证性：电子邮件的发送方不能被假冒，接收方能够确认发送方的身份；
+* 抗抵赖性：发送方无法对发送的邮件进行抵赖，接收方能够预防发送方抵赖自己发送过的事实。
+
+![image-20200928173529980](assets/image-20200928173529980.png)
+
+![image-20200928173535907](assets/image-20200928173535907.png)
+
+
+
+#### 安全套接字层SSL
+
+**SSL提供的安全服务**：
+
+* 在传输层之上构建一个安全层是一种Web安全解决方案，最典型的就是安全套接字层SSL或传输层安全TLS；
+* SSL可以提供机密性、完整性、身份认证等安全服务；
+* 简化的SSL主要包含4个部分：
+  * 发送方和接收方利用各自的证书、私钥认证、鉴别彼此，并交换共享密钥；
+  * 密钥派生或密钥导出，发送方和接收方利用共享密钥派生出一组密码；
+  * 数据传输，将传输数据分割成一系列记录，加密后传输；
+  * 连接关闭，通过发送特殊消息，安全关闭连接，不能留有漏洞被攻击方利用。
+
+**SSL协议栈**：
+
+* SSL是介于TCP和HTTP等应用层协议之间的一个可选层，绝大部分应用层协议可以直接建立在SSL协议上，SSL是两层协议；
+* SSL使用的加密算法有：
+  * 公开密钥加密算法：RSA；
+  * 对称密钥加密算法：DES、3DES或AES；
+  * MAC算法：MD5、SHA-1或SHA-2。
+
+**SSL的握手过程**：
+
+* 客户发送其支持的算法列表，以及客户一次随机数，服务器从算法列表中选择算法，并发给客户自己的选择、公钥证书、服务器端的一次随机数；
+* 客户验证证书， 提取服务器公钥，生成预主密钥，并利用服务器的公钥加密预主密钥，发送给服务器，实现密钥的分发；
+* 客户与服务器基于预主密钥和一次随机数，分别独立计算加密密钥和MAC密钥，包括前面提到的4个密钥；
+* 客户发送一个针对所有握手消息的MAC，并将此MAC发送给服务器；
+* 服务器发送一个针对所有握手消息的MAC，并将此MAC发送给客户。
+
+
+
+#### 虚拟专用网VPN和IP安全协议IPSec
+
+基本原理：<font color='red'>VPN通过隧道技术、加密技术、密钥管理、身份认证和访问控制等，实现与专用网类似的功能</font>，可以达到VPN安全性的目的，同时成本相对而言要低很多。VPN最重要的特点就是虚拟，连接总部网络和分支机构之间的安全通道实际上并不会独占网络资源，是一条逻辑上穿过公共网络的安全、稳定的隧道。
+
+<font color='red'>VPN的核心是隧道技术，包括3种协议</font>：
+
+* <font color='red'>乘客协议</font>：确定封装的对象属于哪种协议；
+* <font color='red'>封装协议</font>：确定遵循哪一种协议进行封装，需要加什么字段等；
+* <font color='red'>承载协议</font>：确定最后的对象会放入哪类公共网络，如在internet网络中传输。
+
+IPSec的核心协议及两种传输模式：
+
+* <font color='red'>IPSec是网络层使用最为广泛的安全协议，但IPSec不是一个单一的协议，而是一个安全体系</font>，主要包括ESP协议、AH协议、安全关联SA、密钥交换IKE； 
+* <font color='red'>IPSec提供的安全服务包括机密性、数据完整性、源认证和防重防攻击等</font>；
+* 核心协议：<font color='red'>ESP（封装安全载荷）和AH（认证头）协议</font>；
+* 传输模式：<font color='red'>传输模式和隧道模式</font>。
+
+AH协议和ESP协议提供的安全服务：
+
+* AH协议提供源认证和鉴别、数据完整性检验；
+* ESP提供源认证和鉴别、数据完整性检验以及机密性，比AH应用更加广泛；
+* 两种不同协议和两种模式结合起来的4种组合：
+  * 传输模式AH；
+  * 隧道模式AH；
+  * 传输模式ESP；
+  * <font color='red'>隧道模式ESP：是使用最为广泛的，最重要的IPSec形式</font>。
 
 
 
@@ -7469,11 +8687,11 @@ TODO
 
 ### Netty是什么？
 
-![img](assets/166e31cd2154b3f0)
-
 * 是一个基于NIO的C/S模式的网络通信框架，可以快速的通过它开发出高并发、高可靠的网络应用程序；
 * 极大的简化了TCP、UDP套接字服务器等网络编程的开发难度，且性能和安全性都得到了更好的保证；
 * 支持多种计算机网络应用层协议，如FTP、SMTP、HTTP以及各种二进制和基于文本的传输协议。
+
+![img](assets/166e31cd2154b3f0)
 
 
 
@@ -7493,8 +8711,8 @@ TODO
 
 ### Netty的应用场景
 
-* RPC框架的网络通信结构：在分布式系统中，不同的服务节点需要相互调用，需要使用RPC框架。而服务节点间可以通过Netty来通信；
-* 高并发的HTTP网络服务器：基于同步非阻塞IO和多路复用模型的HTTP服务器；
+* **RPC框架的网络通信结构**：在分布式系统中，不同的服务节点需要相互调用，需要使用RPC框架。而服务节点间可以通过Netty来通信；
+* **高并发的HTTP网络服务器**：基于同步非阻塞IO和多路复用模型的HTTP服务器；
 * 可以实现即时通讯系统；
 * 可以实现消息推送系统。
 
@@ -7502,7 +8720,7 @@ TODO
 
 ## Netty-模块组件
 
-### Bootstrap、ServerBootstrap
+### Bootstrap/ServerBootstrap
 
 Netty的客户端和服务端启动引导类，主要作用是配置整个Netty程序，串联各个组件。
 
@@ -7537,7 +8755,7 @@ b.group(bossGroup, workerGroup)
 
 
 
-### Future、ChannelFuture
+### Future/ChannelFuture
 
 Netty的API中所有的IO操作都是异步的，不会立即返回结果，但会通过ChannelFuture封装未来异步操作的结果。也可以注册一个监听器，当操作成功或失败后会自动触发注册的监听器回调。
 
@@ -7562,9 +8780,9 @@ serverBootstrap.bind(port).addListener(future -> {
 
 
 
-### Channel、ChannelOption
+### Channel/ChannelOption
 
-通道是Netty用于网络通信的组件，能够执行网络I/O操作，为用户提供：
+Channel通道是Netty用于网络通信的组件，能够执行网络I/O操作，为用户提供：
 
 * 当前网络连接的状态，即通道是否打开，Socket是否建立；
 * 网络连接的参数配置，如：接收缓冲大小；
@@ -7573,35 +8791,35 @@ serverBootstrap.bind(port).addListener(future -> {
 
 ChannelOption为Channel提供了参数的设置：
 
-* ChannelOption.SO_BACKLOG：用于初始化服务器可连接队列的大小。服务端处理客户端连接请求是顺序处理的，所以同时只能处理一个客户端连接。多个客户连接到来时，服务端会将请求排队。
-* ChannelOption.SO_KEEPALIVE：一直保持连接活动状态。
+* **ChannelOption.SO_BACKLOG**：用于初始化服务器可连接队列的大小。服务端处理客户端连接请求是顺序处理的，所以同时只能处理一个客户端连接。多个客户连接到来时，服务端会将请求排队。
+* **ChannelOption.SO_KEEPALIVE**：一直保持连接活动状态。
 
 
 
 ### Selector
 
-Netty基于选择器Selector机制实现IO多路复用，通过Selector一个线程可以监听多个连接的Channel事件。当向一个Selector中注册Channel后，Selector内部的机制就可以轮询已注册的Channel是否发生事件的就绪，如读写、连接等，当有事件就绪才会真正进行处理。
+Netty基于NIO的选择器Selector机制实现I/O多路复用，通过Selector一个线程可以监听多个连接的Channel事件。当向一个Selector中注册Channel后，Selector内部的机制就可以轮询已注册到Channel上的事件是否就绪，当有事件真正就绪才会进行处理。
 
 
 
-### NioEventLoop、NioEventLoopGroup
+### NioEventLoop/NioEventLoopGroup
 
 NioEventLoop事件循环中维护了一个Selector实例和其任务队列，支持异步提交任务，线程启动时会调用NioEventLoop的run方法，执行相应的IO或非IO任务：
 
-* IO任务：即selectionKey中就绪的事件，如accept、connect、read、write等，由processSelectedKeys方法触发；
-* 非IO任务：会添加到taskQueue中，如register、bind等任务，由runAllTasks方法触发。
+* **IO任务**：即selectionKey中就绪的事件，如accept、connect、read、write等，由processSelectedKeys方法触发；
+* **非IO任务**：会添加到taskQueue中，如register、bind等任务，由runAllTasks方法触发。
 
-NioEventLoopGroup事件循环组主要管理NioEventLoop的生命周期，可以理解为线程池，内部维护了一组NioEventLoop线程，可以通过next接口按照一定规则获取一个NioEventLoop处理任务，每个NioEventLoop线程负责处理多个Channel上的事件，而一个Channel只会对应一个线程。
+NioEventLoopGroup事件循环组主要管理NioEventLoop的生命周期，可以理解为线程池，内部维护了一组NioEventLoop线程，可以通过next接口按照一定规则获取一个NioEventLoop去处理任务，每个NioEventLoop线程负责处理多个Channel上的事件，而一个Channel只会对应一个线程。
 
 
 
-### ChannelHandler、ChannelHandlerContext
+### ChannelHandler/ChannelHandlerContext
 
-通道处理器是一个接口，其处理IO事件或拦截IO操作，并将其转发到其ChannelPipeline链上的下一个处理程序。使用ChannelHandler时可以继承其子类或适配器类：
+通道处理器是一个接口，其处理IO事件或拦截IO操作，并将其转发到其所属ChannelPipeline链上的下一个handler程序。使用ChannelHandler时可以继承其子类或适配器类：
 
-* ChannelInboundHandler/ChannelInboundHandlerAdapter：处理入站I/O事件；
-* ChannelOutboundHandler/ChannelOutboundHandlerAdapter：处理出站I/O事件；
-* ChannelDuplexHandler：处理入站和出站事件。
+* **ChannelInboundHandler/ChannelInboundHandlerAdapter**：处理入站I/O事件；
+* **ChannelOutboundHandler/ChannelOutboundHandlerAdapter**：处理出站I/O事件；
+* **ChannelDuplexHandler**：处理入站和出站事件。
 
 ChannelHandlerContext保存了Channel相关的所有上下文信息，同时关联了一个ChannelHandler对象。
 
@@ -7609,17 +8827,17 @@ ChannelHandlerContext保存了Channel相关的所有上下文信息，同时关�
 
 ### ChannelPipline
 
-通道事件处理链是一个保存了ChannelHandler的List，用多个阶段拦截或处理Channel的入站和出站操作。ChannelPipline实现了一种高级形式的拦截过滤器模式，使用户可以完全控制事件的处理方式，以及Channel对应的各个ChannelHandler如何交互。
+* 通道事件处理链是一个保存了ChannelHandler的List，用多个阶段拦截或处理Channel的入站和出站操作。ChannelPipline实现了一种高级形式的拦截过滤器模式，使用户可以完全控制事件处理方式的全过程，以及Channel对应的各个ChannelHandler如何交互。
 
-下图描述了ChannelPipeline中的ChannelHandler如果处理IO事件。入站事件由自下而上的入站处理程序处理，如图左所示。出站事件由自上而下的出站处理程序处理，如图右所示。
+* 下图描述了ChannelPipeline中的ChannelHandler如果处理IO事件。入站事件由自下而上的入站处理程序处理，如图左所示。出站事件由自上而下的出站处理程序处理，如图右所示。
 
-![img](assets/166e31cd231e80d9)
+  ![img](assets/166e31cd231e80d9)
 
-Netty中每个Channel都有且仅有一个ChannelPipeline与之对应。而ChannelPipeline中又维护了一个由ChannelHandlerContext组成的双向链表，且每个ChannelHandlerContext又关联一个ChannelHandler。
+* Netty中每个Channel都有且仅有一个ChannelPipeline与之对应。而ChannelPipeline中又维护了一个由ChannelHandlerContext组成的双向链表，且每个ChannelHandlerContext又关联一个ChannelHandler。
 
-入站事件和出站事件在一个双向链表中，入站事件会从链表head向后传递到最后一个入站的handler，出站事件会从链表tail向前传递到最前一个出站的handler，两种类型的handler互不干扰。
+* 入站事件和出站事件在一个双向链表中，入站事件会从链表head向后传递到最后一个入站的handler，出站事件会从链表tail向前传递到最前一个出站的handler，两种类型的handler互不干扰。
 
-![img](assets/166e31cd41342c12)
+  ![img](assets/166e31cd41342c12)
 
 
 
@@ -7629,50 +8847,60 @@ Netty的线程模式是基于Reactor模式实现的。
 
 ![img](assets/166e31cd44075dd8)
 
-**结构对应：**
+### 结构对应
 
-* NioEventLoop —— 初始化分发器/反应器（Initiation Dispatcher）；
-* Selector —— 同步事件分离器（Synchronous EventDemultiplexer）；
-* ChannelHandler —— 事件处理器（Event Handler）；
-* 具体的ChannelHandler实现 —— 具体的事件存储器。
+* NioEventLoop <—> 初始化分发器/反应器（Initiation Dispatcher）；
+* Selector <—> 同步事件分离器（Synchronous EventDemultiplexer）；
+* ChannelHandler <—> 事件处理器（Event Handler）；
+* 具体的ChannelHandler实现 <—> 具体的事件存储器。
 
-**模式对应：**
 
-* NioEventLoop（bossGroup） —— mainReactor；
-* NioEventLoop（workGroup）—— subReactor。
-* ServerBootstrapAcceptor —— acceptor。
 
-**工作流程：**
+### 模式对应
 
-* Boss Group轮询步骤：
-  1. select轮询Accept事件；
-  2. processSelectedKeys处理Accept I/O事件。与Client建立连接，生成对应的NioSocketChannel，并将其注册到Worker Group中的某个NioEventLoop的Selector上；
-  3. 处理任务队列中的任务runAllTasks。任务队列中的任务包括用户调用eventLoop.execute或schedule执行的任务，或者其他线程提交到该eventLoop上的任务。
-* Worker Group轮询步骤：
-  1. select轮询Read/Write事件；
-  2. processSelectedKeys处理读写I/O事件。在NioSocketChannel可读/可写事件发生时将其传入ChannelPipeline中处理；
-  3. 处理任务队列中的任务runAllTasks。
+* NioEventLoop（bossGroup） <—> mainReactor；
+* NioEventLoop（workGroup）<—> subReactor。
+* ServerBootstrapAcceptor <—> acceptor。
+
+
+
+### 工作流程
+
+**Boss Group轮询步骤**：
+
+* select轮询Accept事件；
+* 通过processSelectedKeys处理Accept的I/O事件，与Client建立连接，生成对应的NioSocketChannel，并将其注册到Worker Group中的某个NioEventLoop的Selector上；
+* 处理任务队列中的任务runAllTasks。任务队列中的任务包括用户调用eventLoop.execute或schedule执行的任务，或者其他线程提交到该eventLoop上的任务。
+
+**Worker Group轮询步骤**：
+
+* select轮询Read/Write事件；
+* processSelectedKeys处理读写I/O事件。在NioSocketChannel可读/可写事件发生时将其传入ChannelPipeline中处理；
+* 处理任务队列中的任务runAllTasks。
 
 
 
 ## Netty-编码解码器
 
-当Netty发送或接受一个消息时，就会发生一次数据转换。即入站消息会被解码（如字节转换为对象），出站消息会被编码（如对象转换为字节）。因此Netty提供了一系列编码解码器，都实现了ChannelInboundHandler或ChannelOutboundHandler接口，且channelRead方法都被重写。
+### 基本概念
 
-以入站为例，对于每个从入站Channel读取的消息，这个方法会被调用，随后将调用由解码器提供的decode()方法进行解码，并将已解码的字节转发给ChannelPipeline中的下一个ChannelInboundHandler。
+* 当Netty发送或接受一个消息时，就会发生一次数据转换。即入站消息会被解码（如字节转换为对象），出站消息会被编码（如对象转换为字节）。因此Netty提供了一系列编码解码器，都实现了ChannelInboundHandler或ChannelOutboundHandler接口，且channelRead方法都会被重写。
+* 以入站为例，对于每个从入站Channel读取的消息，这个方法会被调用，随后将调用由解码器提供的 `decode()` 方法进行解码，并将已解码的字节转发给ChannelPipeline中的下一个ChannelInboundHandler。
 
-**ByteToMessageDecoder解码器**：
 
-![image-20201130141331931](assets/image-20201130141331931.png)
+
+### ByteToMessageDecoder解码器
 
 由于TCP会出现粘包拆包的问题，所以不能确定发送方的数据包是一个完整的信息。该类会对入站数据进行缓存，直到它准备好被处理。
+
+<img src="assets/image-20201130141331931.png" alt="image-20201130141331931" style="zoom: 67%;" />
 
 ```JAVA
 public class ToIntegerDecoder extends ByteToMessageDecoder {
     
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-        // 每次从入站的ByteBuf中读取4字节，然后编码为int类型，添加到下一个List中，当没有更多元素可以被添加时，该内容会被发送给下一个ChannelInboundHandler
+        // 每次从入站的ByteBuf中读取4字节，然后编码为int类型，添加到一个List中，当没有更多元素可以被添加时，该内容会被发送给下一个ChannelInboundHandler
         if (in.readableBytes() >= 4) {
             out.add(in.readInt());
         }
@@ -7680,13 +8908,15 @@ public class ToIntegerDecoder extends ByteToMessageDecoder {
 }
 ```
 
-**ReplayingDecoder解码器**：
+
+
+### ReplayingDecoder解码器
 
 ```JAVA
 public abstract class ReplayingDecoder<S> extends ByteToMessageDecoder
 ```
 
-ReplayingDecoder扩展了ByteToMessageDecoder类，使用这个类时无需调用readableBytes()方法，参数S指定了用户状态管理的类型，使用Void则不需要状态管理。
+ReplayingDecoder扩展了ByteToMessageDecoder类，使用这个类时无需调用 `readableBytes()` 方法，参数S指定了用户状态管理的类型，使用Void则不需要状态管理。
 
 ```JAVA
 public class MyReplayingDecoder extends ReplayingDecoder<Void> {
@@ -7703,7 +8933,9 @@ public class MyReplayingDecoder extends ReplayingDecoder<Void> {
 
 ## Netty-源码分析
 
-io.Netty.example的源码分析案例
+### 程序示例
+
+以 `io.Netty.example` 下的示例程序做为源码分析的案例。
 
 ```JAVA
 public final class EchoServer {
@@ -7719,10 +8951,12 @@ public final class EchoServer {
         } else {
             sslCtx = null;
         }
-
+		
+        // mainReactor、subReactor
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
+            // 启动引导，全局配置
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
@@ -7738,7 +8972,8 @@ public final class EchoServer {
                      p.addLast(new EchoServerHandler());
                  }
              });
-
+				
+            // 同步操作
             ChannelFuture f = b.bind(PORT).sync();
             f.channel().closeFuture().sync();
         } finally {
@@ -7781,14 +9016,16 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
 }
 ```
 
-### Netty启动过程源码分析
+
+
+### 启动过程分析
 
 #### NioEventLoopGroup阶段分析
 
 **NioEventLoopGroup构造方法**：
 
 ```JAVA
-// 若不指定线程数将从这里开始
+// 空参构造（不指定线程数）
 public NioEventLoopGroup() {
 	// 调⽤下⼀个构造⽅法
 	this(0);
@@ -7799,10 +9036,9 @@ public NioEventLoopGroup(int nThreads) {
 	this(nThreads, (Executor) null);
 }
 
-// ......各种重载的构造方法
-    
+// ......经过各种重载的构造方法后
 public NioEventLoopGroup(int nThreads, Executor executor, final SelectorProvider selectorProvider, final SelectStrategyFactory selectStrategyFactory) {
-    // 开始调⽤⽗类的构造方法
+    // 开始调⽤⽗类MultithreadEventLoopGroup的构造方法
     super(nThreads, executor, selectorProvider, selectStrategyFactory, RejectedExecutionHandlers.reject());
 }
 ```
@@ -7810,16 +9046,18 @@ public NioEventLoopGroup(int nThreads, Executor executor, final SelectorProvider
 **MultithreadEventLoopGroup构造方法**：
 
 ```JAVA
-// 从1和系统属性和CPU核⼼数*2这三个值中取最⼤值，可以得出DEFAULT_EVENT_LOOP_THREADS的值为CPU核⼼数*2
+// EventLoopGroup中默认的EventLoop线程数
 private static final int DEFAULT_EVENT_LOOP_THREADS;
 
 static {
+    // 从1、系统属性、CPU核⼼数*2这三个值中取最⼤值，可以得出DEFAULT_EVENT_LOOP_THREADS的值为CPU核⼼数*2
     DEFAULT_EVENT_LOOP_THREADS = Math.max(1, SystemPropertyUtil.getInt(
         "io.netty.eventLoopThreads", NettyRuntime.availableProcessors() * 2));
 }
 
-// 被调⽤的⽗类构造函数，NioEventLoopGroup默认的构造函数会起多少线程的秘密所在，当指定的线程数nThreads为0时，使⽤默认的线程数DEFAULT_EVENT_LOOP_THREADS
+// 被调⽤的⽗类构造函数，当指定的线程数nThreads为0时，使⽤默认的线程数DEFAULT_EVENT_LOOP_THREADS
 protected MultithreadEventLoopGroup(int nThreads, ThreadFactory threadFactory, Object... args) {
+    // 继续调用父类MultithreadEventExecutorGroup的构造方法
 	super(nThreads == 0 ? DEFAULT_EVENT_LOOP_THREADS : nThreads, threadFactory, args);
 }
 ```
@@ -7842,14 +9080,15 @@ protected MultithreadEventExecutorGroup(int nThreads, Executor executor,
         executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
     }
 	
-    // NioEventLoop实现了EventExecutor，即创建了一个线程数大小的NioEventLoop数组
+    // NioEventLoop实现了EventExecutor接口
+    // 即本语句创建了一个线程数大小的NioEventLoop数组
     children = new EventExecutor[nThreads];
 
-    // 循环初始化线程数组
+    // 通过循环初始化线程数组
     for (int i = 0; i < nThreads; i ++) {
         boolean success = false;
         try {
-            // 创建NioEventLoop
+            // 初始化NioEventLoop
             children[i] = newChild(executor, args);
             success = true;
         } catch (Exception e) {
@@ -7884,11 +9123,16 @@ protected MultithreadEventExecutorGroup(int nThreads, Executor executor,
 }
 ```
 
+**总结**：
+
+* 创建NioEventLoopGroup时，若不指定线程数，则默认使用CPU核数*2的数量创建。若指定，则按照指定的数量创建；
+* NioEventLoopGroup内部通过数组来初始化所有EventLoop，初始化完毕后最终会通过只读的LinkedHashSet来维护。
+
 
 
 #### ServerBootstrap阶段分析
 
-**ServerBootstrap构造方法**：
+**ServerBootstrap构造方法和基本属性**：
 
 ```java
 private final Map<ChannelOption<?>, Object> childOptions = new LinkedHashMap<ChannelOption<?>, Object>();
@@ -7896,42 +9140,44 @@ private final Map<AttributeKey<?>, Object> childAttrs = new LinkedHashMap<Attrib
 private final ServerBootstrapConfig config = new ServerBootstrapConfig(this);
 private volatile EventLoopGroup childGroup;
 private volatile ChannelHandler childHandler;
-
+// 空参构造
 public ServerBootstrap() { }
 ```
 
-**ServerBootstrap#group**：
+**ServerBootstrap#`group()`**：
 
 ```JAVA
 public ServerBootstrap group(EventLoopGroup parentGroup, EventLoopGroup childGroup) {
-    super.group(parentGroup);	// parentGroup即bossGroup
+    // parentGroup即bossGroup
+    super.group(parentGroup);
     if (childGroup == null) {
         throw new NullPointerException("childGroup");
     }
     if (this.childGroup != null) {
         throw new IllegalStateException("childGroup set already");
     }
-    this.childGroup = childGroup;	// childGroup即workerGroup
+    // childGroup即workerGroup
+    this.childGroup = childGroup;
     return this;
 }
 ```
 
-**AbstractBootstrap#channel**：
+**AbstractBootstrap#`channel()`**：
 
 ```java
 public B channel(Class<? extends C> channelClass) {
     if (channelClass == null) {
         throw new NullPointerException("channelClass");
     }
-    // 创建反射工厂类，在bind阶段会将Channel反射出来
+    // 创建反射工厂类，在bind阶段才会将Channel通过反射创建出来
     return channelFactory(new ReflectiveChannelFactory<C>(channelClass));
 }
 ```
 
-**AbstractBootstrap#option**：
+**AbstractBootstrap#`option()`**：
 
 ```JAVA
-// 通过Map存储配置
+// 通过一个Map结构来存储各种配置
 private final Map<ChannelOption<?>, Object> options = new LinkedHashMap<ChannelOption<?>, Object>();
 
 public <T> B option(ChannelOption<T> option, T value) {
@@ -7951,9 +9197,10 @@ public <T> B option(ChannelOption<T> option, T value) {
 }
 ```
 
-**AbstractBootstrap#bind**：
+**AbstractBootstrap#`bind()`**：
 
 ```JAVA
+// 通过bind为服务端Channel绑定端口
 public ChannelFuture bind(int inetPort) {
     return bind(new InetSocketAddress(inetPort));
 }
@@ -7987,22 +9234,22 @@ final ChannelFuture initAndRegister() {
     Channel channel = null;
     try {
         // 通过反射工厂类将Channel创建出来：
-        // 1.获取JDK NIO的ServerSocketChannel；
-        // 2.创建一个唯一的ChannelId；
-        // 3.创建一个NioMessageUnsafe，用于操作消息；
-        // 4.创建一个DefaultChannelPipeline，是一个双向链表结构；
-        // 5.创建了一个NioServerSocketChannelConfig对象，用于对外展示一些配置
+        // 	1.获取JDK NIO的ServerSocketChannel；
+        // 	2.创建一个唯一的ChannelId；
+        // 	3.创建一个NioMessageUnsafe，用于操作消息；
+        // 	4.创建一个DefaultChannelPipeline，是一个双向链表结构；
+        // 	5.创建了一个NioServerSocketChannelConfig对象，用于对外展示一些配置。
         channel = channelFactory.newChannel();
         // 初始化NioServerSocketChannel：
-        // 1.抽象方法，由ServerBootstrap实现；
-        // 2.设置NioServerSocketChannel的TCP属性；
-        // 3.对NioServerSocketChannel的ChannelPipeline添加ChannelInitializer处理器；
-        // 4.初始化DefaultChannelPipeline的head和tail节点。并通过addLast添加ChannelHandler。
+        // 	1.抽象方法，由ServerBootstrap实现；
+        // 	2.设置NioServerSocketChannel的TCP属性；
+        // 	3.对NioServerSocketChannel的ChannelPipeline添加ChannelInitializer处理器；
+        // 	4.初始化DefaultChannelPipeline的head和tail节点，并通过addLast添加ChannelHandler。
         init(channel);
     } catch (Throwable t) {
         // ......
     }
-    // 注册NioServerSocketChannel到bossGroup上，并返回一个注册结果的future
+    // 注册NioServerSocketChannel到bossGroup上，并返回一个封装注册结果的Future对象
     ChannelFuture regFuture = config().group().register(channel);
     if (regFuture.cause() != null) {
         if (channel.isRegistered()) {
@@ -8034,9 +9281,10 @@ private static void doBind0(
 }
 ```
 
-**DefaultChannelPipeline#addLast**：
+**DefaultChannelPipeline#`addLast()`**：
 
 ```JAVA
+// 通过addLast将ChannelHandler添加到ChannelPipeline中
 @Override
 public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
     final AbstractChannelHandlerContext newCtx;
@@ -8045,7 +9293,8 @@ public final ChannelPipeline addLast(EventExecutorGroup group, String name, Chan
         checkMultiplicity(handler);
 		
         // 创建一个AbstractChannelHandlerContext对象
-        // 每当有ChannelHandler添加到Pipeline时，都会创建对应的Context
+        // 每当有ChannelHandler添加到ChannelPipeline中时，都会创建对应的Context
+        // 所以最终ChannelPipeline这个链表结构中存储的就是ChannelHandlerContext
         newCtx = newContext(group, filterName(name, handler), handler);
 
         // 将Context插入链表尾部，即追加到tail节点之前
@@ -8076,6 +9325,7 @@ public final ChannelPipeline addLast(EventExecutorGroup group, String name, Chan
     return this;
 }
 
+// 维护双向链表结构
 private void addLast0(AbstractChannelHandlerContext newCtx) {
     AbstractChannelHandlerContext prev = tail.prev;
     newCtx.prev = prev;
@@ -8085,7 +9335,7 @@ private void addLast0(AbstractChannelHandlerContext newCtx) {
 }
 ```
 
-**NioEventLoop#run**：
+**NioEventLoop#`run()`**：
 
 ```JAVA
 // 当bind阶段结束，就会进入NioEventLoop的run中执行
@@ -8146,19 +9396,22 @@ protected void run() {
 }
 ```
 
-**Netty服务端启动过程总结**：
-
-1. 创建两个NioEventLoopGroup线程池，其内部维护着NioEventLoop的集合，集合默认大小是本机的CPU*2；
-2. ServerBootstrap设置一些属性，然后通过bind方法完成创建NIO相关对象、初始化、注册、绑定端口、启动事件循环等操作；
-   1. initAndRegister会创建NioServerSocketChannel、Pipeline等对象，然后初始化这些对象，如Pipeline的head和tail节点的初始化；
-   2. doBind会对底层JDK NIO的Channel和端口进行绑定；
-   3. 最后调用NioEventLoop的run方法监听连接事件，表示服务器正式启动。
 
 
+#### Netty服务端启动过程总结
 
-### Netty接收请求过程源码分析
+* 创建两个NioEventLoopGroup线程池，其内部维护着NioEventLoop的集合，集合默认大小是本机的CPU*2；
 
-* NioEventLoop的processSelectedKey()方法分析：
+* ServerBootstrap设置一些属性，然后通过bind方法完成创建NIO相关对象、初始化、注册、绑定端口、启动事件循环等操作。
+  * initAndRegister会创建NioServerSocketChannel、ChannelPipeline等对象，然后初始化这些对象，如ChannelPipeline的head和tail节点的初始化；
+  * doBind会对底层JDK NIO的Channel和端口进行绑定；
+  * 最后调用NioEventLoop的run方法监听连接事件，表示服务器正式启动。
+
+
+
+### 接收请求过程分析
+
+**NioEventLoop#`processSelectedKey()`**：
 
 ```JAVA
 private void processSelectedKey(SelectionKey k, AbstractNioChannel ch) {
@@ -8218,7 +9471,7 @@ private void processSelectedKey(SelectionKey k, AbstractNioChannel ch) {
 }
 ```
 
-* SelectionKey中的readyOps就绪事件常量：
+**SelectionKey中的readyOps就绪事件常量**：
 
 ```JAVA
 // 读事件就绪
@@ -8231,7 +9484,7 @@ public static final int OP_CONNECT = 1 << 3;
 public static final int OP_ACCEPT = 1 << 4;
 ```
 
-* AbstractNioMessageChannel中的NioMessageUnsafe的read()方法分析：
+**AbstractNioMessageChannel$NioMessageUnsafe#`read()`**：
 
 ```JAVA
 private final class NioMessageUnsafe extends AbstractNioUnsafe {
@@ -8306,7 +9559,7 @@ private final class NioMessageUnsafe extends AbstractNioUnsafe {
 }
 ```
 
-* NioServerSocketChannel的doReadMessages()方法分析：
+**NioServerSocketChannel#`doReadMessages()`**：
 
 ```JAVA
 @Override
@@ -8334,7 +9587,7 @@ protected int doReadMessages(List<Object> buf) throws Exception {
 }
 ```
 
-* ServerBootstrapAcceptor的channelRead()方法：
+**ServerBootstrapAcceptor#`channelRead()`方法**：
 
 ```JAVA
 // 调用pipeline的fireChannelRead方法，会执行链上的所有handler的channelRead方法。
@@ -8372,12 +9625,13 @@ public void channelRead(ChannelHandlerContext ctx, Object msg) {
 }
 ```
 
-* debug进入workGroup的register()方法：
+**debug追踪到workGroup#`register()`方法**：
 
 ```JAVA
 @Override
 public final void register(EventLoop eventLoop, final ChannelPromise promise) {
     AbstractChannel.this.eventLoop = eventLoop;
+    // 将客户端连接对应的NioSocketChannel注册到一个EventLoop中去轮询
     if (eventLoop.inEventLoop()) {
         register0(promise);
     } else {
@@ -8391,7 +9645,7 @@ public final void register(EventLoop eventLoop, final ChannelPromise promise) {
 }
 ```
 
-* 最后debug追踪到AbstractNioChannel的doBeginRead()方法：
+**debug追踪到AbstractNioChannel#`doBeginRead()`方法**：
 
 ```JAVA
 @Override
@@ -8413,28 +9667,30 @@ protected void doBeginRead() throws Exception {
 
 **Netty请求接收过程总结**：
 
-1. 服务端轮询Accept事件，当获取事件后调用unsafe的read方法，unsafe是ServerSocket的内部类，其read方法由两部分组成；
-2. doReadMessage方法：用于创建NioSocketChannel对象，该对象包装了JDK NIO的SocketChannel，并将其加入请求缓冲区；
-3. pipeline的fireChannelRead方法：循环所有NioSocketChannel，调用其pipeline上的所有handler，如添加用户自定义handler、设置日志和其他配置属性和将其注册到workerGroup上；
-4. 最后workerGroup选择其中的一个EventLoop负责轮询该NioSockerChannel。自此，客户端请求建立过程结束。
+* 服务端轮询Accept事件，当获取事件后调用unsafe的read方法，unsafe是ServerSocket的内部类，其read方法由两部分组成：
+  * **`doReadMessage()`方法**：用于创建NioSocketChannel对象，该对象包装了JDK NIO的SocketChannel，并将其加入请求缓冲区，即用一个ArrayList类型的集合来存储；
+  * **pipeline的`fireChannelRead()`方法**：遍历缓冲区，循环调用NioSocketChannel对应Pipeline上的所有handler，如：添加用户自定义handler、设置日志和其他配置属性，最后将NioSocketChannel注册到workerGroup上；
+* 最后workerGroup选择其中的一个EventLoop负责轮询该NioSockerChannel。自此，客户端请求建立过程结束。
 
 
 
-### ChannelPipeline/ChannelHandler/ChannelHandlerContext源码分析
+### CP/CH/CHC分析
 
 **三者关系概述**：
 
-* 每当NioServerSocketChannel接收一个客户端连接，就会创建对应的NioSocketChannel；
+* 每当NioServerSocketChannel接收一个客户端连接，就会创建一个对应的NioSocketChannel；
 * 每个NioSocketChannel创建时都会被分配一个ChannelPipeline；
 * 每个ChannelPipeline中都包含多个ChannelHandlerContext；
-* 这些ChannelHandlerContext用于包装ChannelHandler，并且它们一起组成了一个双向链表；
-* 当一个客户端请求被接收时，会进入其对应的NioSocketChannel的pipeline，并经过pipeline中所有的handler处理（使用了设计模式中的过滤器模式）。
+* 这些ChannelHandlerContext用于包装ChannelHandler，并且组成了一个双向链表；
+* 当一个客户端请求被接收时，会进入其对应的NioSocketChannel的Pipeline中，并经过Pipeline中所有的handler处理（使用了设计模式中的过滤器模式）。
 
-**ChannelPipeline**：
+
+
+#### ChannelPipeline
 
 <img src="assets/image-20201201164749442.png" alt="image-20201201164749442" style="zoom: 80%;" />
 
-* ChannelPipeline接口：
+**ChannelPipeline接口**：
 
 ```JAVA
 /**
@@ -8481,58 +9737,62 @@ public interface ChannelPipeline
         extends ChannelInboundInvoker, ChannelOutboundInvoker, Iterable<Entry<String, ChannelHandler>> {
 ```
 
-**ChannelHandler**：
 
-* ChannelHandler接口：ChannelHandler的作用就是处理IO或拦截IO事件，并将其转发给链上的下一个ChannelHandler。Handler处理事件时分入站和出站，两个方向的操作都不同，因此Netty定义了两个子接口继承ChannelHandler。
 
-  ```JAVA
-  public interface ChannelHandler {
-  
-      // 当前ChannelHandler被添加到pipeline时调用
-      void handlerAdded(ChannelHandlerContext ctx) throws Exception;
-  
-      // 当前ChannelHandler从pipeline中移除时调用
-      void handlerRemoved(ChannelHandlerContext ctx) throws Exception;
-  
-  	// 当处理过程中发生异常时调用
-      @Deprecated
-      void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;
-  
-      // ......
-  }
-  ```
+#### ChannelHandler
 
-* ChannelInboundHandler入站事件接口：
+ChannelHandler的作用就是处理IO或拦截IO事件，并将其转发给链上的下一个ChannelHandler。Handler处理事件时分入站和出站，两个方向的操作都不同，因此Netty定义了两个子接口继承ChannelHandler。
 
-  ![image-20201201170816845](assets/image-20201201170816845.png)
+```JAVA
+public interface ChannelHandler {
 
-* ChannelOutboundHandler出站事件接口：
+    // 当前ChannelHandler被添加到pipeline时调用
+    void handlerAdded(ChannelHandlerContext ctx) throws Exception;
 
-  ![image-20201201170855957](assets/image-20201201170855957.png)
+    // 当前ChannelHandler从pipeline中移除时调用
+    void handlerRemoved(ChannelHandlerContext ctx) throws Exception;
 
-**ChannelHandlerContext**：
+	// 当处理过程中发生异常时调用
+    @Deprecated
+    void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;
 
-* ChannelHandlerContext：继承了ChannelInboundInvoker和ChannelOutboundInvoker，同时也定义了一些能够获取Context上下文环境中channel、executor、handler、pipeline和内存分配器等方法。
+    // ......
+}
+```
 
-  ![image-20201201172535886](assets/image-20201201172535886.png)
+ChannelInboundHandler入站事件接口：
 
-  ```JAVA
-  public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvoker, ChannelOutboundInvoker {
-  ```
+![image-20201201170816845](assets/image-20201201170816845.png)
 
-* ChannelInboundInvoker和ChannelOutboundInvoker：这两个接口是在入站和出站的handler外层再包装一层，达到在方法前后拦截并做一些特定操作的目的。
+ChannelOutboundHandler出站事件接口：
 
-  ![image-20201201171446081](assets/image-20201201171446081.png)
-
-  ![image-20201201171634077](assets/image-20201201171634077.png)
-
-* AbstractChannelHandlerContext：
+![image-20201201170855957](assets/image-20201201170855957.png)
 
 
 
-### ChannelPipeline/ChannelHandler/ChannelHandlerContext创建过程源码分析
+#### ChannelHandlerContext
 
-* ChannelPipeline创建过程：每一个NioSocketChannel创建时都会创建一个ChannelPipeline。
+继承了ChannelInboundInvoker和ChannelOutboundInvoker，同时也定义了一些能够获取Context上下文环境中channel、executor、handler、pipeline和内存分配器等方法。
+
+```java
+public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvoker, ChannelOutboundInvoker {
+```
+
+![image-20201201172535886](assets/image-20201201172535886.png)
+
+ChannelInboundInvoker和ChannelOutboundInvoker：这两个接口是在入站和出站的handler外层再包装一层，达到在方法前后拦截并做一些特定操作的目的。
+
+![image-20201201171446081](assets/image-20201201171446081.png)
+
+![image-20201201171634077](assets/image-20201201171634077.png)
+
+
+
+### CP/CH/CHC创建过程分析
+
+#### ChannelPipeline的创建过程
+
+每一个NioSocketChannel创建时都会创建一个ChannelPipeline。
 
 ```java
 // NioSocketChannel的抽象父类AbstractChannel的构造方法
@@ -8540,6 +9800,7 @@ protected AbstractChannel(Channel parent) {
     this.parent = parent;
     id = newId();
     unsafe = newUnsafe();
+    // 创建对应的Pipeline
     pipeline = newChannelPipeline();
 }
 ```
@@ -8551,7 +9812,7 @@ protected DefaultChannelPipeline newChannelPipeline() {
 
 protected DefaultChannelPipeline(Channel channel) {
     this.channel = ObjectUtil.checkNotNull(channel, "channel");
-    // 创建future用于异步回调使用 
+    // 创建Future用于异步回调使用 
     succeededFuture = new SucceededChannelFuture(channel, null);
     voidPromise =  new VoidChannelPromise(channel, true);
 
@@ -8565,7 +9826,11 @@ protected DefaultChannelPipeline(Channel channel) {
 }
 ```
 
-* ChannelHandlerContext创建过程：当用户或系统调用pipeline的addxxx方法添加handler时，都会创建一个包装这个handler的Context。
+
+
+#### ChannelHandlerContexte的创建过程
+
+当用户或系统调用Pipeline的以add为前缀的方法添加handler时，都会创建一个包装这个handler的Context。
 
 ```JAVA
 @Override
@@ -8609,9 +9874,11 @@ public final ChannelPipeline addLast(EventExecutorGroup group, String name, Chan
 
 
 
-### ChannelPipeline的handler调度源码分析
+### ChannelPipeline的Handler调度分析
 
-* 当请求进入时，会调用pipeline的相关方法，若是入站事件，这些方法由fire开头，表示开始在管道中流动，让后续的handler继续处理。其中调用的invoke开头的静态方法传入的是head，即会先调用head的ChannelInboundInvoker接口的方法，然后调用handler真正的方法。
+#### 入站事件
+
+当请求进入时，会调用Pipeline的相关方法，若是入站事件，这些方法由fire开头，表示开始在管道中流动，让后续的handler继续处理。其中调用的invoke开头的静态方法传入的是head，即会先调用head的ChannelInboundInvoker接口的方法，然后调用handler真正的方法。
 
 ```JAVA
 @Override
@@ -8657,7 +9924,11 @@ public final ChannelPipeline fireChannelWritabilityChanged() {
 }
 ```
 
-* 若是出站事件，则由tail开始处理。
+
+
+#### 出站事件
+
+若是出站事件，则由tail开始处理。
 
 ```JAVA
 @Override
@@ -8718,9 +9989,11 @@ public final ChannelFuture disconnect(ChannelPromise promise) {
 }
 ```
 
-* 调度过程：
 
-  ![image-20201201185720460](assets/image-20201201185720460.png)
+
+#### 调度过程
+
+![image-20201201185720460](assets/image-20201201185720460.png)
 
 ```JAVA
 // 以入站事件为例，debug追踪到DefaultChannelPipeline的fireChannelRead方法的调用
@@ -8799,11 +10072,24 @@ private AbstractChannelHandlerContext findContextOutbound() {
 
 
 
-### EventLoop事件循环源码分析
+### EventLoop事件循环分析
+
+#### NioEventLoop继承关系图
+
+* 继承自ScheduleExecutorService接口是一个定时任务接口，表示NioEventLoop可以接受定时任务；
+* 继承自EventLoop接口是当Channel被注册时用于处理其对应I/O操作的接口；
+* 继承自SingleThreadEventExecutor接口，表示NioEventLoop是一个单线程的线程池；
+* NioEventLoop是一个单例的线程池，里面包含一个死循环的线程不断的做三件事，即端口监听、事件处理和队列任务处理。每个EventLoop都可以绑定多个Channel，但每个Channel只能由一个EventLoop处理。
 
 <img src="assets/image-20201201222047369.png" alt="image-20201201222047369" style="zoom: 80%;" />
 
-* EventLoop通过SingleThreadEventExecutor#execute添加普通任务，通过AbstractScheduledEventExecutor#schedule添加定时任务：
+
+
+#### execute/schedule
+
+* EventLoop通过 `SingleThreadEventExecutor#execute` 添加普通任务；
+
+* 通过 `AbstractScheduledEventExecutor#schedule` 添加定时任务。
 
 ```JAVA
 @Override
@@ -8834,7 +10120,7 @@ public void execute(Runnable task) {
 }
 ```
 
-* 普通任务被存储在mpscQueue中，而定时任务则被存储在PriorityQueue\<ScheduledFutureTask\>()中。
+普通任务被存储在 `mpscQueue` 中，而定时任务则被存储在 `PriorityQueue<ScheduledFutureTask>()` 中。
 
 ```JAVA
 @Override
@@ -8848,7 +10134,9 @@ public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUni
     return schedule(new ScheduledFutureTask<V>(
         this, callable, ScheduledFutureTask.deadlineNanos(unit.toNanos(delay))));
 }
+```
 
+```JAVA
 <V> ScheduledFuture<V> schedule(final ScheduledFutureTask<V> task) {
     if (inEventLoop()) {
         scheduledTaskQueue().add(task);
@@ -8864,7 +10152,7 @@ public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUni
 }
 ```
 
-* 普通任务加入taskQueue队列的源码分析：
+普通任务加入 `taskQueue` 队列的源码分析：
 
 ```JAVA
 protected void addTask(Runnable task) {
@@ -8885,9 +10173,12 @@ final boolean offerTask(Runnable task) {
 }
 ```
 
-* 启动EventLoop事件循环的源码分析：
+
+
+#### startThread
 
 ```JAVA
+// NioEventLoop#startThread
 private void startThread() {
     // 判断状态state，是否已经启动过了
     if (state == ST_NOT_STARTED) {
@@ -8914,15 +10205,17 @@ private void doStartThread() {
         @Override
         public void run() {
             thread = Thread.currentThread();
+            // 中断状态判断
             if (interrupted) {
                 thread.interrupt();
             }
 
             boolean success = false;
+            // 设置最后一次的执行时间
             updateLastExecutionTime();
             try {
                 // SingleThreadEventExecutor是NioEventLoop的父类，其底层维护了一个单线程的线程池
-                // 该行代码就是启动线程池中唯一的一个线程去执行事件循环机制
+                // run方法就是启动线程池中唯一的一个线程去执行事件循环机制，是整个EventLoop的核心
                 SingleThreadEventExecutor.this.run();
                 success = true;
             } catch (Throwable t) {
@@ -8972,11 +10265,19 @@ private void doStartThread() {
 }
 ```
 
-**NioEventLoop#run**：
+
+
+#### run
+
+* 通过 `select()` 获得感兴趣的事件；
+* 通过 `processSelectedKeys()` 处理事件。在select返回后处理事件，并记录IO事件的处理事件ioTime；
+* 通过 `runAllTasks()` 执行队列中的任务。执行任务处理的时间和IO处理的时间是1:1的关系。
 
 ```JAVA
+// NioEventLoop#run
 @Override
 protected void run() {
+    // 事件循环
     for (;;) {
         try {
             switch (selectStrategy.calculateStrategy(selectNowSupplier, hasTasks())) {
@@ -9011,7 +10312,8 @@ protected void run() {
                 } finally {
                     // ioTime是processSelectedKeys所执行的时间
                     final long ioTime = System.nanoTime() - ioStartTime;
-                    // 根据ioRation的比例执行runAllTasks方法（执行任务队列中的所有任务），默认IO任务和非IO任务的执行时间比是1:1
+                    // 根据ioRation的比例执行runAllTasks方法（执行任务队列中的所有任务）
+                    // 默认IO任务和非IO任务的执行时间比是1:1
                     runAllTasks(ioTime * (100 - ioRatio) / ioRatio);
                 }
             }
@@ -9033,9 +10335,17 @@ protected void run() {
 }
 ```
 
-**NioEventLoop#select**：
+
+
+#### select
+
+* 当发现下一个定时任务将在0.5m内需要被触发执行，会立即转为执行非阻塞的 `selectNow()`；
+* 若任务队列中存在任务，则CAS将select状态置为唤醒，然后转为执行非阻塞的 `selectNow()`；
+* 若都不满足则调用阻塞的 `select()` 去轮询事件一段时间；
+* 若选择到了就绪事件、select被用户唤醒、任务队列中有任务和有定时任务即将被执行这些情况发生，则跳出事件循环。
 
 ```JAVA
+// NioEventLoop#select
 private void select(boolean oldWakenUp) throws IOException {
     Selector selector = this.selector;
     try {
@@ -9129,9 +10439,14 @@ private void select(boolean oldWakenUp) throws IOException {
 }
 ```
 
-**NioEventLoop#processSelectedKeys**：
+
+
+#### processSelectedKeys
+
+processSelectedKeys方法就是对就绪的时间做出响应的。即逐个取出就绪的IO时间，然后根据事件的具体类型执行不同的策略。
 
 ```JAVA
+// NioEventLoop#processSelectedKeys
 private void processSelectedKeys() {
     if (selectedKeys != null) {
         processSelectedKeysOptimized(selectedKeys.flip());
@@ -9139,11 +10454,7 @@ private void processSelectedKeys() {
         processSelectedKeysPlain(selector.selectedKeys());
     }
 }
-```
 
-**NioEventLoop#processSelectedKeysOptimized**：
-
-```java
 private void processSelectedKeysOptimized(SelectionKey[] selectedKeys) {
     for (int i = 0;; i ++) {
         final SelectionKey k = selectedKeys[i];
@@ -9180,7 +10491,7 @@ private void processSelectedKeysOptimized(SelectionKey[] selectedKeys) {
 }
 ```
 
-**NioEventLoop#processSelectedKey**：
+**NioEventLoop#`processSelectedKey()`**：
 
 ```java
 final AbstractNioChannel.NioUnsafe unsafe = ch.unsafe();
@@ -9204,14 +10515,15 @@ if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
     int ops = k.interestOps();
     ops &= ~SelectionKey.OP_CONNECT;
     k.interestOps(ops);
-
     unsafe.finishConnect();
 }
 
+// 写事件
 if ((readyOps & SelectionKey.OP_WRITE) != 0) {
     ch.unsafe().forceFlush();
 }
 
+// 读事件
 if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOps == 0) {
     unsafe.read();
     if (!ch.isOpen()) {
@@ -9220,12 +10532,16 @@ if ((readyOps & (SelectionKey.OP_READ | SelectionKey.OP_ACCEPT)) != 0 || readyOp
 }
 ```
 
-**SingleThreadEventExecutor#runAllTasks**：
+
+
+#### runAllTasks
+
+* 首先进行任务聚合，即取出一个离截止时间最近的定时任务加入到普通任务队列中去；
+* 然后依次从队列中出队任务开始串行执行，每执行64次就去检查一次超时时间，若到达任务执行的截止时间就退出。
 
 ```JAVA
-/**
- * 执行队列中的任务
- */
+// SingleThreadEventExecutor#runAllTasks
+// 执行队列中的任务
 protected boolean runAllTasks(long timeoutNanos) {
     // 任务聚合
     fetchFromScheduledTaskQueue();
@@ -9268,14 +10584,8 @@ protected boolean runAllTasks(long timeoutNanos) {
     this.lastExecutionTime = lastExecutionTime;
     return true;
 }
-```
 
-**SingleThreadEventExecutor#fetchFromScheduledTaskQueue**：
-
-```java
-/**
- * 任务聚合：即将执行的定时任务和待处理的普通任务，都会放入mpscQueue里去执行
- */
+// 任务聚合：即将执行的定时任务和待处理的普通任务，都会放入mpscQueue里去执行
 private boolean fetchFromScheduledTaskQueue() {
     // 可以看做是一个截止日期
     long nanoTime = AbstractScheduledEventExecutor.nanoTime();
@@ -9296,12 +10606,12 @@ private boolean fetchFromScheduledTaskQueue() {
 
 
 
-### 任务加入异步线程池源码分析
+### 任务加入异步线程池过程分析
 
-* 在Netty的NioEventLoop线程中做耗时的，不可预料的操作，如数据连接，网络请求等，会严重影响Netty对Socket的IO操作的效率。解决方法就是将耗时任务添加到异步线程池EventExecutorGroup中去执行。
+* 在Netty的NioEventLoop线程中做耗时的、不可预料的操作，如：数据库连接、网络请求等，都会严重影响Netty对Socket IO操作的效率。解决方法就是将耗时任务添加到异步线程池EventExecutorGroup中去执行；
 * 将耗时任务添加到线程池中的操作有两种方式，一个是在handler中添加，一个是在Context中添加。
 
-**handler中加入异步线程池**：
+#### 在Channelhandler中加入异步线程池
 
 ```JAVA
 @Sharable
@@ -9312,7 +10622,7 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        // 任务执行方式1: 提交到当前channel所属的eventLoop线程的任务队列等待执行
+        // 任务执行方式1: 提交到当前channel所属的EventLoop线程的任务队列等待执行
         ctx.channel().eventLoop().execute(() -> {
             try {
                 Thread.sleep(5 * 1000);
@@ -9335,7 +10645,7 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
             return null;
         });
 
-        // 任务执行方式3：由当前channel所属的eventLoop线程同步执行
+        // 任务执行方式3：由当前channel所属的EventLoop线程同步执行
         ByteBuf buf = (ByteBuf) msg;
         byte[] bytes = new byte[buf.readableBytes()];
         buf.readBytes(bytes);
@@ -9356,9 +10666,7 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
 }
 ```
 
-* 任务执行方式2的write操作源码分析（分析AbstractChannelHandlerContext的write()源码）：
-
-![image-20201202172754106](assets/image-20201202172754106.png)
+任务执行方式2的写操作分析，即**AbstractChannelHandlerContext#`write()`**：当以异步线程池的方式执行任务时，若存在写操作发生，则会将该写操作封装为task加入到EventLoop的任务队列中去等待执行。
 
 ```JAVA
 private void write(Object msg, boolean flush, ChannelPromise promise) {
@@ -9375,14 +10683,14 @@ private void write(Object msg, boolean flush, ChannelPromise promise) {
             next.invokeWrite(m, promise);
         }
     } else {
-        // 若不是，代表当前调用write方法的是异步线程池中的线程（即业务线程），则将该write操作封装为task
+        // 若不是，代表当前调用write方法的是异步线程池中的线程（即业务线程），则将该写操作封装为task
         AbstractWriteTask task;
         if (flush) {
             task = WriteAndFlushTask.newInstance(next, m, promise);
         }  else {
             task = WriteTask.newInstance(next, m, promise);
         }
-        // 最后让task加入executor的任务队列中去执行
+        // 最后让task加入到executor的任务队列中去执行
         safeExecute(executor, task, promise, m);
     }
 }
@@ -9405,7 +10713,9 @@ private static void safeExecute(EventExecutor executor, Runnable runnable, Chann
 }
 ```
 
-**handlerContext中加入异步线程池**：
+
+
+#### 在ChannelHandlerContext中加入异步线程池
 
 ```JAVA
 public final class EchoServer {
@@ -9440,7 +10750,8 @@ public final class EchoServer {
                      if (sslCtx != null) {
                          p.addLast(sslCtx.newHandler(ch.alloc()));
                      }
-                     // 指定一个异步线程池来执行handler的处理逻辑
+                     // 当handler被添加到pipeline上时可以手动指定一个异步的线程池来处理该handler
+                     // 这种方式会将所有handler的操作全部异步执行，不如前一种方式灵活
                      p.addLast(group, new EchoServerHandler());
                  }
              });
@@ -9459,9 +10770,13 @@ public final class EchoServer {
 
 ## Netty-零拷贝机制
 
-**操作系统层面的零拷贝机制**：是指避免用户态和内核态之间来回拷贝数据，而划分出的共享空间供双方操作。
+### 操作系统层面的零拷贝机制
 
-**Netty的零拷贝机制体现在以下几个方面**：
+是指避免用户态和内核态之间来回拷贝数据，而划分出的共享空间供双方操作。如：Linux的 `sendfile()` 系统调用。
+
+
+
+### Netty的零拷贝机制体现在以下几个方面
 
 * 提供CompositeByteBuf类，可以将多个ByteBuf合并为一个逻辑上的ByteBuf，避免了各个ByteBuf间的拷贝；
 * ByteBuf支持slice分片操作，因此可以将ByteBuf分解为多个共享同一存储区域的ByteBuf，避免了内存的拷贝；
@@ -9469,7 +10784,7 @@ public final class EchoServer {
 
 
 
-## Netty-客户端和服务端启动过程
+## Netty-服务启动代码示例
 
 ### 服务端
 
@@ -9543,18 +10858,22 @@ try {
 
 
 
-## Netty-解决TCP的粘包/拆包问题
+## Netty-TCP粘包/拆包
 
 <img src="assets/image-20201130143323000.png" alt="image-20201130143323000" style="zoom:50%;" />
 
-**什么是TCP粘包/拆包？**基于TCP传输数据时，发送方为了更有效的发送数据包，使用Nagle算法来优化，将多次间隔较小且数据量小的数据合成一个大的数据块，然后进行封包。这样做虽然提高了效率，但会造成接收端对数据的边界无法分辨，因为面向流的通信是无消息边界保护的。
+### 什么是TCP粘包/拆包
 
-**使用Netty的解码器解决**：
+基于TCP传输数据时，发送方为了更有效的发送数据包，使用Nagle算法来优化，将多次间隔较小且数据量小的数据合成一个大的数据块，然后进行封包。这样做虽然提高了效率，但会造成接收端对数据的边界无法分辨，因为面向流的通信是无消息边界保护的。
 
-* LineBasedFrameDecoder：发送端发送数据包时，每个数据包之间以换行符做为分隔，该解码器的工作原理就是依次比较ByteBuf中的可读字节，判断是否有换行符，然后进行对应的截取；
-* DelimiterBasedFrameDecoder：即可自定义分隔符解码器，LineBasedFrameDecoder就是DelimiterBasedFrameDecoder的一种自定义实现；
-* FixedLengthFrameDecoder：固定长度解码器，能够按照指定的长度对消息进行相应的拆包；
-* LengthFieldBasedFrameDecoder：自定义长度解码器。
+
+
+### 使用Netty的解码器解决问题
+
+* **LineBasedFrameDecoder**：发送端发送数据包时，每个数据包之间以换行符做为分隔，该解码器的工作原理就是依次比较ByteBuf中的可读字节，判断是否有换行符，然后进行对应的截取；
+* **DelimiterBasedFrameDecoder**：即可自定义分隔符解码器，LineBasedFrameDecoder就是DelimiterBasedFrameDecoder的一种自定义实现；
+* **FixedLengthFrameDecoder**：固定长度解码器，能够按照指定的长度对消息进行相应的拆包；
+* **LengthFieldBasedFrameDecoder**：自定义长度解码器。
 
 
 
@@ -9562,9 +10881,9 @@ try {
 
 ### 基本概念
 
-**Netty的长连接机制即TCP的长连接机制**：当通信双方建立连接后，就不会轻易断开连接，而是维持一段时间，在这段时间内双方的数据收发不需要事先建立连接。
+* **Netty的长连接机制即TCP的长连接机制**：当通信双方建立连接后，就不会轻易断开连接，而是维持一段时间，在这段时间内双方的数据收发不需要事先建立连接。
 
-**Netty的心跳机制**：在TCP保持长连接的过程中，可能会出现网络异常导致连接中断，因此Netty在应用层引入了心跳机制让通信双方能够知道对方是否在线。心跳机制的原理是client与server之间若一定的时间没有数据交互时，即处于idle状态，client就会发送一个特殊的报文，当server接收到后也会回复一个，即完成了一次PING-PONG交互。所以，当一方收到对方的心跳报文后，就知道其仍然在线。
+* **Netty的心跳机制**：在TCP保持长连接的过程中，可能会出现网络异常导致连接中断，因此Netty在应用层引入了心跳机制让通信双方能够知道对方是否在线。心跳机制的原理是client与server之间若一定的时间没有数据交互时，即处于idle状态，client就会发送一个特殊的报文，当server接收到后也会回复一个，即完成了一次PING-PONG交互。所以，当一方收到对方的心跳报文后，就知道其仍然在线。
 
 
 
@@ -9582,7 +10901,7 @@ Netty提供了IdleStateHandler，ReadTimeoutHandler，WriteTimeoutHandler三个H
 
 # Linux操作和概念及其内核原理
 
-## Linux内核的进程管理
+## Linux内核-进程管理
 
 ### 进程在Linux中的实现
 
@@ -9590,7 +10909,7 @@ Netty提供了IdleStateHandler，ReadTimeoutHandler，WriteTimeoutHandler三个H
 
 * **Linux线程：**是在进程中活动的对象，每个线程都拥有一个独立的程序计数器、栈空间和一组寄存器。内核调度的对象是线程，而不是进程。Linux不区分进程和线程，对它来说线程就是一种特殊的进程。
 
-* **进程描述符**：内核将其管理的所有进程存放在一个叫做任务队列的双向循环链表中，链表中的每一项类型都为`task_struct`，称为进程描述符结构，描述了一个具体进程的所有信息。
+* **进程描述符**：内核将其管理的所有进程存放在一个叫做任务队列的双向循环链表中，链表中的每一项类型都为 `task_struct`，称为进程描述符结构，描述了一个具体进程的所有信息。
 
   ```C
   struct task_struct {
@@ -9611,13 +10930,13 @@ Netty提供了IdleStateHandler，ReadTimeoutHandler，WriteTimeoutHandler三个H
   };
   ```
 
-* **分配进程描述符**：Linux通过slab分配器分配进程描述符结构，这样能够对象复用和缓存着色。每个任务的`thread_info`结构在其内核栈尾端分配，其中task域存放的是指向该任务实际的进程描述符的指针。
+* **分配进程描述符**：Linux通过slab分配器分配进程描述符结构，这样能够对象复用和缓存着色。每个任务的 `thread_info` 结构在其内核栈尾端分配，其中task域存放的是指向该任务实际的进程描述符的指针。
 
 * **进程家族树**：所有的进程都是PID为1的init进程的后代，内核在系统启动的最后阶段启动init进程，该进程读取系统的初始化脚本并执行其他的相关程序，最终完成整个系统启动的过程。每个进程描述符结构都包含一个指向其父进程描述符结构的parent指针，还包含一个children列表。
 
-* **进程创建**：Linux将进程的创建分解为两个单独的函数执行：``fork()和exec()``。fork()通过拷贝当前进程创建一个子进程，exec()负责读取可执行文件并将其载入地址空间开始运行。
+  * **进程创建**：Linux将进程的创建分解为两个单独的函数执行：`fork()`  和 `exec()`。`fork()` 通过拷贝当前进程创建一个子进程，`exec()` 负责读取可执行文件并将其载入地址空间开始运行。
 
-* **写时拷贝**：Linux的fork()使用写时拷贝页实现，这是一种推迟甚至免除拷贝数据的技术，在创建子进程时，内核并不复制整个进程地址空间，而是让父子进程共享一个拷贝，只有在写入的时候，数据才会被复制。 
+* **写时拷贝**：Linux的 `fork()` 使用写时拷贝页实现，这是一种推迟甚至免除拷贝数据的技术，在创建子进程时，内核并不复制整个进程地址空间，而是让父子进程共享一个拷贝，只有在写入的时候，数据才会被复制。 
 
 
 
@@ -9672,7 +10991,9 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 
 
 
-## Linux内核的进程调度
+## Linux内核-进程调度
+
+#### 基本概念
 
 * 进程调度：在可运行态进程之间分配有限处理器时间资源的内核子系统。
 * 多任务：多任务操作系统是同时并发的交互执行多个进程的操作系统。能使多个进程处于阻塞状态，这些任务位于内存中，但是并不处于可运行状态，而是通过内核阻塞自己，直到某一事件（键盘输入、网络数据等）发生而被唤醒。
@@ -9692,7 +11013,11 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
   * nice值：-20~+19，默认值0，越大的nice优先级越低，越低就越能获得更多时间片。
   * 实时优先级：0~99，数值越大优先级越高。
 
-* Linux调度算法：**完全公平调度CFS**，允许每个进程运行一段时间、循环轮转、选择运行最少的进程作为下一个运行进程，在所有进程总数基础上计算一个进程应该运行多久，不在依靠nice值计算绝对时间片，而是作为进程获得的处理器运行比的权重，越高的nice值越获得更低的处理器使用权重（总之，**CFS中任何进程所获得的处理器时间是由自己和其他所有可运行进程nice值的相对差决定的**）。
+
+
+#### 进程调度算法
+
+* **完全公平调度CFS**：允许每个进程运行一段时间、循环轮转、选择运行最少的进程作为下一个运行进程，在所有进程总数基础上计算一个进程应该运行多久，不在依靠nice值计算绝对时间片，而是作为进程获得的处理器运行比的权重，越高的nice值越获得更低的处理器使用权重（总之，**CFS中任何进程所获得的处理器时间是由自己和其他所有可运行进程nice值的相对差决定的**）。
 
 * Linux调度实现主要关注以下四个部分：
   * **时间记账**：CFS不再有时间片的概念，但是会维护每个进程运行的时间记账，需要确保每个进程在分配给它的处理器时间内运行；
@@ -9700,22 +11025,28 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
   * **调度器入口**：进程调度的入口函数是`schedule()`，其定义在kernel/sched.c文件，是内核其他部分调用进程调度器的入口；
   * **睡眠和唤醒**：睡眠（阻塞）的进程处于一个特殊的不可运行状态。当进程将自己标记为睡眠状态，则会从可执行进程对应的红黑树中移出，放入**等待队列（是由所有等待事件发生的进程组成的链表）**，然后调用`schedule()`调度下一个进程。唤醒的过程则相反，进程被设置为可执行状态，然后从等待队列转移到可执行红黑树中。
 
-* **抢占和上下文切换**：
-  * 上下文切换由定义在kernel/sched.c中的`context_switch()`函数负责，每当一个新的进程被选出投入运行的时候，`schedule()`会调用`context_switch()`完成：
-  * 将虚拟内存从上一个进程映射切换到新进程中；
-  * 从上一个进程的处理器状态切换到新进程的处理器状态，其中包括**保存、恢复栈信息和寄存器信息**。
-
-  * **用户抢占**： 内核在中断处理程序或者系统调用返回后，都会检测`need_resched`标志，从中断处理程序或者系统调用返回的返回路径都是跟体系结构相关的。**即用户抢占会发生在系统调用返回用户空间时，和中断处理程序返回用户空间时**。
-
-  * 内核抢占：2.6版本中，Linux内核引入抢占能力，只要重新调度是安全的（即没有持有锁的情况），内核可以在任何时间抢占正在执行的任务。内核抢占发生在：
-    * 中断处理程序正在执行，且返回内核空间之前；
-    * 进程在内核空间释放锁的时候；
-    * 内核任务显式的调用`schedule()`；
-    * 内核中的任务阻塞。
 
 
 
-## Linux内核的系统调用
+#### 抢占和上下文切换
+
+* 上下文切换由定义在kernel/sched.c中的`context_switch()`函数负责，每当一个新的进程被选出投入运行的时候，`schedule()`会调用`context_switch()`完成：
+* 将虚拟内存从上一个进程映射切换到新进程中；
+* 从上一个进程的处理器状态切换到新进程的处理器状态，其中包括**保存、恢复栈信息和寄存器信息**。
+
+* **用户抢占**： 内核在中断处理程序或者系统调用返回后，都会检测`need_resched`标志，从中断处理程序或者系统调用返回的返回路径都是跟体系结构相关的。**即用户抢占会发生在系统调用返回用户空间时，和中断处理程序返回用户空间时**。
+
+* 内核抢占：2.6版本中，Linux内核引入抢占能力，只要重新调度是安全的（即没有持有锁的情况），内核可以在任何时间抢占正在执行的任务。内核抢占发生在：
+  * 中断处理程序正在执行，且返回内核空间之前；
+  * 进程在内核空间释放锁的时候；
+  * 内核任务显式的调用`schedule()`；
+  * 内核中的任务阻塞。
+
+
+
+## Linux内核-系统调用
+
+#### 编程接口
 
 * API、POSI、C库：当需要使用系统功能时，应用程序通过在用户空间实现的应用编程接口API而不是直接通过系统调用来完成，一个API定义了一组应用程序使用的编程接口。
 
@@ -9725,6 +11056,10 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 
   * 系统调用号一旦分配就不能再有变更，否则编译好的程序有可能崩溃；
   * 如果系统调用被删除，所占用的系统调用号不允许被回收利用，否则之前编译过的代码会调用这个系统调用，出现问题。Linux使用未实现系统调用``sys_ni_syscall()``来填补这种空缺，除了返回`-ENOSYS`不做任何工作。
+
+
+
+#### 调用过程
 
 * **系统调用处理程序**：**通知内核的机制通过软中断实现**。通过引发一个中断异常来促使系统切换到内核态去执行异常处理程序，在x86系统上预定义的软中断的中断号是128，**通过int $0x80指令触发**，这条指令触发一个异常导致系统切换到内核态并执行128号异常处理程序（这个异常处理程序就是系统调用处理程序），即``system_call()``。
 
@@ -9736,48 +11071,48 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 
 # Java基础和容器
 
-## Java基础-概念
+## Java基础-基本概念
 
 ### 面向过程和面向对象
 
-* **面向过程**：性能高于面向对象，因为类的调用需要实例化，更为消耗资源，所以当性能是最重要的考虑因素时，如单片机、嵌入式开发、Linux内核等一般采用面向过程开发；
+* **面向过程**：性能高于面向对象，因为类的调用需要实例化，更为消耗资源。所以当性能是最重要的考虑因素时，如单片机、嵌入式开发、Linux内核等一般采用面向过程开发；
 * **面向对象**：更易维护、易复用、易扩展，因为面向对象有封装、继承、多态的特性，所以可用设计出低耦合的系统，时系统更加灵活、更加易于维护。
 
 
 
-### JVM、JDK和JRE的区别
+### JVM/JDK/JRE的区别
 
 **JVM**：
 
-* 概念：即Java虚拟机，是运行Java字节码的虚拟机。通过针对不同系统的特定实现来跨平台，目的是使用相同的字节码，它们都会给出相同的结果；
+* **概念**：即Java虚拟机，是运行Java字节码的虚拟机器。通过针对不同系统的特定实现来跨平台，目的是使用相同的字节码，它们都会给出相同的结果；
 
-* 字节码：JVM可用理解的代码就叫做字节码（扩展名为.class的文件），不面向特定的处理器，只面向虚拟机。Java通过字节码的方式，在一定程度上解决了传统解释型语言执行效率低的问题， 同时又保留了解释型语言可移植的特点。所以Java程序运行时比较高效，而且由于字节码不针对一种特定的机器，因此Java程序无需重新编译便可在各种操作系统上运行。
+* **字节码**：JVM可用理解的代码就叫做字节码（扩展名为.class的文件），不面向特定的处理器，只面向虚拟机。Java通过字节码的方式，在一定程度上解决了传统解释型语言执行效率低的问题， 同时又保留了解释型语言可移植的特点。所以Java程序运行时比较高效，而且由于字节码不针对一种特定的机器，因此Java程序无需重新编译便可在各种操作系统上运行。
 
-* Java程序从源代码到运行：
+* **Java程序从源代码到运行**：
 
   ![image-20201111110125699](assets/image-20201111110125699.png)
 
-  * 在``.class—>机器码``这一步JVM的类加载器首先加载字节码文件，然后通过解释器逐行解释执行，这种方式执行速度较慢，而且有些方法和代码块是经常需要被调用的（热点代码），所以引入了JIT编译器，而JIT属于运行时编译器；
+  * 在.class —> 机器码这一步JVM的类加载器首先加载字节码文件，然后通过解释器逐行解释执行，这种方式执行速度较慢，而且有些方法和代码块是经常需要被调用的（热点代码），所以引入了JIT编译器，而JIT属于运行时编译器；
   * 当JIT完成第一次编译后，就会将字节码对应的机器码保存下来，下次可以直接使用，而机器码的执行效率远高于Java解释器。所以说Java是编译和解释共存的语言。
 
   * HotSpot采用了惰性评估策略，根据二八定律，消耗大部分资源的只有那一小部分的热点代码，而这也就是JIT所要编译的部分。JVM会根据代码每次被执行的情况收集信息并相应的做出优化，因此执行的次数越多，速度就越快。JDK9引入了新的编译模式AOT，会直接将字节码编译成机器码，从而避免JIT预热等待各个方面的开销。
 
 **JDK和JRE的区别**：
 
-* JDK是Java Development Kit，是功能齐全的Java SDK，拥有JRE所拥有的一切，还有编译工具javac和javadoc等工具，能够创建和编译程序；
-* JRE是Java运行时环境，是运行已编译Java程序所需要的所有内容的集合，包括JVM、Java类库、Java命令和其他一些基础构件，但不能创建新程序；
+* **JDK是Java Development Kit**：是功能齐全的Java SDK，拥有JRE所拥有的一切，还有编译工具javac和javadoc等工具，能够创建和编译程序；
+* **JRE是Java运行时环境**：是运行已编译Java程序所需要的所有内容的集合，包括JVM、Java类库、Java命令和其他一些基础构件，但不能创建新程序；
 * 若只需要在机器上运行普通Java程序的话，只需要安装JRE即可，若要进行Java源代码的编译等工作，那么就需要安装JDK了。
 
 
 
 ### OracleJDK和OpenJDK的区别
 
-* OracleJDK大概每6个月发布一次主要版本，而OpenJDK大概每3个月发布一次，但并不是固定的；
-* OpenJDK是一个参考模型并且是完全开源的，而OracleJDK是OpenJDK的一个实现，并不是完全开源的；
+* OracleJDK大概每6个月发布一次主要版本。而OpenJDK大概每3个月发布一次，但并不是固定的；
+* OpenJDK是一个参考模型并且是完全开源的。而OracleJDK是OpenJDK的一个实现，并不是完全开源的；
 * OracleJDK比OpenJDK更稳定，虽然二者代码几乎相同，但OracleJDK有更多的类和一些错误修复；
 * 在响应性和JVM性能方面，OracleJDK相对于OpenJDK有更好的表现；
 * OracleJDK不会为即将发布的版本提供长期支持，用户每次都必须通过更新到最新版本获得支持来获取最新版本；
-* OracleJDK根据二进制代码许可证获得许可，而OpenJDK根据GPL v2获得许可。
+* OracleJDK根据二进制代码许可证获得许可。而OpenJDK根据GPL v2获得许可。
 
 
 
@@ -9786,49 +11121,49 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 * 都是面向对象的语言，都支持封装、继承和多态；
 * Java不像C++一样提供指针来直接访问内存，程序内存更加安全；
 * Java的类是单继承的，C++支持多继承，但Java的接口可以多继承；
-* Java有自动的内存管理机制，不需要手动释放内存。
+* Java有自动的内存管理机制，不需要手动管理内存。
 
 
 
-## Java基础-特性
+## Java基础-基本特性
 
 ### 字符型常量和字符串常量的区别
 
-* **形式上：**字符常量是单引号引起的一个字符。字符串常量是双引号引起的若干个字符；
+* **形式上：**字符常量是单引号引起的一个字符。而字符串常量是双引号引起的若干个字符；
 
-* **含义上：**字符常量相当于一个整型值，对应ASCII码值，可以参与表达式运算。字符串常量代表一个地址值，指向字符串在内存种的存放位置；
+* **含义上：**字符常量相当于一个整型值，可以对应ASCII码值，可以参与表达式运算。字符串常量代表一个地址值，指向字符串在内存中的存放位置；
 
 * **占内存大小：**字符常量通常占用2个字节。字符串常量占有若干个字节。
 
 * **注：**Java要确定每种基本类型所占存储空间的大小，它们的大小并不像其他大多数语言那样随机器硬件架构的变化而变化，这种所占存储空间大小的不变性是Java程序更具有可移植性的原因之一。
 
-  ![image-20201111123518474](assets/image-20201111123518474.png)
+![image-20201111123518474](assets/image-20201111123518474.png)
 
 
 
 ### 重载和重写的区别
 
 * **重载：**就是同样的一个方法能够根据输入数据的不同，做出不同的处理。在同一类中，重载的方法名必须相同，参数类型、个数、顺序、返回值和访问修饰符可以不同。重载解析就是一个类中多个同名方法根据不同的传参来执行不同的逻辑处理；
-* **重写：**就是当子类继承自父类的相同方法，输入数据一样，但要做出有别于父类的响应时，就要覆盖父类方法。重写发生在运气期间，是子类对父类的允许访问方法的实现过程进行重写编写：
+* **重写：**就是当子类继承自父类的相同方法，输入数据一样，但要做出有别于父类的响应时，就要覆盖父类方法。重写发生在运行期间，是子类对父类的允许访问方法的实现过程进行重新编写。
   * 返回值类型、方法名、参数列表必须相同，抛出的异常范围小于等于父类，访问修饰符范围大于等于父类；
   * 如果父类方法访问修饰符为private/final/static，则子类就不能重写该方法，但是被static修饰的方法能够被再次声明；
   * 构造方法无法被重写；
-  * 总结：重写就是子类对父类方法的重新改造，外部样子不能改变，内部逻辑可以改变。
+  * **总结**：重写就是子类对父类方法的重新改造，外部样子不能改变，内部逻辑可以改变。
 
 
 
-### 封装、继承和多态
+### 封装/继承/多态
 
-* **封装：**把一个对象的属性私有化，同时提供一些可以被外界访问的方法操作和获取属性，如果属性不想被外界访问，则不提供对应的方法即可。但如果一个类没有提供给外界访问的方法，那么这个类也就没有什么意义。
-* **继承：**使用已存在的类定义作为基础建立新类的技术，新类的定义可以增加新的数据或新的功能，也可以使用父类的功能，但不能选择性的基础父类。通过使用继承能够非常方便的复用以前的代码。
+* **封装：**把一个对象的属性私有化，同时提供一些可以被外界访问的方法操作和获取属性的方式，如果属性不想被外界访问，则不提供对应的方法即可。但如果一个类没有提供给外界访问的方法，那么这个类也就没有什么意义。
+* **继承：**使用已存在的类定义作为基础建立新类的技术，新类的定义可以增加新的数据或新的功能，也可以使用父类的功能，但不能选择性的继承父类。通过使用继承能够非常方便的复用以前的代码。
   * 子类拥有父类所有的属性和方法，包括私有属性和私有方法，但是父类中的私有属性和方法子类是无法访问的，只能拥有；
   * 子类可以拥有自己的属性和方法，即子类可以对父类进行扩展；
-  * 子类可以用自己的方式实现父类的方法。
-* **多态：**指程序中定义的引用变量所指向的具体类型和通过该引用变量进行的方法调用在编程时并不确定，而是在程序运行期间才会确定，即一个引用变量到底会指向哪个类的实例对象，该引用变量进行的方法调用到底是哪个类中实现的方法，必须由程序运行期间才能决定。在Java中可以使用继承（多个子类对父类同一方法的重写）和接口（多个类实现一个接口并覆盖其中的同一方法）来实现多态。
+  * 子类可以用自己的方式实现父类的方法，即重写。
+* **多态：**指程序中定义的引用变量所指向的具体类型和通过该引用变量进行的方法调用在编程时并不确定，而是在程序运行期间才会确定。即一个引用变量到底会指向哪个类的实例对象，该引用变量进行的方法调用到底是哪个类中实现的方法，必须由程序运行期间才能决定。在Java中可以使用继承（多个子类对父类同一方法的重写）和接口（多个类实现一个接口并覆盖其中的同一方法）来实现多态。
 
 
 
-### String、StringBuffer和StringBuilder的区别
+### String/StringBuffer/StringBuilder的区别
 
 **可变性**：
 
@@ -9842,19 +11177,19 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
   }
   ```
 
-  为什要设计成不可变的？
+* **为什要设计成不可变？**
 
-  * 可以缓存hash值：如HashMap的String类型的key，需要使用hash值，不可变的特性可以使得hash值不可变，只需要进行一次计算；
+  * **可以缓存hash值**：如HashMap使用String类型的key，需要计算hash值，不可变的特性可以使得hash值不可变，只需要进行一次计算；
 
-  * 字符串常量池的需要：如果一个String对象已被创建过，那么就会从字String Pool中取得引用。如果String Pool没有这个字符串，那么会创建并添加到String Pool。
+  * **字符串常量池的需要**：如果一个String对象已被创建过，那么就会从字String Pool中取得引用。如果String Pool没有这个字符串，那么会创建并添加到String Pool。
 
     ![String Pool](assets/String Pool.png)
 
-  * 安全性：String经常做为参数，保证参数不可变操作更加安全；
+  * **安全性**：String经常做为参数，保证参数不可变操作更加安全；
 
-  * 线程安全：使String天生支持线程安全，可以在多个线程安全使用。
+  * **线程安全**：使String天生支持线程安全，可以在多个线程安全使用。
 
-* 而StringBuilder与StringBuffer都继承自AbstractStringBuilder类。在该类中也是使用字符数组保存字符串，但没有使用final关键字修饰，所以这两个对象都是可变的；StringBuilder与StringBuffer的构造方法都是调用父类构造方法也就是``AbstractStringBuilder()``实现的。
+* 而StringBuilder与StringBuffer都继承自AbstractStringBuilder类。在该类中也是使用字符数组保存字符串，但没有使用final关键字修饰，所以这两个对象都是可变的。StringBuilder与StringBuffer的构造方法都是调用父类构造方法实现的。
 
   ```JAVA
   abstract class AbstractStringBuilder implements Appendable, CharSequence {
@@ -9878,7 +11213,7 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 **线程安全性**：
 
 * String中的对象是不可变的，可以理解为常量，且线程安全；
-* AbstractStringBuilder是StringBuilder和StringBuffer的公共父类，定义了一系列字符串基本操作。StringBuffer对方法加了同步锁保证了线程的安全，StringBuilder则没有，所以线程不安全但效率更高；
+* AbstractStringBuilder是StringBuilder和StringBuffer的公共父类，定义了一系列字符串基本操作。StringBuffer对方法加了同步锁保证了线程的安全。StringBuilder则没有，所以线程不安全但效率更高。
 
 **性能**：
 
@@ -9886,11 +11221,11 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 * StringBuffer每次都会对StringBuffer对象本身进行操作，而不是生成新的对象并改变对象引用；
 * StringBuilder虽然不存在同步锁消耗，但提高的性能有限，且线程不安全。
 
-**总结**：
+**适用**：
 
 * 操作少量的数据适用于String；
-* 单线程操作字符串缓冲区操作大量数据使用StringBuilder；
-* 多线程操作字符串缓冲区操作大量数据使用StringBuffer。
+* 单线程下通过字符串缓冲区操作大量数据使用StringBuilder；
+* 多线程下通过字符串缓冲区操作大量数据使用StringBuffer。
 
 
 
@@ -9899,72 +11234,72 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 * 接口中的所有方法默认是public，所有方法在接口中不能有实现（JDK8中接口可以有默认方法和静态方法功能，JDK9中引入了私有方法和私有静态方法）。而抽象类可以有非抽象方法；
 * 接口中除了static、final变量，不能有其他变量。而抽象类中则不一定；
 * 一个类可以实现多个接口，但只能实现一个抽象类。接口本身可以通过extends关键字扩展多个接口；
-* 接口的方法默认修饰符是public，抽象方法可以有public、protected和default这些修饰符，抽象方法就是为了被重写所以不能使用private关键字修饰；
-* 从设计层面来说，抽象是对类的抽象，是一种模板设计，而接口是对行为的抽象，是一种行为的规范。
+* 接口的方法默认修饰符是public。抽象方法可以有public、protected和default这些修饰符，抽象方法就是为了被重写所以不能使用private关键字修饰；
+* 从设计层面来说，抽象是对类的抽象，是一种模板设计。而接口是对行为的抽象，是一种行为的规范。
 
 
 
 ### 成员变量和局部变量的区别
 
-* **从语法形式上来看**：成员变量是属于类的，而局部变量是在方法中定义的变量或是方法的参数。成员变量可以被public、private、static等修饰符所修饰，而局部变量不能被访问控制修饰符及static所修饰，但二者皆可被final修饰；
+* **从语法形式上来看**：成员变量是定义在类中的，而局部变量是在方法中定义的变量或是方法的参数。成员变量可以被public、private、static等修饰符所修饰，而局部变量不能被访问控制修饰符及static所修饰，但二者皆可被final修饰；
 * **从变量在内存中的存储方式来看**：若成员变量是使用static修饰的，那么这个成员变量就是属于类的，如果没有使用static修饰，这个成员变量就是属于实例的。对象存储在堆内存，如果局部变量类型为基本数据类型，则存储在栈内存，如果是引用类型，则在栈中存储指向堆内存对象的引用或是常量池中的地址；
-* **从变量在内存中的生存时间上来看**：成员变量是对象的一部分，随着对象创建而存在，而局部变量是随着方法的调用结束而消失的；
-* 成员变量如果没有被赋予初始值，则会自动以该类型的默认值而赋值（被final修饰的成员变量也需要显式赋值），而局部变量则不会自动赋值。
+* **从变量在内存中的生存时间上来看**：成员变量是对象的一部分，随着对象创建而存在。而局部变量是随着方法的调用结束而消失的；
+* 成员变量如果没有被赋予初始值，则会自动以该类型的默认值而赋值（被final修饰的成员变量也需要显式赋值）。而局部变量则不会自动赋值。
 
 
 
 ### 静态方法和实例方法的区别
 
-* 在外部调用静态方法时，可以使用``类名.方法名``的形式，也可以使用``对象.方法名``的形式，而实例方法只有后面这种方式，也就是说，调用静态方法无需创建对象；
-* 静态方法在访问本类的成员时，只允许访问静态成员，而不允许访问实例成员和实例方法，而实例方法无此限制。
+* 在外部调用静态方法时，可以使用 `类名.方法名` 的形式，也可以使用 `对象.方法名` 的形式。而实例方法只有后面这种方式，也就是说，调用静态方法无需创建对象；
+* 静态方法在访问本类的成员时，只允许访问静态成员，不允许访问实例成员和实例方法。实例方法无此限制。
 
 
 
 ### hashCode()和equals()
 
-* **hashCode()**：作用是获取对象的哈希码。这个哈希码的作用是确定该对象在哈希表中的索引位置。hashCode()定义在JDK的Object.java中，意味着Java中的任何类都包含hashCode()方法；
-* **为什么需要hashCode()？**用于HashSet、HashMap中散列表结构的元素存储位置，当元素要加入时，会先计算hashCode，然后定位该元素在散列表中的存储位置，若是位置上有元素存在，则使用equals()判断是否是同一个元素，若不是则重新散列到其他位置，若是则操作失败达到了去重的目的；
-* **hashCode()和equals()的相关规定**：
-  * 若两个对象相等，则hashCode一定也相同；
-  * 若两个对象相等，对两个对象分别调用equals()都会返回true；
-  * 若两个对象hashCode相同，但不一定是相等的；
-  * equals()被覆盖过，hashCode也必须被覆盖；
-  * hashCode()的默认行为是对堆上的对象产生独特值，如果没有重写hashCode()，则该class的两个对象无论如何都不会相等。
-* **== 和 equals()**：
-  * 对于基本类型，== 判断两个值是否相等，基本类型没有equals()；
-  * 对于引用类型，== 判断两个变量是否引用同一对象，而equals()则判断引用的对象是否等价。
+* **`hashCode()`**：作用是获取对象的哈希码。这个哈希码的作用是确定该对象在哈希表中的索引位置。`hashCode()` 定义在JDK的Object.java中，意味着Java中的任何类都包含 `hashCode()` 方法；
+* **为什么需要`hashCode()`？**用于HashSet、HashMap中散列表结构的元素存储位置，当元素要加入时，会先计算hashCode，然后定位该元素在散列表中的存储位置，若是位置上有元素存在，则使用 `equals()` 判断是否是同一个元素，若不是则挂入这个位置的链表上，若是则操作失败达到了去重的目的；
+* **`hashCode()`和`equals()`的相关规定**：
+  * 若两个对象相等，则 `hashCode()` 一定也相同；
+  * 若两个对象相等，对两个对象分别调用 `equals()` 都会返回true；
+  * 若两个对象hashCode相同，但不一定是相等的，即存在哈希碰撞的可能；
+  * 若 `equals()` 被覆盖，`hashCode()` 也必须被覆盖；
+  * `hashCode()` 的默认行为是对堆上的对象产生独特值，如果没有被重写，则类的两个对象无论如何都不会相等。
+* **==和`equals()`**：
+  * **对于基本类型**：== 判断两个值是否相等，基本类型没有 `equals()`；
+  * **对于引用类型**：== 判断两个变量是否引用同一对象，而 `equals()` 则判断引用的对象是否等价。
 
 
 
 ### final关键字总结
 
 * **当final修饰一个变量时**：如果是基本数据类型的变量，则数值一旦在初始化后便不能修改。如果是引用类型变量，则在对其初始化后便不能再让其指向另一个对象；
-* **当final修饰一个类时**：表名这个类不能被继承，类中的所有成员方法都会隐式的被指定为final修饰；
-* **当final修饰一个方法时**：第一是为了锁定方法，以防止任何继承类修改其含义。第二是效率问题，早期会通过final方法提供性能，现版本已经不需要了。类中的所有private方法都隐式的指定为final。
+* **当final修饰一个类时**：表示这个类不能被继承，类中的所有成员方法都会隐式的被指定为final修饰；
+* **当final修饰一个方法时**：第一是为了锁定方法，以防止任何子类修改其含义。第二是效率问题，早期会通过final方法提高性能，现版本已经不需要了。类中的所有private方法都隐式的指定为final。
 
 
 
 ### 反射
 
-**概念：**每个类都有一个Class对象，包含了与类有关的信息。当编译一个新类时，会产生一个同名的 .class 文件，该文件保存着Class对象的信息。类加载就相当于Class对象的加载，类在第一次使用时才会动态加载到JVM中。反射则是提供了在运行时通过 `Class.forName("com.mysql.jdbc.Driver");` 这种方式来动加载类到JVM中。
+**概念**：每个类都有一个Class对象，包含了与类有关的信息。当编译一个新类时，会产生一个同名的 .class 文件，该文件保存着Class对象的信息。类加载就相当于Class对象的加载，类在第一次使用时才会动态加载到JVM中。反射则是提供了在运行时通过 `Class.forName("com.mysql.jdbc.Driver");` 这种方式来动态加载类到JVM中。
 
 **Class 和 java.lang.reflect 对反射提供了支持，java.lang.reflect 类库主要包含了以下三个类：**
 
-* Field：可以使用 get() 和 set() 方法读取和修改Field对象关联的字段； 
-* Method：可以使用 invoke() 方法调用与Method对象关联的方法；
-* Constructor：可以用Constructor的 newInstance() 创建新的对象。
+* **Field**：可以使用 `get()` 和 `set()` 方法读取和修改Field对象关联的字段； 
+* **Method**：可以使用 `invoke()` 方法调用与Method对象关联的方法；
+* **Constructor**：可以用Constructor的 `newInstance()` 创建新的对象。
 
-**优点：**
+**优点**：
 
-* 可扩展性：应用程序可以利用类的全限定名创建可扩展对象的实例，来使用来自外部的用户自定义类；
-* 类浏览器和可视化开发环境：一个类浏览器需要可以枚举类的成员。可视化开发环境（如 IDE）可以从利用反射中可用的类型信息中受益，以帮助程序员编写正确的代码；
-* 调试器和测试工具：调试器需要检查一个类中的私有成员。测试工具可以利用反射来自动的调用类里定义的可被发现的API定义，以确保一组测试中有较高的代码覆盖率。
+* **可扩展性**：应用程序可以利用类的全限定名创建可扩展对象的实例，使用来自外部的用户自定义类；
+* **类浏览器和可视化开发环境**：一个类浏览器需要可以枚举类的成员。可视化开发环境（如：IDE）可以从利用反射中可用的类型信息中受益，以帮助程序员编写正确的代码；
+* **调试器和测试工具**：调试器需要检查一个类中的私有成员。测试工具可以利用反射来自动的调用类里定义的可被发现的API定义，以确保一组测试中有较高的代码覆盖率。
 
 **缺点：**
 
-* 性能开销：反射涉及了动态类型解析，所以JVM无法对这些代码进行优化。因此反射操作的效率要比非反射操作低得多；
-* 安全限制：使用反射要求程序员必须在一个没有安全限制的环境中运行。如果一个程序必须在有安全限制的环境中运行，如Applet，那就不适用反射；
-* 内部暴露：由于反射允许代码执行一些在正常情况下不被允许的操作（如访问私有的属性和方法），所以使用反射可能会导致意料之外的副作用，这可能导致代码功能失调并破坏可移植性。发射代码破坏了抽象性，因此当平台发生改变时，代码的行为就有可能随之变化。
+* **性能开销**：反射涉及了动态类型解析，所以JVM无法对这些代码进行优化。因此反射操作的效率要比非反射操作低得多；
+* **安全限制**：使用反射要求程序员必须在一个没有安全限制的环境中运行。如果一个程序必须在有安全限制的环境中运行，如Applet，那就不适用反射；
+* **内部暴露**：由于反射允许代码执行一些在正常情况下不被允许的操作（如访问私有的属性和方法），所以使用反射可能会导致意料之外的副作用，这可能导致代码功能失调并破坏可移植性。发射代码破坏了抽象性，因此当平台发生改变时，代码的行为就有可能随之变化。
 
 
 
@@ -9972,14 +11307,13 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 
 ![image-20201111151210161](assets/image-20201111151210161.png)
 
-* 在Java中，若有的异常都有一个公共的父类，即java.lang包下的Throwable类。该类有两个重要的子类：Exception异常类和Error错误类；
-* **Error错误**：是程序无法处理的错误。表示运行应用程序中较严重的问题。大多数错误与代表编写者执行的操作无关，而与代码运行时JVM有关。如虚拟机运行错误VirtulMachineError、当JVM不再有继续执行操作所需的内存资源时的OutOfMemoryError，这些错误发生时JVM一般会选择终止线程；
+* **Throwable**：在Java中，所有的异常都有一个公共的父类，即java.lang包下的Throwable类。该类有两个重要的子类：Exception异常类和Error错误类；
+* **Error错误**：是程序无法处理的错误。表示运行应用程序中较严重的问题。大多数错误与代码编写者执行的操作无关，而与代码运行时JVM有关。如：虚拟机运行错误VirtulMachineError、当JVM不再有继续执行操作所需的内存资源时的OutOfMemoryError，这些错误发生时JVM一般会选择终止线程；
 * **Exception异常**：是程序本身可以处理的异常。Exception存在一个重要的子类RuntimeException运行时异常，该异常由JVM抛出。常见的异常有NullPointerException（空指针异常，即要访问的变量没有引用任何对象）、ArithmeticException（算术运算异常，如整数除0时会抛出）、ArrayIndexOutOfBoundsException（数组下标越界异常）。
-* 异常处理：
-  * **try块**：用于捕获异常，其后可以接多个catch块，若没有catch块，则必须紧跟一个finally块；
-  * **catch块**：用于处理try捕获到的异常；
-  * **finally块**：无论是否捕获或处理异常，finally块里的语句都会被执行。当在try块或catch块中遇到return语句时，finally语句块将在方法返回前被执行。
-  * finally块不会被执行的特殊情况：finally块内部发生了异常、线程死亡、CPU被关闭、System.exit()退出程序。
+* **异常处理**：
+  * **try块**：用于捕获异常，其后可以接多个 catch 块，若没有 catch 块，则必须紧跟一个 finally 块；
+  * **catch块**：用于处理 try 捕获到的异常；
+  * **finally块**：无论是否捕获或处理异常，finally 块里的语句都会被执行。当在 try 块或 catch 块中遇到 return 语句时，finally 语句块将在方法返回前被执行。finally 块不会被执行的特殊情况，如：finally块内部发生了异常、线程死亡、CPU被关闭、`System.exit()` 退出程序。
 
 
 
@@ -9987,14 +11321,14 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 
 * Java中的IO流划分：
 
-  * 按照流的流向划分：可以划分为输入流和输出流；
-  * 按照操作单元划分：可以划分为字节流和字符流；
-  * 按照流的角色划分为节点流和处理流。
+  * **按照流的流向划分**：可以划分为输入流和输出流；
+  * **按照操作单元划分**：可以划分为字节流和字符流；
+  * **按照流的角色划分**：可以划分为节点流和处理流。
 
 * JavaIO流的40多个类都是从4个抽象类中派生出来的：
 
-  * InputStream/Reader：所有输入流的基类，前者是按字节操作，后者是字符；
-  * OutputStream/Writer：所有输出流的基类，前置是按字节操作，后者是字符。
+  * **InputStream/Reader**：所有输入流的基类，前者是按字节操作，后者是字符；
+  * **OutputStream/Writer**：所有输出流的基类，前置是按字节操作，后者是字符。
 
 * 按操作方式分类结构图：
 
@@ -10006,7 +11340,7 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 
 
 
-### BIO、NIO、AIO
+### BIO/NIO/AIO
 
 * **BIO（Blocking I/O）**：同步阻塞I/O模型，数据的读取写入必须阻塞在一个线程内等待其完成。在活动连接数不是特别高（单机小于1000）的情况下，这种模型是比较不错的，可以让每一个连接都专注于自己的I/O，且编程模型简单，不需要过多的考虑系统的过载、限流等问题。线程池本身就是一个天然的漏斗，可以缓冲一些系统处理不了的连接或请求。但是，当面对10w甚至100w级的连接时，传统的BIO模型就无能为力了；
 * **NIO（Non-blocking/New I/O）**：同步非阻塞I/O模型，在JDK1.4中引入了NIO的框架，对应于java.nio包，提供了Channel、Selector、Buffer等抽象。其支持面向缓冲的，基于通道的I/O操作方法。NIO提供了与传统BIO模型中的Socket和ServerSocket相对应的SocketChannel和ServerSocketChannel两种不同的套接字通道实现，两种都支持阻塞和非阻塞模式。阻塞模式和传统IO一样，简单但性能欠佳，而非阻塞模式正好与之相反。对于低负载、低并发的网络应用，可以使用同步阻塞IO来提升并发速率和更好的维护性。对于高负载、高并发的网络应用，可以使用NIO的非阻塞模式来开发；
@@ -10018,8 +11352,8 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 
 ![image-20201111153317651](assets/image-20201111153317651.png)
 
-* **浅拷贝：**对基本数据类型进行值拷贝，对引用数据类型进行引用传递的拷贝；
-* **深拷贝：**对基本数据类型进行值拷贝，对引用数据类型，则创建新对象，并复制其内容。
+* **浅拷贝：**对基本数据类型进行值拷贝。对引用数据类型进行引用传递的拷贝；
+* **深拷贝：**对基本数据类型进行值拷贝。对引用数据类型，则创建新对象，并复制其内容。
 
 
 
@@ -10027,32 +11361,31 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 
 ### Collection接口概述
 
-* Set：
-  * SortedSet/TreeSet：基于红黑树实现，支持有序性操作，如根据范围查找元素。查询效率不如HashSet，时间复杂度为O(logN)，而HashSet是O(1)；
-  * HashSet/LinkedHashSet：基于哈希表实现，支持快速查找，但不支持有序性操作。且失去了元素插入时的顺序信息，即HashSet中元素的位置是无序的。而底层基于LinkedHashMap实现，可使用双向链表维护元素的插入顺序；
-  * EnumSet：
-  * CopyOnWriteArraySet：写时复制的ArraySet。相比于CopyOnWriteArrayList没有重复元素；
-  * ConcurrentSkipListSet：跳表。
-* List：
-  * ArrayList：基于可动态扩容的数组实现，支持根据下标随机访问；
-  * Vector/Stack：可以看成是线程安全的ArrayList（所有方法都是synchronized的）； 
-  * LinkedList：基于双向链表实现，只能顺序访问，但可以快速在任意位置插入和删除元素。且还能够实现栈、队列等结构；
-* CopyOnWriteArrayList：是写时复制的ArrayList，当一个ArrayList写操作非常少，读操作非常多时使用。所谓写时复制是当些操作发生时，会整体将数组复制一份并执行写操作，之后将引用重新指向。在大量线程同时访问时，写操作真正操作的是复制后的新数组，而读操作访问原数组就可以无需加锁，以此提高效率。
-* Queue：
-  * Deque：
-    * ArrayDeque：底层使用数组实现的双端队列；
-    * BlockingDeque/LinkedBlockingDeque：阻塞的双端队列。
-  * BlockingQueue：
-    * ArrayBlockingQueue：底层使用数组实现的阻塞队列。队列为空则消费者阻塞，队列已满则生产者阻塞。
-    * PriorityBlockingQueue：底层使用堆实现的带优先级的阻塞队列；
-    * LinkedBlockingQueue：底层使用链表实现的阻塞队列；
-    * TransferQueue/LinkedTransferQueue：生产者和消费者必须成对的队列。生产者会一直阻塞在队列上，直到另一端有消费者过来消费为止；
-    * SynchronousQueue：容量为空的队列；
-    * DelayQueue：基于阻塞队列实现的延迟队列。提供了在指定时间才能获取队列元素的功能，队列头元素是最接近过期的元素。当生产者线程调用put之类的方法加入元素时，会触发Delayed接口中的compareTo方法进行排序，也就是说队列中元素的顺序是按到期时间排序的，而非它们进入队列的顺序。排在队列头部的元素是最早到期的，越往后到期时间赿晚。
-  * LinkedList：可基于双向链表实现双端队列；
-  * PriorityQueue：底层使用堆（小顶堆/大顶堆）实现的优先队列；
-  * ConcurrentLinkedQueue：并发的且底层使用链表实现的队列；
-  * DelayQueue：
+* **Set**：
+  * **SortedSet/TreeSet**：基于红黑树实现，支持有序性操作，如根据范围查找元素。查询效率不如HashSet，时间复杂度为O(logN)，而HashSet是O(1)；
+  * **HashSet/LinkedHashSet**：基于哈希表实现，支持快速查找，但不支持有序性操作。且失去了元素插入时的顺序信息，即HashSet中元素的位置是无序的。而底层基于LinkedHashMap实现，可使用双向链表维护元素的插入顺序；
+  * **EnumSet**：枚举集合；
+  * **CopyOnWriteArraySet**：写时复制的ArraySet，相比于CopyOnWriteArrayList没有重复元素；
+  * **ConcurrentSkipListSet**：跳表。底层通过ConcurrentSkipListMap实现，有序且线程安全的集合。
+* **List**：
+  * **ArrayList**：基于可动态扩容的数组实现，支持根据下标随机访问；
+  * **Vector/Stack**：可以看成是线程安全的ArrayList（所有方法都是synchronized的）； 
+  * **LinkedList**：基于双向链表实现，只能顺序访问，但可以快速在任意位置插入和删除元素。且还能够实现栈、队列等结构；
+* **CopyOnWriteArrayList**：是写时复制的ArrayList，当一个ArrayList写操作非常少，读操作非常多时使用。所谓写时复制是当些操作发生时，会整体将数组复制一份并执行写操作，之后将引用重新指向。在大量线程同时访问时，写操作真正操作的是复制后的新数组，而读操作访问原数组就可以无需加锁，以此提高效率。
+* **Queue**：
+  * **Deque**：
+    * **ArrayDeque**：底层使用数组实现的双端队列；
+    * **BlockingDeque/LinkedBlockingDeque**：阻塞的双端队列。
+  * **BlockingQueue**：
+    * **ArrayBlockingQueue**：底层使用数组实现的阻塞队列。队列为空则消费者阻塞，队列已满则生产者阻塞。
+    * **PriorityBlockingQueue**：底层使用堆实现的带优先级的阻塞队列；
+    * **LinkedBlockingQueue**：底层使用链表实现的阻塞队列；
+    * **TransferQueue/LinkedTransferQueue**：生产者和消费者必须成对的队列。生产者会一直阻塞在队列上，直到另一端有消费者过来消费为止；
+    * **SynchronousQueue**：容量为空的队列；
+    * **DelayQueue**：基于阻塞队列实现的延迟队列。提供了在指定时间才能获取队列元素的功能，队列头元素是最接近过期的元素。当生产者线程调用put之类的方法加入元素时，会触发Delayed接口中的compareTo方法进行排序，也就是说队列中元素的顺序是按到期时间排序的，而非它们进入队列的顺序。排在队列头部的元素是最早到期的，越往后到期时间越晚。
+  * **LinkedList**：可基于双向链表实现双端队列；
+  * **PriorityQueue**：底层使用堆（小顶堆/大顶堆）实现的优先队列；
+  * **ConcurrentLinkedQueue**：并发的且底层使用链表实现的队列；
 
 <img src="assets/Java容器概述.png" alt="Java容器概述" style="zoom: 67%;" />
 
@@ -10060,14 +11393,14 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 
 ### Map接口概述
 
-* TreeMap：基于红黑树实现，元素具有顺序的特性；
-* HashMap：JDK1.8之前是由数组+链表组成，数组是主体，链表是为了解决哈希冲突而存在的。JDK1.8后当链表的长度大于阈值8时，将链表转换为红黑树（若当前数组长度小于64，则优先扩容数组），减少搜索时间；
-* HashTable：可以看成是线程安全的HashMap；
-* LinkedHashMap：使用双向链表维护元素的顺序，顺序为插入顺序或最近最少使用（LRU）顺序；
-* WeakHashMap：
-* IdentityHashMap：
-* ConcurrentHashMap：
-* ConcurrentSkipListMap：
+* **TreeMap**：基于红黑树实现，元素具有顺序的特性；
+* **HashMap**：JDK1.8之前是由数组+链表组成，数组是主体，链表是为了解决哈希冲突而存在的。JDK1.8后当链表的长度大于阈值8时，将链表转换为红黑树（若当前数组长度小于64，则优先扩容数组），减少搜索时间；
+* **HashTable**：可以看成是线程安全的HashMap；
+* **LinkedHashMap**：使用双向链表维护元素的顺序，顺序为插入顺序或最近最少使用（LRU）顺序；
+* **WeakHashMap**：键使用弱引用的散列表结构；
+* **IdentityHashMap**：特殊的Map，根据其名字Identity，即同一性，其表现出的具体特点便是，在判断Map中的两个key是否相等时，只通过==来判断，而不通过equals，也就是说，允许两个key的值相同，但引用不能相同，即不同对象；
+* **ConcurrentHashMap**：适用于高并发场景的HashMap；
+* **ConcurrentSkipListMap**：底层通过跳表实现的、线程安全的、有序的哈希表，适用于高并发的场景。
 
 <img src="assets/Map接口.png" alt="Map接口" style="zoom:67%;" />
 
