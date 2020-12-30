@@ -1349,8 +1349,6 @@ public final native boolean compareAndSwapInt(Object var1, long var2, int var4, 
 
 
 
-
-
 ### CAS比较并交换
 
 **概念**：CAS（Compare And Swap）是多线程的场景下，修改共享数据前先使用期望值与共享数据进行比较，若符合期望则允许修改，不符合期望则修改失败（也可以通过自旋的方式多次尝试）。CAS本身是由硬件提供的原子指令实现的，可以确保操作的原子性。
@@ -5784,7 +5782,8 @@ G1（Garbage-First）是面向运行在Server模式的虚拟机的垃圾收集�
 #### SATB算法
 
 * SATB（snapshot-at-the-beginning）快照标记算法。G1垃圾回收器使用该技术在初始标记阶段记录一个存活对象的快照。在并发标记阶段引用可能会发生改变，比如删除了一个原本的引用，这就会导致并发标记结束之后存活的对象和SATB的快照不一致。
-* G1是通过在并发标记阶段引入一个写屏障（pre-write barrier）来解决这个问题的，即每当引用被删除的情况出现时，会将删除之前的旧引用记录到一个Log Buffer中（即把所有旧引用指向的对象都变成灰色）。并在在再次标记阶段（Remark）清空缓冲区，跟踪未被访问的存活对象，并执行标记处理，即以Log Buffer中的旧引用指向的对象为根重新扫描一遍。
+* G1是通过在并发标记阶段引入一个写屏障（pre-write barrier）来解决这个问题的，即每当引用被删除的情况出现时，会将所有被删除之前的旧引用记录到一个Log Buffer中。并在在再次标记阶段（Remark）清空缓冲区，跟踪未被访问的存活对象，并标记为灰色，即以Log Buffer中的旧引用指向的对象为根重新扫描一遍。
+
 * 这样STAB就保证了真正存活的对象不会被GC误回收，但同时也造成了某些可以被回收的对象逃过了GC，导致了内存里面存在浮动的垃圾（Float Garbage），这些浮动垃圾会在下一次GC被回收。
 
 
@@ -10899,7 +10898,33 @@ Netty提供了IdleStateHandler，ReadTimeoutHandler，WriteTimeoutHandler三个H
 
 
 
-# Linux操作和概念及其内核原理
+# Linux操作和内核原理
+
+## Linux操作-基本概念
+
+## Linux操作-磁盘
+
+## Linux操作-分区
+
+## Linux操作-文件系统
+
+## Linux操作-目录/文件
+
+## Linux操作-压缩打包
+
+## Linux操作-Bash
+
+## Linux操作-管道指令
+
+## Linux操作-正则表达式
+
+## Linux操作-进程管理
+
+## Linux操作-安全
+
+## Linux操作-Shell
+
+
 
 ## Linux内核-进程管理
 
@@ -11361,31 +11386,33 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 
 ### Collection接口概述
 
-* **Set**：
-  * **SortedSet/TreeSet**：基于红黑树实现，支持有序性操作，如根据范围查找元素。查询效率不如HashSet，时间复杂度为O(logN)，而HashSet是O(1)；
-  * **HashSet/LinkedHashSet**：基于哈希表实现，支持快速查找，但不支持有序性操作。且失去了元素插入时的顺序信息，即HashSet中元素的位置是无序的。而底层基于LinkedHashMap实现，可使用双向链表维护元素的插入顺序；
-  * **EnumSet**：枚举集合；
-  * **CopyOnWriteArraySet**：写时复制的ArraySet，相比于CopyOnWriteArrayList没有重复元素；
-  * **ConcurrentSkipListSet**：跳表。底层通过ConcurrentSkipListMap实现，有序且线程安全的集合。
 * **List**：
   * **ArrayList**：基于可动态扩容的数组实现，支持根据下标随机访问；
   * **Vector/Stack**：可以看成是线程安全的ArrayList（所有方法都是synchronized的）； 
   * **LinkedList**：基于双向链表实现，只能顺序访问，但可以快速在任意位置插入和删除元素。且还能够实现栈、队列等结构；
-* **CopyOnWriteArrayList**：是写时复制的ArrayList，当一个ArrayList写操作非常少，读操作非常多时使用。所谓写时复制是当些操作发生时，会整体将数组复制一份并执行写操作，之后将引用重新指向。在大量线程同时访问时，写操作真正操作的是复制后的新数组，而读操作访问原数组就可以无需加锁，以此提高效率。
+  * **CopyOnWriteArrayList**：写时复制的ArrayList，当一个ArrayList写操作非常少，读操作非常多时使用。所谓写时复制是当些操作发生时，会整体将数组复制一份并执行写操作，之后将引用重新指向。在大量线程同时访问时，写操作真正操作的是复制后的新数组，而读操作访问原数组就可以无需加锁，以此提高效率。
+
+* **Set**：
+  * **TreeSet**：底层使用红黑树实现，支持有序性操作，如：根据范围查找元素。查询效率不如HashSet，时间复杂度为O(logN)，而HashSet是O(1)；
+  * **HashSet**：底层使用哈希表实现，支持快速查找，但不支持有序性操作。且失去了元素插入时的顺序信息，即HashSet中元素的位置是无序的；
+  * **LinkedHashSet**：基于LinkedHashMap实现，额外使用了双向链表维护元素的插入顺序；
+  * **EnumSet**：枚举集合；
+  * **CopyOnWriteArraySet**：写时复制的ArraySet，相比于CopyOnWriteArrayList没有重复元素；
+  * **ConcurrentSkipListSet**：基于ConcurrentSkipListMap实现，有序且线程安全的集合。
+
 * **Queue**：
   * **Deque**：
     * **ArrayDeque**：底层使用数组实现的双端队列；
-    * **BlockingDeque/LinkedBlockingDeque**：阻塞的双端队列。
+    * **BlockingDeque/LinkedBlockingDeque**：底层使用链表实现的阻塞的双端队列。
   * **BlockingQueue**：
-    * **ArrayBlockingQueue**：底层使用数组实现的阻塞队列。队列为空则消费者阻塞，队列已满则生产者阻塞。
+    * **ArrayBlockingQueue**：底层使用数组实现的阻塞队列。队列为空则消费者阻塞，队列已满则生产者阻塞；
     * **PriorityBlockingQueue**：底层使用堆实现的带优先级的阻塞队列；
     * **LinkedBlockingQueue**：底层使用链表实现的阻塞队列；
-    * **TransferQueue/LinkedTransferQueue**：生产者和消费者必须成对的队列。生产者会一直阻塞在队列上，直到另一端有消费者过来消费为止；
+    * **TransferQueue/LinkedTransferQueue**：底层使用链表实现的生产者和消费者必须成对的队列。生产者会一直阻塞在队列一端，直到另一端有消费者过来消费为止；
     * **SynchronousQueue**：容量为空的队列；
-    * **DelayQueue**：基于阻塞队列实现的延迟队列。提供了在指定时间才能获取队列元素的功能，队列头元素是最接近过期的元素。当生产者线程调用put之类的方法加入元素时，会触发Delayed接口中的compareTo方法进行排序，也就是说队列中元素的顺序是按到期时间排序的，而非它们进入队列的顺序。排在队列头部的元素是最早到期的，越往后到期时间越晚。
-  * **LinkedList**：可基于双向链表实现双端队列；
+    * **DelayQueue**：基于阻塞队列实现的延迟队列。只有当指定的时间到其才能获取队列中的元素，队列头元素是最接近到期的元素。当生产者线程添加元素时，会触发队列排序，即队列中的元素顺序是按到期时间排序的。排在队列头部的元素是最早到期的，越往后到期时间越晚。
   * **PriorityQueue**：底层使用堆（小顶堆/大顶堆）实现的优先队列；
-  * **ConcurrentLinkedQueue**：并发的且底层使用链表实现的队列；
+  * **ConcurrentLinkedQueue**：并发安全的且底层使用链表实现的队列。
 
 <img src="assets/Java容器概述.png" alt="Java容器概述" style="zoom: 67%;" />
 
@@ -11393,14 +11420,14 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 
 ### Map接口概述
 
-* **TreeMap**：基于红黑树实现，元素具有顺序的特性；
-* **HashMap**：JDK1.8之前是由数组+链表组成，数组是主体，链表是为了解决哈希冲突而存在的。JDK1.8后当链表的长度大于阈值8时，将链表转换为红黑树（若当前数组长度小于64，则优先扩容数组），减少搜索时间；
+* **TreeMap**：底层使用红黑树实现，元素具有顺序的特性；
+* **HashMap**：JDK1.8之前使用数组+链表实现，数组是主体，链表是为了解决哈希冲突而存在的。JDK1.8后当链表的长度大于阈值8时，会将链表转换为红黑树（若当前数组长度小于64，则优先扩容数组），减少搜索时间；
 * **HashTable**：可以看成是线程安全的HashMap；
-* **LinkedHashMap**：使用双向链表维护元素的顺序，顺序为插入顺序或最近最少使用（LRU）顺序；
+* **LinkedHashMap**：使用双向链表维护元素顺序的HashMap，顺序为插入顺序或最近最少使用（LRU）顺序；
 * **WeakHashMap**：键使用弱引用的散列表结构；
-* **IdentityHashMap**：特殊的Map，根据其名字Identity，即同一性，其表现出的具体特点便是，在判断Map中的两个key是否相等时，只通过==来判断，而不通过equals，也就是说，允许两个key的值相同，但引用不能相同，即不同对象；
+* **IdentityHashMap**：具备同一性的HashMap，在判断Map中的两个key是否相等时，只通过==来判断，而不通过equals，即允许两个key的值相同，但引用不能相同；
 * **ConcurrentHashMap**：适用于高并发场景的HashMap；
-* **ConcurrentSkipListMap**：底层通过跳表实现的、线程安全的、有序的哈希表，适用于高并发的场景。
+* **ConcurrentSkipListMap**：底层使用跳表实现的、线程安全的、有序的哈希表，适用于高并发的场景。
 
 <img src="assets/Map接口.png" alt="Map接口" style="zoom:67%;" />
 
@@ -11415,20 +11442,20 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 
 ### 为什么使用集合？
 
-* 当需要保存一组类型相同的数据时，需要一个容器，但使用数组存储对象由很多弊端。在实际开发中，存储数据的类型是多种多样的，所以出现了集合；
-* 数组的缺点是一旦声明后，长度就无法改变，同时声明数组的同时也必须指定数据类型，一旦确定后就不法改变，另外，数组存储数据是不提供自定义排序和判重功能的。所以用数组存储数据功能单一不够灵活。
+* 当需要保存一组类型相同的数据时，需要一个容器，但使用数组存储对象有很多弊端。因为在实际开发中，存储数据的类型是多种多样的，所以出现了集合；
+* 数组的缺点是一旦声明后，长度就无法改变，同时声明数组也必须指定数据类型，一旦确定后就不法改变，另外，数组存储数据是不提供自定义排序和判重功能的，所以用数组存储数据功能单一不够灵活。
 
 
 
 ### 线程不安全和安全的集合有哪些？
 
 * **线程不安全的集合：**ArrayList、LinkedList、HashMap、TreeMap、HashSet、TreeSet都不是线程安全的；
-* **JUC（java.util.concurrent）包提供了各种并发容器**：
-  * ConcurrentHashMap：线程安全的HashMap；
-  * CopyOnWriteArrayList：可以看成线程安全的ArrayList，在读多写少的场合性能非常好，远胜于Vector；
-  * ConcurrentLinkedQueue：使用链表实现的并发队列，可以看成是一个线程安全的LinkedList，是一个非阻塞队列；
-  * BlockingQueue：阻塞队列接口，JDK通过链表、数组等方式实现了这个接口，非常适合作为数据共享的通道；
-  * ConcurrentSkipListMap：跳表的实现。底层是一个Map结构，使用跳表的数据结构实现了快速查找。
+* **java.util.concurrent（JUC）包提供的各种并发容器**：
+  * **ConcurrentHashMap**：线程安全的HashMap；
+  * **CopyOnWriteArrayList**：使用写时复制实现的线程安全的ArrayList，在读多写少的场合性能非常好，远胜于Vector；
+  * **ConcurrentLinkedQueue**：使用链表实现的并发队列，可以看成是一个线程安全的LinkedList，是一个非阻塞队列；
+  * **BlockingQueue**：阻塞队列接口，JDK通过链表、数组等方式实现了这个接口，非常适合作为数据共享的通道；
+  * **ConcurrentSkipListMap**：跳表的实现。底层是一个Map结构，使用跳表的数据结构实现了快速查找。
 
 
 
@@ -11445,7 +11472,7 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 
 ### 适配器模式
 
-* **意图：**将一个类的接口转换成客户希望的另外一个接口。适配器模式使得原本由于接口不兼容而不能一起工作的那些类可以一起工作。
+* 将一个类的接口转换成客户希望的另外一个接口。适配器模式使得原本由于接口不兼容而不能一起工作的那些类可以一起工作。
 * Java中通过 `java.util.Arrays#asList()` 将数组类型转换为List类型。
 
 ```JAVA
@@ -11459,8 +11486,8 @@ public static <T> List<T> asList(T... a)
 
 ### ArrayList和Vector的区别
 
-* ArrayList是List的主要实现类，底层使用Object[]存储，适用于频繁的查找工作，线程不安全；
-* Vector是List的古老实现类，底层使用Object[]存储，线程安全，效率低，已经不适合使用了。
+* ArrayList是List的主要实现类，底层使用 `Object[]` 存储，适用于频繁的查找工作，线程不安全；
+* Vector是List的古老实现类，底层同样使用 `Object[]` 存储，线程安全，效率低，已经不适合使用了。
 
 
 
@@ -11472,14 +11499,14 @@ public static <T> List<T> asList(T... a)
 
 * **插入和删除是否受元素位置的影响**：
 
-  * ArrayList采用数组存储，所以插入删除的时间复杂度受元素位置影响。如：执行add(E e)方法的时候，ArrayList会默认将指定元素插入到列表的末尾，时间复杂度是O(1)。但若是要通过add(int index, E element)在指定位置插入素的话，时间复杂度就是O(n-i)，因为在进行上述操作时集合中第i和第i个元素之后的(n-i)个元素都要执行向后移位的操作；
-  * LinkedList采用链表存储，所以对于add(E e)的插入不受元素位置的影响，近似O(1)。若是要通过add(int index, E element)在指定位置i插入元素的话，时间复杂度近似为O(n)，因为需要先从头移动到指定位置再插入。
+  * ArrayList采用数组存储，所以插入删除的时间复杂度受元素位置影响。如：执行 `add(E e)` 方法的时候，ArrayList会默认将指定元素插入到列表的末尾，时间复杂度是O(1)。但若是要通过 `add(int index, E element)` 在指定位置插入素的话，时间复杂度就是O(n-i)，因为在进行上述操作时集合中第i和第i个元素之后的(n-i)个元素都要执行向后移位的操作；
+  * LinkedList采用链表存储，所以对于 `add(E e)` 的插入不受元素位置的影响，近似O(1)。而通过 `add(int index, E element)` 在指定位置i插入元素时，也无需像数组那样移动元素，但需要迭代访问到指定位置。
 
-* **是否支持快速随机访问**：LinkedList不支持高效的随机元素访问，而ArrayList支持。快速随机访问就是通过元素的序号快速获取元素对象的过程，如get(int index)；
+* **是否支持快速随机访问**：LinkedList不支持高效的随机元素访问，而ArrayList支持。快速随机访问就是通过元素的序号快速获取元素对象的过程，如：`get(int index)`；
 
-* **内存空间占用**：ArrayList的空间浪费主要体现再列表的结尾会预留一定的容量空间，而LinkedList的空间花费则体现在它的每一个元素都需要消耗相对更多个空间（因为除了存放数据还需要存放前驱和后继指针）。
+* **内存空间占用**：ArrayList的空间浪费主要体现再列表的结尾会预留一定的容量空间，而LinkedList的空间花费则体现在它的每一个元素都需要消耗相对更多个空间（因为除了存放数据还需要存放prev和next指针）。
 
-* **RandomAccess接口：**只有定义没有具体内容的接口，用于标识实现这个接口的类具有随机访问功能。查看binarySearch()的源码发现，若List实现了RandomAccess接口，说明具有随机访问功能，则调用indexedBinarySearch()方法。若没实现，则调用iteratorBinarySearc()，则只能通过迭代去访问。
+* **RandomAccess接口**：只有定义没有具体内容的接口，用于标识实现这个接口的类具有随机访问功能。查看 `binarySearch()` 的源码发现，若List实现了RandomAccess接口，说明具有随机访问功能，则调用 `indexedBinarySearch() `方法。若没实现，则调用`iteratorBinarySearc()`，则只能通过迭代去访问。
 
   ```JAVA
   public static <T> int binarySearch(List<? extends Comparable<? super Tjk list, T key) {
@@ -11497,28 +11524,28 @@ public static <T> List<T> asList(T... a)
           implements List<E>, RandomAccess, Cloneable, java.io.Serializable
   ```
 
-* LinkedList存储结构：
+* **LinkedList存储结构**：
 
   ```JAVA
   // 基于双向链表，使用Node存储链表节点
   private static class Node<E> {
       E item;
-      Node<E> next;
-      Node<E> prev;
+      Node<E> next;	// 前驱指针
+      Node<E> prev;	// 后继指针
   }
   
-  // 每个链表都维护first和last指针
+  // 每个链表都维护一对头尾指针
   transient Node<E> first;
   transient Node<E> last;
   ```
 
   ![LinkedList](assets/LinkedList.png)
 
-* 双向链表：包含两个指针，一个prev指向前一个节点，一个next指向后一个节点。
+* **双向链表**：包含两个指针，一个prev指向前一个节点，一个next指向后一个节点。
 
   ![image-20201109150211100](assets/image-20201109150211100.png)
 
-* 双向循环链表：最后一个节点的next指向head，而head的prev指向最后一个节点，构成一个环形。
+* **双向循环链表**：最后一个节点的next指向head，而head的prev指向最后一个节点，构成一个环形。
 
   ![image-20201109150227193](assets/image-20201109150227193.png)
 
@@ -11528,7 +11555,7 @@ public static <T> List<T> asList(T... a)
 
 ![ArryList存储结构](assets/ArryList存储结构.png)
 
-构造方法源码分析：
+#### 构造方法分析
 
 ```JAVA
 // 数组的默认大小为10
@@ -11542,20 +11569,20 @@ public ArrayList() {
     this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
 }
 
-// 带指定容量参数的构造函数
+// 带指定容量参数的构造方法
 public ArrayList(int initialCapacity) {
-    if (initialCapacity > 0) {	// 若初始容量大于0
+    if (initialCapacity > 0) {
         // 创建initialCapacity大小的数组
         this.elementData = new Object[initialCapacity];
-    } else if (initialCapacity == 0) {	// 若初始容量等于0
-        // 创建空数组
+    } else if (initialCapacity == 0) {
+        // 若初始容量被指定为0，则创建空数组
         this.elementData = EMPTY_ELEMENTDATA;
-    } else {	// 初始容量小于0，抛出异常
+    } else {
         throw new IllegalArgumentException("Illegal Capacity: " + initialCapacity);
     }
 }
 
-// 构造包含指定collection元素的列表，这些元素利用该集合的迭代器按顺序返回
+// 构造包含指定collection元素的列表，这些元素利用该集合的迭代器顺序返回
 public ArrayList(Collection<? extends E> c) {
     elementData = c.toArray();
     if ((size = elementData.length) != 0) {
@@ -11569,11 +11596,21 @@ public ArrayList(Collection<? extends E> c) {
 }
 ```
 
-`add()`  方法源码分析：
 
-* 当add第1个元素时，elementData.length为0，执行``ensureCapacityInternal()`` 方法后，因为是默认数组，所以minCapacity为10。接着 ``ensureExplicitCapacity()`` 方法中的 `minCapacity - elementData.length > 0` 条件成立，进入 ``grow(minCapacity)`` 扩容；
-* 当add第2个元素时，elementData.length已经被扩容为10，执行``ensureCapacityInternal()`` 方法后， 因为是扩容后的新数组，所以minCapacity为2。接着 ``ensureExplicitCapacity()`` 方法中的`minCapacity - elementData.length > 0` 条件不成立，所以不会扩容；
-* 接下来添加的3~10个元素都不会触发扩容，直到第11个元素，minCapacity增加到了11（即现有11个元素），大于elementData.length的10（即数组容量10），满足条件后触发扩容。
+
+#### add方法分析
+
+**添加元素流程**：
+
+* 当add第1个元素，此时 `elementData.length = 0`。执行 `ensureCapacityInternal()` 方法后，因为是默认数组，所以 `minCapacity = DEFAULT_CAPACITY = 10`。接着执行 `ensureExplicitCapacity()` 方法，其中的 `minCapacity - elementData.length > 0` 条件成立。进入 `grow(minCapacity)` 扩容，`elementData.length` 被扩容为10；
+* 当add第2个元素，此时 `elementData.length = 10`。执行 `ensureCapacityInternal()` 方法后，因为是扩容后的新数组，所以`minCapacity = 2`。接着执行 `ensureExplicitCapacity()` 方法，其中的 `minCapacity - elementData.length > 0`  条件不成立，所以不会扩容；
+* 接下来add的3~10个元素都不会触发扩容，直到第11个元素，`minCapacity = 11` 时（即现有11个元素），大于`elementData.length = 10`（即数组容量10），触发数组的扩容。
+
+**总结**：
+
+* 若不指定容量的情况下，默认创建空数组，长度为0；
+* 那么第一次添加元素的时候就会触发扩容；
+* 之后添加的元素数量如果达到了数组扩容后的长度，则再次触发扩容。接下来，依次类推。
 
 ```JAVA
 // 将指定的元素追加到此列表的末尾
@@ -11605,10 +11642,19 @@ private void ensureExplicitCapacity(int minCapacity) {
 }
 ```
 
-`grow()`  方法源码分析：
 
-* 当add第1个元素，进入grow()方法时，oldCapacity为0，`if (newCapacity - minCapacity < 0) newCapacity = minCapacity;`  操作后newCapacity为10，并通过 ``Arrays.copyOf()`` 创建新容量的数组；
-* 当add第11个元素，进入grow()方法时，oldCapacity为10，`newCapacity = oldCapacity + (oldCapacity >> 1)`  操作后newCapacity为15，并通过``Arrays.copyOf()`` 创建新容量的数组。
+
+#### grow方法分析
+
+**扩容流程**：
+
+* 当add第1个元素，进入 `grow()` 方法时，`oldCapacity = 0`，经过 `if (newCapacity - minCapacity < 0) newCapacity = minCapacity`  操作后 `newCapacity = DEFAULT_CAPACITY = 10`，并通过 ``Arrays.copyOf()`` 创建新容量的数组；
+* 当add第11个元素，进入 `grow()` 方法时，`oldCapacity = 10`，经过 `newCapacity = oldCapacity + (oldCapacity >> 1)`  操作后 `newCapacity = 15`，并通过  `Arrays.copyOf()`  创建新容量的数组。
+
+**总结**：
+
+* 若需要扩容的是默认的空数组，则直接将容量扩充为默认容量10，然后创建新数组并将旧元素拷贝进来；
+* 若需要扩容不是空数组，则将容量扩充为原来的1.5倍，若还不能满足需求，则直接扩充为需要的容量，扩充的最大容量不能超过int类型的最大值-8，最后创建新数组并将旧元素拷贝进来。
 
 ```JAVA
 // 要分配的最大数组大小
@@ -11646,104 +11692,94 @@ private static int hugeCapacity(int minCapacity) {
 
 ### Comparable和Comparator的区别
 
-* Comparable接口存在于java.lang包下，有一个compareTo(Object obj)方法用来排序；
-* Comparator接口存在于java.util包下，有一个compare(Object obj1, Object obj2)方法用来排序。
-* 一般需要对集合进行自定义排序时，需要重写compareTo()或compare()方法，或将二者结合使用。
+* Comparable接口存在于 `java.lang` 包下，通过 `compareTo(Object obj)` 方法进行排序；
+* Comparator接口存在于 `java.util` 包下，通过 `compare(Object obj1, Object obj2)` 方法进行排序。
+* 一般需要对集合进行自定义排序时，需要重写 `compareTo()` 或 `compare()` 方法，或将二者结合使用。
 
-* Comparator定制排序：
 
-  ```JAVA
-  public class SortTest {
-      
-      public static void main(String[] args) {
-          ArrayList<Integer> arr = new ArrayList<Integer>();
-   		arr.add(-1);
-          arr.add(3);
-          arr.add(0);
-          Collections.sort(arr, new Comparator<Integer>() {
-              @Override
-              public int compare(Integer o1, Integer o2) {
-                  return o2.compareTo(o1);
-              }
-          });
-      }
-  }
-  ```
+**Comparator定制排序**：
 
-* Comparable定制对象比较规则：
+```JAVA
+public class SortTest {
+    
+    public static void main(String[] args) {
+        ArrayList<Integer> arr = new ArrayList<Integer>();
+ 		arr.add(-1);
+        arr.add(3);
+        arr.add(0);
+        Collections.sort(arr, new Comparator<Integer>() {
+            @Override
+            public int compare(Integer o1, Integer o2) {
+                return o2.compareTo(o1);
+            }
+        });
+    }
+}
+```
 
-  ```JAVA
-  public class Person implements Comparable<Person> {
-      
-      private String name;
-      private int age;
-      
-      public Person(String name, int age) {
-          super();
-          this.name = name;
-          this.age = age;
-      }
-  
-      public String getName() {
-          return name;
-      }
-  
-      public void setName(String name) {
-          this.name = name;
-      }
-  
-      public int getAge() {
-          return age;
-      }
-  
-      public void setAge(int age) {
-          this.age = age;
-      }
-  	
-      @Override
-      public int compareTo(Person o) {
-          if (this.age > o.getAge()) {
-              return 1;
-          }
-          if (this.age < o.getAge()) {
-              return -1;
-          }
-      }
-  }
-  ```
+**Comparable让对象具备可比较性**：
+
+```JAVA
+public class Person implements Comparable<Person> {
+    
+    private String name;
+    private int age;
+    
+    public Person(String name, int age) {
+        super();
+        this.name = name;
+        this.age = age;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+	
+    @Override
+    public int compareTo(Person o) {
+        if (this.age > o.getAge()) {
+            return 1;
+        }
+        if (this.age < o.getAge()) {
+            return -1;
+        }
+    }
+}
+```
 
 
 
 ### 无序性和不可重复性
 
 * **什么是无序性？**无序性不等于随机性，无序性是指存储的数据在底层数组中并非按照数组索引的顺序添加，而是根据数据的哈希值决定的。
-* **什么是不重复性？**不可重复性是指添加的元素按照equals()判断时，需要返回false，Set集合的不重复性判断需要同时重写equals()方法hashCode()。
+* **什么是不重复性？**不可重复性是指添加的元素按照 `equals()` 判断时，需要返回false，Set集合的不重复性判断需要同时重写`equals()` 方法 `hashCode()`。
 
 
 
-### HashSet、LinkedHashSet和TreeSet的区别
+### HashSet/LinkedHashSet/TreeSet的区别
 
-* HashSet是Set接口的主要实现类，底层是基于HashMap实现的，线程不安全，可以存储null值；
-* LinkedHashSet是HashSet的子类，格外维护了链表结构，能够按照元素添加时的顺序遍历；
-* TreeSet底层使用红黑树，能够按照添加元素的顺序遍历，排序的方式有自然排序和定制排序。
+* **HashSet**：是Set接口的主要实现类，底层是基于HashMap实现的，无序且不可重复且线程不安全，可以存储null值；
+* **LinkedHashSet**：是HashSet的子类，额外维护了链表结构，能够按照元素添加时的顺序遍历；
+* **TreeSet**：底层使用红黑树，能够按照添加元素的顺序遍历，排序的方式有自然排序和定制排序。
 
 
 
 ### HashSet如何检查重复
 
-* 判重的过程：
-  * 当对象add进HashSet中时，会先计算对象的HashCode来判断对象加入的位置，同时也会与集合中已存在元素的HashCode作比较，若没有相同的，则假定对象没有重复出现；
-  * 但如果发现存在相同HashCode的对象，这时会再调用equals()方法来检查HashCode相同的对象是否真的相同，若相同就不允许加入操作。
-* `hashCode()`和``equals()``的相关规定：
-  * 如果两个对象相等，则HashCode也一定相同；
-  * 两个对象相等，则equals()方法返回true；
-  * 即使两个对象有相同的HashCode，也不一定相等；
-  * equals()被重写的话，那hashCode()也必须被重写；
-  * hashCode()的默认行为是对堆上的对象产生独特值，如果没有重写hashCode()，则该Class的两个对象无论如何都不会相等，即使它们指向相同的数据。
-* ``==``和``equeals()``的区别：
-  * ==是判断两个变量或实例是不是指向同一块内存空间。equals()是判断两个变量或实例所指向内存空间的数据是不是相同的；
-  * 以字符串为例，==是对内存地址的比较，equals()是对字符串内容的比较；
-  * ==指引用是否相同，equals()指值是否相同。
+* 当元素倍add进HashSet中时，会先计算对象的 `hashCode()` 来判断对象加入的位置，同时也会与集合中已存在元素的 `hashCode()` 比较，若没有相同的，则假定对象没有重复出现；
+* 但如果发现存在相同 `hashCode()` 的对象，这时会再调用 `equals()` 方法来检查 `hashCode()` 相同的对象是否真的相同，若相同就不允许加入操作。
 
 
 
@@ -11751,22 +11787,26 @@ private static int hugeCapacity(int minCapacity) {
 
 ### HashMap和HashTable的区别
 
-* **线程是否安全**：HashMap的非线程安全的，HashTable保证线程安全。HashTable的内部方法都经过了synchronized修饰；
+* **线程是否安全**：HashMap的非线程安全的。而HashTable保证线程安全，其内部方法都经过了synchronized的修饰；
 
-* **效率**：因为线程安全的问题，HashMap要比HashTable消息效率高，HashTable基本是被淘汰了；
+* **效率**：因为线程安全的问题，HashMap要比HashTable效率更高，HashTable基本是被淘汰了；
 
-* **对null key和null value的支持**：HashMap中null可以作为键，只能有一个，但可以有多个键对应的值为null。HashTable中如果put的k-v只要有一个null，会抛空指针异常；
+* **对null key和null value的支持**：HashMap中null可以作为键，但只能有一个，但可以有多个键对应的值为null。HashTable中如果put的k-v只要有一个null，会抛空指针异常；
 
 * **初始容量大小和每次扩充容量大小的不同**：
 
   * 创建时如果不指定容量初始值，HashTable默认的初始值大小为11，之后每次扩充，容量变为原来的2n+1。HashMap的默认初始容量是16，之后每次扩容，容量变为原来的2倍；
   * 创建时如果给定了容量初始值，那么HashTable会直接使用给定的大小，而HashMap会将其扩充为2的幂次方大小，即HashMap总是使用2的幂作为哈希表的大小。
 
-* **底层数据结构**：JDK1.8后HashMap在解决哈希冲突时有了较大的变化，当链表长度大于阈值（默认8）时，会将链表转化为红黑树，已减少搜索时间。HashTable没有这样的机制。
+* **底层数据结构**：JDK1.8后HashMap在解决哈希冲突时有了较大的变化，当链表长度大于阈值（默认8）时，会将链表转化为红黑树，以此来减少搜索时间。HashTable则没有这样的机制。
 
-* HashMap允许指定容量的构造函数源码：
+* **HashMap指定容量的构造方法源码**：
 
   ```JAVA
+  public HashMap(int initialCapacity) {
+      this(initialCapacity, DEFAULT_LOAD_FACTOR);
+  }
+  
   public HashMap(int initialCapacity, float loadFactor) {
       if (initialCapacity < 0)
       	throw new IllegalArgumentException("Illegal initial capacity: " + initialCapacity);
@@ -11777,12 +11817,7 @@ private static int hugeCapacity(int minCapacity) {
       	this.loadFactor = loadFactor;
       	this.threshold = tableSizeFor(initialCapacity);
       }
-  
-  public HashMap(int initialCapacity) {
-      this(initialCapacity, DEFAULT_LOAD_FACTOR);
   }
-  
-  ......
       
   // 保证了HashMap总是使用2的幂作为哈希表的大小
   static final int tableSizeFor(int cap) {
@@ -11800,382 +11835,411 @@ private static int hugeCapacity(int minCapacity) {
 
 ### HashMap和HashSet的区别
 
-HashSet是基于HashMap实现的，除了``clone()、writeObject()、readObject()``外都是直接调用HashMap的方法。
+HashSet是基于HashMap实现的，除了 `clone()`、`writeObject()`、`readObject()` 外都是直接调用HashMap的方法。
 
-|            HashMap             |                           HashSet                            |
-| :----------------------------: | :----------------------------------------------------------: |
-|         实现了Map接⼝          |                         实现Set接⼝                          |
-|           存储键值对           |                          仅存储对象                          |
-|    调⽤put()向map中添加元素    |                 调⽤add()⽅法向Set中添加元素                 |
-| HashMap使⽤键 Key计算 HashCode | HashSet使⽤成员对象来计算HashCode值，对于两个对象来说HashCode可能相同，所以equals()⽅法⽤来判断对象的相等性 |
+|          HashMap           |              HashSet              |
+| :------------------------: | :-------------------------------: |
+|       实现了Map接⼝        |            实现Set接⼝            |
+|         存储键值对         |            仅存储对象             |
+| 调⽤put方法向map中添加元素 |    调⽤add⽅法向Set中添加元素     |
+| HashMap使⽤键计算 hashCode | HashSet使⽤成员对象来计算hashCode |
+
+
+
+### HashMap的长度为什么是2的幂次方？
+
+为了能让 HashMap存取⾼效，尽量较少碰撞，也就是要尽量把数据分配均匀。我们上⾯也讲到了过了，Hash值的范围值-2147483648到2147483647，前后加起来⼤概40亿的映射空间，只要哈希函数映射得⽐较均匀松散，⼀般应⽤是很难出现碰撞的。但问题是⼀个40亿⻓度的数组，内存是放不下的。所以这个散列值是不能直接拿来⽤的。⽤之前还要先做对数组的⻓度取模运算，得到的余数才能⽤来要存放
+的位置也就是对应的数组下标。这个数组下标的计算⽅法是“ (n - 1) & hash ”。（n代表数组⻓度）。这也就解释了 HashMap 的⻓度为什么是2的幂次⽅。
+
+这个算法应该如何设计呢？我们⾸先可能会想到采⽤%取余的操作来实现。但是，重点来了： “取余(%)操作中如果除数是2的幂次则
+等价于与其除数减⼀的与(&)操作（也就是说 hash%lengthdehash&(length-1)的前提是 length 是2的n 次⽅；）。 ” 并且 采⽤⼆进制位操作 &，相对于%能够提⾼运算效率，这就解释了 HashMap 的⻓度为什么是2的幂次⽅。  
 
 
 
 ### HashMap源码分析
 
-**JDK1.8之前的HashMap：**
+#### Jdk1.8之前的HashMap
 
-* **底层数据结构**：是数组和链表的结合使用，即链表散列。HashMap通过key的hasCode()经过扰动函数处理后得到hash值，然后通过(n-1)&hash判断当前元素的存放位置（n为数组长度），如果当前位置存在元素的话，就判断该元素与新元素的key和hash是否相同，若相同则直接覆盖，若不相同则通过拉链法解决冲突；
+![1571240135761](assets/1571240135761.png)
 
-* **扰动函数**：就是指HashMap的hash()方法，使用hash()方法是为了防止一些对象的hashCode()实现较差，即使用扰动函数减少哈希碰撞。
+HashMap的底层数据结构是数组和链表的结合使用，即链表散列。HashMap通过key的 `hasCode()` 经过扰动函数处理后得到hash值，然后通过 `(n-1)&hash` 判断当前元素的存放位置（n为数组长度）。如果当前位置存在元素的话，就判断该元素与新元素的key和hash是否相同，若相同则直接覆盖，若不相同则通过拉链法解决冲突。
 
-* **拉链法**：将链表和数组结合后，数组的每一个元素都是一个链表，若遇到哈希冲突的情况，比较是否是相同元素，若不是则将其挂到链表上即可。
+* **扰动函数**：就是指HashMap的 `hash()` 方法，使用 `hash()` 方法是为了防止一些对象的 `hashCode()` 实现较差，即使用扰动函数减少哈希碰撞；
 
-  ![image-20201110094713862](assets/image-20201110094713862.png)
+* **拉链法**：将链表和数组结合后，数组的每一个元素都是一个链表，若遇到哈希冲突的情况，通过 `equals()` 比较是否是相同元素，若不是则将其挂到链表上即可。
 
-**JDk1.8之后的HashMap：**这个版本的HashMap在解决哈希冲突的时候变化较大，当链表的长度大于阈值（默认为8），则会将链表转换为红黑树，以减少搜索时间（在链表转换之前会先判断，当数组的长度小于64，那么会先进行数组的扩容操作，而不是直接转换红黑树）。
 
-![image-20201110094820366](assets/image-20201110094820366.png)
 
-* 类的属性：
+#### Jdk1.8之后的HashMap
 
-  ```JAVA
-  public class HashMap<K,V> extends AbstractMap<K,V> implements Map<K,V>, Cloneable, Serializable {
-      // 序列号
-      private static final long serialVersionUID = 362498820763181265L;    
-      // 默认的初始容量是16
-      static final int DEFAULT_INITIAL_CAPACITY = 1 << 4;   
-      // 最大容量
-      static final int MAXIMUM_CAPACITY = 1 << 30; 
-      // 默认的加载因子
-      static final float DEFAULT_LOAD_FACTOR = 0.75f;
-      // 当桶(bucket)上的结点数大于这个值时会转成红黑树
-      static final int TREEIFY_THRESHOLD = 8; 
-      // 当桶(bucket)上的结点数小于这个值时树转链表
-      static final int UNTREEIFY_THRESHOLD = 6;
-      // 桶中结构转化为红黑树对应的table的最小大小
-      static final int MIN_TREEIFY_CAPACITY = 64;
-      // 存储元素的数组，总是2的幂次倍
-      transient Node<k,v>[] table; 
-      // 存放具体元素的集
-      transient Set<map.entry<k,v>> entrySet;
-      // 存放元素的个数，注意这个不等于数组的长度
-      transient int size;
-      // 每次扩容和更改map结构的计数器
-      transient int modCount;   
-      // 临界值，当实际大小(容量*填充因子)超过临界值时，会进行扩容
-      int threshold;
-      // 加载因子
-      final float loadFactor;
-  }
-  ```
+![1571240170466](assets/1571240170466.png)
 
-  * **loadFactor加载因子**：用于控制数组存放数据的疏密程度，加载因子越趋近于1，则数组中存放的数据entry就越多越密集，也就是会让链表的长度增加。相反，加载因子越小越趋近于0，数组中存放的数据entry就越少越稀疏；
+这个版本的HashMap在解决哈希冲突的时候变化较大，当链表的长度大于阈值（默认为8），则会将链表转换为红黑树，以减少搜索时间。在链表转换之前会先判断，当数组的长度小于64，那么会先进行数组的扩容操作，而不是直接转换红黑树。
 
-    loadFactor太大会导致查找元素效率低，太小会导致数组的利用率低，存放的数据会很分散，官方给出的默认值是0.75f；
 
-    源码给出的数组默认容量是16，加载因子是0.75f。当HashMap在使用的过程中不断存放数据，直到数据达到了`16 * 0.75 = 12`就需要将当前的默认16的容量进行扩容，扩容的过程则需要进程rehash、数据复制等操作，会产生非常大的消耗。
 
-  * **threshold临界值**：`threshold = capacity * loadFactor`，当集合中元素的个数`size >= threshold`时，就需要考虑对数组进行扩容。临界值的作用就是衡量数组是否需要扩容的一个标准。
+#### 类的基本属性和构造方法
 
-* 链表节点类Node源码：
+**基本属性**：
 
-  ```JAVA
-  // 继承自 Map.Entry<K,V>
-  static class Node<K,V> implements Map.Entry<K,V> {
-      final int hash;	// 哈希值，存放元素到hashmap中时用来与其他元素hash值比较
-      final K key;	// 键
-      V value;		// 值
-      Node<K,V> next; // 指向下一个节点
-      
-      Node(int hash, K key, V value, Node<K,V> next) {
-          this.hash = hash;
-          this.key = key;
-          this.value = value;
-          this.next = next;
-      }
-      
-      public final K getKey()        { return key; }
-      public final V getValue()      { return value; }
-      public final String toString() { return key + "=" + value; }
-  
-      // 重写hashCode()方法
-      public final int hashCode() {
-          return Objects.hashCode(key) ^ Objects.hashCode(value);
-      }
-  
-      public final V setValue(V newValue) {
-          V oldValue = value;
-          value = newValue;
-          return oldValue;
-      }
-      
-      // 重写equals()方法
-      public final boolean equals(Object o) {
-          if (o == this)
-              return true;
-          if (o instanceof Map.Entry) {
-              Map.Entry<?,?> e = (Map.Entry<?,?>)o;
-              if (Objects.equals(key, e.getKey()) &&
-                  Objects.equals(value, e.getValue()))
-                  return true;
-          }
-          return false;
-      }
-  }
-  ```
+* **loadFactor加载因子**：
+  * 用于控制数组存放数据的疏密程度，加载因子越趋近于1，则数组中存放的数据entry就越多越密集，也就是会让链表的长度增加。相反，加载因子越小越趋近于0，数组中存放的数据entry就越少越稀疏；
+  * loadFactor太大会导致查找元素效率低，太小会导致数组的利用率低，存放的数据会很分散，官方给出的默认值是0.75f；
+  * 源码给出的数组默认容量是16，加载因子是0.75f。当HashMap在使用的过程中不断存放数据，直到数据达到了 `16 * 0.75 = 12` 时就需要将当前的数组进行扩容，扩容的过程则需要进行rehash、数据复制等操作，会产生非常大的消耗。
+* **threshold临界值**：`threshold = capacity * loadFactor`，当集合中元素的个数 `size >= threshold` 时，就需要考虑对数组进行扩容。临界值的作用就是衡量数组是否需要扩容的一个标准。
 
-* 树节点类TreeNode源码：
+```JAVA
+public class HashMap<K,V> extends AbstractMap<K,V> implements Map<K,V>, Cloneable, Serializable {
+    // 序列号
+    private static final long serialVersionUID = 362498820763181265L;    
+    // 默认的初始容量是16
+    static final int DEFAULT_INITIAL_CAPACITY = 1 << 4;   
+    // 最大容量
+    static final int MAXIMUM_CAPACITY = 1 << 30; 
+    // 默认的加载因子
+    static final float DEFAULT_LOAD_FACTOR = 0.75f;
+    // 当桶（bucket）上的结点数大于这个值时链表会转换成红黑树
+    static final int TREEIFY_THRESHOLD = 8; 
+    // 当桶（bucket）上的结点数小于这个值时红黑树会转换成链表
+    static final int UNTREEIFY_THRESHOLD = 6;
+    // 桶中结构转化为红黑树时对应的数组的最小大小（即不足64会先扩容数组）
+    static final int MIN_TREEIFY_CAPACITY = 64;
+    // 存储元素的数组，总是2次幂
+    transient Node<k,v>[] table; 
+    // 存放具体元素的集合
+    transient Set<map.entry<k,v>> entrySet;
+    // 存放元素的个数，注意这个不等于数组的长度
+    transient int size;
+    // 每次扩容和更改map结构的计数器
+    transient int modCount;   
+    // 临界值，当实际大小（容量*填充因子）超过临界值时，会进行扩容
+    int threshold;
+    // 加载因子
+    final float loadFactor;
+}
+```
 
-  ```java
-  static final class TreeNode<K,V> extends LinkedHashMap.Entry<K,V> {
-      TreeNode<K,V> parent;  // 父节点
-      TreeNode<K,V> left;    // 左孩子
-      TreeNode<K,V> right;   // 右孩子
-      TreeNode<K,V> prev;    // 删除后需要取消链接
-      boolean red;           // 判断颜色
-      
-      TreeNode(int hash, K key, V val, Node<K,V> next) {
-          super(hash, key, val, next);
-      }
-      
-      // 返回根节点
-      final TreeNode<K,V> root() {
-          for (TreeNode<K,V> r = this, p;;) {
-              if ((p = r.parent) == null)
-                  return r;
-              r = p;
-          }
-      }
-  }
-  ```
+**链表节点类Node源码**：
 
-* 构造方法：
+```JAVA
+// 继承自 Map.Entry<K,V>
+static class Node<K,V> implements Map.Entry<K,V> {
+    
+    final int hash;	// 哈希值，存放元素到hashmap中时用来与其他元素的hash值比较
+    final K key;	// 键
+    V value;		// 值
+    Node<K,V> next; // 指向下一个节点
+    
+    Node(int hash, K key, V value, Node<K,V> next) {
+        this.hash = hash;
+        this.key = key;
+        this.value = value;
+        this.next = next;
+    }
+    
+    public final K getKey()        { return key; }
+    public final V getValue()      { return value; }
+    public final String toString() { return key + "=" + value; }
 
-  ```JAVA
-  // 默认构造函数
-  public HashMap() {
-      this.loadFactor = DEFAULT_LOAD_FACTOR;	// 默认加载因子0.75f
-  }
-  
-  // 包含另一个Map的构造函数
-  public HashMap(Map<? extends K, ? extends V> m) {
-      this.loadFactor = DEFAULT_LOAD_FACTOR;
-      putMapEntries(m, false);
-  }
-  
-  // 指定容量的构造函数
-  public HashMap(int initialCapacity) {
-      this(initialCapacity, DEFAULT_LOAD_FACTOR);
-  }
-  
-  // 指定容量和加载因子的构造函数
-  public HashMap(int initialCapacity, float loadFactor) {
-      if (initialCapacity < 0)
-          throw new IllegalArgumentException("Illegal initial capacity: " + initialCapacity);
-      if (initialCapacity > MAXIMUM_CAPACITY)
-          initialCapacity = MAXIMUM_CAPACITY;
-      if (loadFactor <= 0 || Float.isNaN(loadFactor))
-          throw new IllegalArgumentException("Illegal load factor: " + loadFactor);
-      this.loadFactor = loadFactor;
-      this.threshold = tableSizeFor(initialCapacity);
-  }
-  ```
+    // 重写hashCode()方法，即将key和value的hashCode按位异或做为Node的hashCode
+    public final int hashCode() {
+        return Objects.hashCode(key) ^ Objects.hashCode(value);
+    }
 
-* `putVal()`方法添加元素分析：
+    public final V setValue(V newValue) {
+        V oldValue = value;
+        value = newValue;
+        return oldValue;
+    }
+    
+    // 重写equals()方法
+    public final boolean equals(Object o) {
+        if (o == this)
+            return true;
+        if (o instanceof Map.Entry) {
+            Map.Entry<?,?> e = (Map.Entry<?,?>)o;
+            if (Objects.equals(key, e.getKey()) &&
+                Objects.equals(value, e.getValue()))
+                return true;
+        }
+        return false;
+    }
+}
+```
 
-  ![image-20201110112703722](assets/image-20201110112703722.png)
+**树节点类TreeNode源码**：
 
-  1. 首先，对新元素根据hash计算数组的位置，若对应位置没有元素，则直接插入；
-  2. 若定位到的数组位置有元素，就和要插入的key进行比较，若key相同就直接覆盖；
-  3. 若key不同，就判断是否是一个树节点，若是就插入到红黑树上；
-  4. 不是树节点则判断链表长度是否大于等于8，若是则转换为红黑树，若不是则插入链表尾部；
-  5. 最后，集合元素size相应增加，判断是否大于临界值，若大于则会触发扩容。
+```java
+static final class TreeNode<K,V> extends LinkedHashMap.Entry<K,V> {
+    
+    TreeNode<K,V> parent;  // 父节点
+    TreeNode<K,V> left;    // 左孩子
+    TreeNode<K,V> right;   // 右孩子
+    TreeNode<K,V> prev;    // 前驱
+    boolean red;           // 判断颜色
+    
+    TreeNode(int hash, K key, V val, Node<K,V> next) {
+        super(hash, key, val, next);
+    }
+    
+    // 返回根节点
+    final TreeNode<K,V> root() {
+        for (TreeNode<K,V> r = this, p;;) {
+            if ((p = r.parent) == null)
+                return r;
+            r = p;
+        }
+    }
+}
+```
 
-  ```java
-  public V put(K key, V value) {
-      return putVal(hash(key), key, value, false, true);
-  }
-  
-  final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
-                     boolean evict) {
-      Node<K,V>[] tab; Node<K,V> p; int n, i;
-      // table未初始化或者长度为0，直接进行扩容
-      if ((tab = table) == null || (n = tab.length) == 0)
-          n = (tab = resize()).length;
-      // 通过(n - 1) & hash确定元素该存放在哪个桶中，若桶为空，新结点直接放入桶中，此时该结点是放在数组中的
-      if ((p = tab[i = (n - 1) & hash]) == null)
-          tab[i] = newNode(hash, key, value, null);
-      // 若桶中已经存在元素
-      else {
-          Node<K,V> e; K k;
-          // 比较桶中第一个元素（即数组的节点）的hash值和key值是否和新元素相等
-          if (p.hash == hash &&
-              ((k = p.key) == key || (key != null && key.equals(k))))
-                  // 相等则直接覆盖，将第一个元素赋值给e，用e来记录
-                  e = p;
-          // hash值不相等，即key不相等；判断是否为红黑树结点
-          else if (p instanceof TreeNode)
-              // 是树节点则插入树中
-              e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
-          // 不是树节点则为链表结点
-          else {
-              // 在链表尾部插入结点
-              for (int binCount = 0; ; ++binCount) {
-                  // 到达链表的尾部
-                  if ((e = p.next) == null) {
-                      // 在尾部插入新结点
-                      p.next = newNode(hash, key, value, null);
-                      // 结点数量达到阈值，转化为红黑树
-                      if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
-                          xtreeifyBin(tab, hash);
-                      // 跳出循环
-                      break;
-                  }
-                  // 判断链表中结点的key值与插入的元素的key值是否相等
-                  if (e.hash == hash &&
-                      ((k = e.key) == key || (key != null && key.equals(k))))
-                      // 相等，跳出循环
-                      break;
-                  // 用于遍历桶中的链表，与前面的e = p.next组合，可以遍历链表
-                  p = e;
-              }
-          }
-          // 表示在桶中找到key值、hash值与插入元素相等的结点
-          if (e != null) { 
-              // 记录e的value
-              V oldValue = e.value;
-              // onlyIfAbsent为false或者旧值为null
-              if (!onlyIfAbsent || oldValue == null)
-                  //用新值替换旧值
-                  e.value = value;
-              // 访问后回调
-              afterNodeAccess(e);
-              // 返回旧值
-              return oldValue;
-          }
-      }
-      // 结构性修改
-      ++modCount;
-      // 实际大小大于阈值则扩容
-      if (++size > threshold)
-          resize();
-      // 插入后回调
-      afterNodeInsertion(evict);
-      return null;
-  } 
-  ```
+**构造方法**：
 
-* get方法：
+```JAVA
+// 默认构造函数
+public HashMap() {
+    // 默认加载因子0.75f
+    this.loadFactor = DEFAULT_LOAD_FACTOR;	
+}
 
-  ```JAVA
-  public V get(Object key) {
-      Node<K,V> e;
-      return (e = getNode(hash(key), key)) == null ? null : e.value;
-  }
-  
-  final Node<K,V> getNode(int hash, Object key) {
-      Node<K,V>[] tab; Node<K,V> first, e; int n; K k;
-      // 1.数组不为空；2.数组长度大于0；3.对应hash位置的元素不为空
-      if ((tab = table) != null && (n = tab.length) > 0 &&
-          (first = tab[(n - 1) & hash]) != null) {
-          // 对应位元素的hash和key相等，则直接获取到
-          if (first.hash == hash && // always check first node
-              ((k = first.key) == key || (key != null && key.equals(k))))
-              return first;
-          // 若对应位置存在后继节点
-          if ((e = first.next) != null) {
-              // 若是树节点则从树中获取
-              if (first instanceof TreeNode)
-                  return ((TreeNode<K,V>)first).getTreeNode(hash, key);
-              // 否则在链表上迭代获取
-              do {
-                  if (e.hash == hash &&
-                      ((k = e.key) == key || (key != null && key.equals(k))))
-                      return e;
-              } while ((e = e.next) != null);
-          }
-      }
-      return null;
-  }
-  ```
+// 包含另一个Map的构造函数
+public HashMap(Map<? extends K, ? extends V> m) {
+    this.loadFactor = DEFAULT_LOAD_FACTOR;
+    putMapEntries(m, false);
+}
 
-* resize方法：
+// 指定容量的构造函数
+public HashMap(int initialCapacity) {
+    this(initialCapacity, DEFAULT_LOAD_FACTOR);
+}
 
-  ```JAVA
-  // 若触发扩容操作，则会将数组容量和临界值扩充为原来的2倍，同时会重新进行hash的分配和桶的移动
-  final Node<K,V>[] resize() {
-      Node<K,V>[] oldTab = table;
-      int oldCap = (oldTab == null) ? 0 : oldTab.length；
-      int oldThr = threshold;
-      int newCap, newThr = 0;
-      
-      if (oldCap > 0) {
-          // 超过最大值就不再扩充
-          if (oldCap >= MAXIMUM_CAPACITY) {
-              threshold = Integer.MAX_VALUE;
-              return oldTab;
-          }
-          // 没超过最大值，就扩充为原来的2倍
-          else if ((newCap = oldCap << 1) < MAXIMUM_CAPACITY && oldCap >= DEFAULT_INITIAL_CAPACITY)
-              newThr = oldThr << 1; // 临界值也变为原来的2倍
-      }
-      else if (oldThr > 0) // initial capacity was placed in threshold
-          newCap = oldThr;
-      else { 
-          // signifies using defaults
-          newCap = DEFAULT_INITIAL_CAPACITY;
-          newThr = (int)(DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY);
-      }
-      // 计算新的resize上限
-      if (newThr == 0) {
-          float ft = (float)newCap * loadFactor;
-          newThr = (newCap < MAXIMUM_CAPACITY && ft < (float)MAXIMUM_CAPACITY ? (int)ft : Integer.MAX_VALUE);
-      }
-      threshold = newThr;
-      @SuppressWarnings({"rawtypes","unchecked"})
-          Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];
-      table = newTab;
-      if (oldTab != null) {
-          // 把每个bucket都移动到新的buckets中
-          for (int j = 0; j < oldCap; ++j) {
-              Node<K,V> e;
-              if ((e = oldTab[j]) != null) {
-                  oldTab[j] = null;
-                  if (e.next == null)
-                      newTab[e.hash & (newCap - 1)] = e;
-                  else if (e instanceof TreeNode)
-                      ((TreeNode<K,V>)e).split(this, newTab, j, oldCap);
-                  else { 
-                      Node<K,V> loHead = null, loTail = null;
-                      Node<K,V> hiHead = null, hiTail = null;
-                      Node<K,V> next;
-                      do {
-                          next = e.next;
-                          // 原索引
-                          if ((e.hash & oldCap) == 0) {
-                              if (loTail == null)
-                                  loHead = e;
-                              else
-                                  loTail.next = e;
-                              loTail = e;
-                          }
-                          // 原索引+oldCap
-                          else {
-                              if (hiTail == null)
-                                  hiHead = e;
-                              else
-                                  hiTail.next = e;
-                              hiTail = e;
-                          }
-                      } while ((e = next) != null);
-                      // 原索引放到bucket里
-                      if (loTail != null) {
-                          loTail.next = null;
-                          newTab[j] = loHead;
-                      }
-                      // 原索引+oldCap放到bucket里
-                      if (hiTail != null) {
-                          hiTail.next = null;
-                          newTab[j + oldCap] = hiHead;
-                      }
-                  }
-              }
-          }
-      }
-      return newTab;
-  }
-  ```
+// 指定容量和加载因子的构造函数
+public HashMap(int initialCapacity, float loadFactor) {
+    if (initialCapacity < 0)
+        throw new IllegalArgumentException("Illegal initial capacity: " + initialCapacity);
+    if (initialCapacity > MAXIMUM_CAPACITY)
+        initialCapacity = MAXIMUM_CAPACITY;
+    if (loadFactor <= 0 || Float.isNaN(loadFactor))
+        throw new IllegalArgumentException("Illegal load factor: " + loadFactor);
+    this.loadFactor = loadFactor;
+    this.threshold = tableSizeFor(initialCapacity);
+}
+```
+
+
+
+#### put方法分析
+
+![image-20201110112703722](assets/image-20201110112703722.png)
+
+* 首先，对新元素根据hashCode计算数组的位置，若对应位置没有元素，则直接插入；
+
+* 若定位到的数组位置有元素，就和要插入的key进行比较，若key相同就直接覆盖； 
+
+* 若key不同，就判断是否是一个树节点，若是就挂到红黑树上；
+
+* 不是树节点则判断链表长度是否大于等于8，若是则转换为红黑树，若不是则插入链表尾部；
+
+* 最后，集合元素size相应增加，判断是否大于临界值，若大于则会触发扩容。
+
+```java
+public V put(K key, V value) {
+    return putVal(hash(key), key, value, false, true);
+}
+
+final V putVal(int hash, K key, V value, boolean onlyIfAbsent, boolean evict) {
+    Node<K,V>[] tab; Node<K,V> p; int n, i;
+    // table未初始化或者长度为0，直接进行扩容
+    if ((tab = table) == null || (n = tab.length) == 0)
+        n = (tab = resize()).length;
+    // 通过(n - 1) & hash确定元素该存放在哪个桶中，若桶为空，新结点直接放入桶中，此时该结点是放在数组中的
+    if ((p = tab[i = (n - 1) & hash]) == null)
+        tab[i] = newNode(hash, key, value, null);
+    // 若桶中已经存在元素
+    else {
+        Node<K,V> e; K k;
+        // 比较桶中第一个元素（即数组的节点）的hash值和key值是否和新元素相等
+        if (p.hash == hash &&
+            ((k = p.key) == key || (key != null && key.equals(k))))
+                // 相等则直接覆盖，将第一个元素赋值给e，用e来记录
+                e = p;
+        // hash值不相等，即key不相等；判断是否为红黑树结点
+        else if (p instanceof TreeNode)
+            // 是树节点则插入树中
+            e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
+        // 不是树节点则为链表结点
+        else {
+            // 在链表尾部插入结点
+            for (int binCount = 0; ; ++binCount) {
+                // 到达链表的尾部
+                if ((e = p.next) == null) {
+                    // 在尾部插入新结点
+                    p.next = newNode(hash, key, value, null);
+                    // 结点数量达到阈值，转化为红黑树
+                    if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
+                        xtreeifyBin(tab, hash);
+                    // 跳出循环
+                    break;
+                }
+                // 判断链表中结点的key值与插入的元素的key值是否相等
+                if (e.hash == hash &&
+                    ((k = e.key) == key || (key != null && key.equals(k))))
+                    // 相等，跳出循环
+                    break;
+                // 用于遍历桶中的链表，与前面的e = p.next组合，可以遍历链表
+                p = e;
+            }
+        }
+        // 表示在桶中找到key值、hash值与插入元素相等的结点
+        if (e != null) { 
+            // 记录e的value
+            V oldValue = e.value;
+            // onlyIfAbsent为false或者旧值为null
+            if (!onlyIfAbsent || oldValue == null)
+                //用新值替换旧值
+                e.value = value;
+            // 访问后回调
+            afterNodeAccess(e);
+            // 返回旧值
+            return oldValue;
+        }
+    }
+    // 结构性修改
+    ++modCount;
+    // 实际大小大于阈值则扩容
+    if (++size > threshold)
+        resize();
+    // 插入后回调
+    afterNodeInsertion(evict);
+    return null;
+} 
+```
+
+
+
+#### get方法分析
+
+```JAVA
+public V get(Object key) {
+    Node<K,V> e;
+    return (e = getNode(hash(key), key)) == null ? null : e.value;
+}
+
+final Node<K,V> getNode(int hash, Object key) {
+    Node<K,V>[] tab; Node<K,V> first, e; int n; K k;
+    // 数组不为空/数组长度大于0/对应hash位置的元素不为空
+    if ((tab = table) != null && (n = tab.length) > 0 &&
+        (first = tab[(n - 1) & hash]) != null) {
+        // 对应位置元素的hash和key相等，则直接获取到
+        if (first.hash == hash && // always check first node
+            ((k = first.key) == key || (key != null && key.equals(k))))
+            return first;
+        // 若对应位置存在后继节点
+        if ((e = first.next) != null) {
+            // 若是树节点则从树中获取
+            if (first instanceof TreeNode)
+                return ((TreeNode<K,V>)first).getTreeNode(hash, key);
+            // 否则在链表上迭代获取
+            do {
+                if (e.hash == hash &&
+                    ((k = e.key) == key || (key != null && key.equals(k))))
+                    return e;
+            } while ((e = e.next) != null);
+        }
+    }
+    return null;
+}
+```
+
+
+
+#### resize方法分析
+
+```JAVA
+// 若触发扩容操作，则会将数组容量和临界值扩充为原来的2倍，同时会重新进行hash的分配和桶的移动
+final Node<K,V>[] resize() {
+    Node<K,V>[] oldTab = table;
+    int oldCap = (oldTab == null) ? 0 : oldTab.length；
+    int oldThr = threshold;
+    int newCap, newThr = 0;
+    
+    if (oldCap > 0) {
+        // 超过最大值就不再扩充
+        if (oldCap >= MAXIMUM_CAPACITY) {
+            threshold = Integer.MAX_VALUE;
+            return oldTab;
+        }
+        // 没超过最大值，就扩充为原来的2倍
+        else if ((newCap = oldCap << 1) < MAXIMUM_CAPACITY && oldCap >= DEFAULT_INITIAL_CAPACITY)
+            // 临界值也变为原来的2倍
+            newThr = oldThr << 1;
+    }
+    else if (oldThr > 0) // initial capacity was placed in threshold
+        newCap = oldThr;
+    else { 
+        // signifies using defaults
+        newCap = DEFAULT_INITIAL_CAPACITY;
+        newThr = (int)(DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY);
+    }
+    // 计算新的resize上限
+    if (newThr == 0) {
+        float ft = (float)newCap * loadFactor;
+        newThr = (newCap < MAXIMUM_CAPACITY && ft < (float)MAXIMUM_CAPACITY ? (int)ft : Integer.MAX_VALUE);
+    }
+    threshold = newThr;
+    @SuppressWarnings({"rawtypes","unchecked"})
+    Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];
+    table = newTab;
+    if (oldTab != null) {
+        // 把每个bucket都移动到新的buckets中
+        for (int j = 0; j < oldCap; ++j) {
+            Node<K,V> e;
+            if ((e = oldTab[j]) != null) {
+                oldTab[j] = null;
+                if (e.next == null)
+                    newTab[e.hash & (newCap - 1)] = e;
+                else if (e instanceof TreeNode)
+                    ((TreeNode<K,V>)e).split(this, newTab, j, oldCap);
+                else { 
+                    Node<K,V> loHead = null, loTail = null;
+                    Node<K,V> hiHead = null, hiTail = null;
+                    Node<K,V> next;
+                    do {
+                        next = e.next;
+                        // 原索引
+                        if ((e.hash & oldCap) == 0) {
+                            if (loTail == null)
+                                loHead = e;
+                            else
+                                loTail.next = e;
+                            loTail = e;
+                        }
+                        // 原索引+oldCap
+                        else {
+                            if (hiTail == null)
+                                hiHead = e;
+                            else
+                                hiTail.next = e;
+                            hiTail = e;
+                        }
+                    } while ((e = next) != null);
+                    // 原索引放到bucket里
+                    if (loTail != null) {
+                        loTail.next = null;
+                        newTab[j] = loHead;
+                    }
+                    // 原索引+oldCap放到bucket里
+                    if (hiTail != null) {
+                        hiTail.next = null;
+                        newTab[j + oldCap] = hiHead;
+                    }
+                }
+            }
+        }
+    }
+    return newTab;
+}
+```
 
 
 
@@ -12189,178 +12253,184 @@ HashSet是基于HashMap实现的，除了``clone()、writeObject()、readObject(
   * JDK1.8时的ConcurrentHashMap则摒弃了Segment的概念，直接使用Node数组+链表/红黑树的结构来实现，并发控制使用了synchronized和CAS操作，使其整体看上去就像是优化且线程安全的HashMap；
   * HashTable则直接使用一把全局锁synchronized来保证线程安全，效率低下，当一个线程访问同步方法时，其他线程也访问同步方法，就会进入阻塞或轮询状态，多线程的竞争越激烈效率越低。
 
-* HashTable结构图：
+* **HashTable结构图**：
 
-  ![image-20201110100950558](assets/image-20201110100950558.png)
+![image-20201110100950558](assets/image-20201110100950558.png)
 
-* JDK1.7的ConcurrentHashMap结构图：
+* **JDK1.7的ConcurrentHashMap结构图**：
 
-  ![image-20201110101200877](assets/image-20201110101200877.png)
+  ![1571240327611](assets/1571240327611.png)
 
-* JDK1.8的ConcurrentHashMap结构图：
+  
 
-  ![image-20201110101245983](assets/image-20201110101245983.png)
+* **JDK1.8的ConcurrentHashMap结构图**：
+
+![image-20201110101245983](assets/image-20201110101245983.png)
 
 
 
 ### ConcurrentHashMap源码分析
 
-* 初始化：
+#### 初始化分析
 
-  ```java
-  private final Node<K,V>[] initTable() {
-      Node<K,V>[] tab; int sc;、
-      // 自旋操作，保证初始化成功
-      while ((tab = table) == null || tab.length == 0) {
-          //　如果sizeCtl < 0，说明有另外的线程CAS操作成功，正在进行初始化
-          if ((sc = sizeCtl) < 0)
-              // 主动让出CPU的使用权
-              Thread.yield();
-          else if (U.compareAndSwapInt(this, SIZECTL, sc, -1)) {	// 使用CAS将sizeCtl修改为-1
-              try {
-                  if ((tab = table) == null || tab.length == 0) {
-                      int n = (sc > 0) ? sc : DEFAULT_CAPACITY;
-                      @SuppressWarnings("unchecked")
-                      Node<K,V>[] nt = (Node<K,V>[])new Node<?,?>[n];
-                      table = tab = nt;
-                      sc = n - (n >>> 2);
-                  }
-              } finally {
-                  sizeCtl = sc;
-              }
-              break;
-          }
-      }
-      return tab;
-  }
-  ```
+* 初始化操作通过自旋+CAS完成，变量sizeCtl的值决定着当前的初始化状态；
+* 若sizeCtl小于0，证明其他线程正在对其初始化，让出CPU执行权；
+* 若sizeCtl不小于0，则使用CAS将sizeCtl修改为-1，表示正在初始化；
+* 若当前table没有初始化，则sizeCtl表示table的默认初始化大小；
+* 若当前table已经初始化，则sizeCtl表示table的容量。
 
-  * ConcurrentHashMap的初始化是通过自旋和CAS操作完成的，变量sizeCtl的值决定着当前的初始化状态；
-  * 若sizeCtl小于0，证明其他线程正在对其初始化，让出CPU执行权；
-  * 若sizeCtl不小于0，则使用CAS将sizeCtl修改为-1，表示正在初始化；
-  * 若当前table没有初始化，则sizeCtl表示table的默认初始化大小；
-  * 若当前table已经初始化，则sizeCtl表示table的容量。
+```java
+private final Node<K,V>[] initTable() {
+    Node<K,V>[] tab; int sc;
+    // 自旋操作，保证初始化成功
+    while ((tab = table) == null || tab.length == 0) {
+        //　如果sizeCtl < 0，说明有另外的线程CAS操作成功，正在进行初始化
+        if ((sc = sizeCtl) < 0)
+            // 主动让出CPU的使用权
+            Thread.yield();
+        else if (U.compareAndSwapInt(this, SIZECTL, sc, -1)) {	// 使用CAS将sizeCtl修改为-1
+            try {
+                if ((tab = table) == null || tab.length == 0) {
+                    int n = (sc > 0) ? sc : DEFAULT_CAPACITY;
+                    @SuppressWarnings("unchecked")
+                    Node<K,V>[] nt = (Node<K,V>[])new Node<?,?>[n];
+                    table = tab = nt;
+                    sc = n - (n >>> 2);
+                }
+            } finally {
+                sizeCtl = sc;
+            }
+            break;
+        }
+    }
+    return tab;
+}
+```
 
-* put：
 
-  ```JAVA
-  public V put(K key, V value) {
-      return putVal(key, value, false);
-  }
-  
-  final V putVal(K key, V value, boolean onlyIfAbsent) {
-      // key和value不能为空
-      if (key == null || value == null) throw new NullPointerException();
-      int hash = spread(key.hashCode());	// hash扰动
-      int binCount = 0;
-      
-      for (Node<K,V>[] tab = table;;) {
-          // f指目标位置元素，fh后面存放目标位置元素的hash值
-          Node<K,V> f; int n, i, fh;
-          if (tab == null || (n = tab.length) == 0)
-              // 若桶为空，则通过CAS+自旋的方式初始化数组桶（自旋+CAS)
-              tab = initTable();
-          else if ((f = tabAt(tab, i = (n - 1) & hash)) == null) {
-              // 若桶内为空，则通过CAS+自旋的方式插入，成功了就直接break跳出
-              if (casTabAt(tab, i, null,new Node<K,V>(hash, key, value, null)))
-                  break;
-          }
-          else if ((fh = f.hash) == MOVED)
-              // 需要扩容
-              tab = helpTransfer(tab, f);
-          else {
-              V oldVal = null;
-              // 使用synchronized加锁插入节点
-              synchronized (f) {
-                  if (tabAt(tab, i) == f) {
-                      // 如果是链表执行的操作
-                      if (fh >= 0) {
-                          binCount = 1;
-                          // 循环加入新的或者覆盖节点
-                          for (Node<K,V> e = f;; ++binCount) {
-                              K ek;
-                              if (e.hash == hash &&
-                                  ((ek = e.key) == key ||
-                                   (ek != null && key.equals(ek)))) {
-                                  oldVal = e.val;
-                                  if (!onlyIfAbsent)
-                                      e.val = value;
-                                  break;
-                              }
-                              Node<K,V> pred = e;
-                              if ((e = e.next) == null) {
-                                  pred.next = new Node<K,V>(hash, key,
-                                                            value, null);
-                                  break;
-                              }
-                          }
-                      }
-                      else if (f instanceof TreeBin) {
-                          // 如果是红黑树执行的操作
-                          Node<K,V> p;
-                          binCount = 2;
-                          if ((p = ((TreeBin<K,V>)f).putTreeVal(hash, key, value)) != null) {
-                              oldVal = p.val;
-                              if (!onlyIfAbsent)
-                                  p.val = value;
-                          }
-                      }
-                  }
-              }
-              if (binCount != 0) {
-                  if (binCount >= TREEIFY_THRESHOLD)
-                      treeifyBin(tab, i);
-                  if (oldVal != null)
-                      return oldVal;
-                  break;
-              }
-          }
-      }
-      addCount(1L, binCount);
-      return null;
-  }
-  ```
 
-  * 根据key计算出HashCode，即获得了桶的位置；
-  * 判断该位置的桶是否为空，为空则初始化一个桶；
-  * 若桶内为空，则表示当前位置可用写入数据，使用CAS尝试写入，若失败则自旋保证成功；
-  * 若当前位置的`hashCode == MOVED == -1`，则需要进行扩容；
-  * 如果都不满足，则使用synchronized加锁插入数据到链表或红黑树上；
-  * 若是桶内是链表，如果数量大于`TREEIFY_THRESHOLD`，则需要转换为红黑树。
+#### put方法分析
 
-* get：
+* 根据key计算出HashCode，即获得了桶的位置；
+* 判断该位置的桶是否为空，为空则初始化一个桶；
+* 若桶内为空，则表示当前位置可用写入数据，使用CAS尝试写入，若失败则自旋保证成功；
+* 若当前位置的 `hashCode == MOVED == -1`，则需要进行扩容；
+* 如果桶不为空且不需要扩容，则使用synchronized加锁插入数据到链表或红黑树上；
+* 若桶内是链表，如果此时数量大于 `TREEIFY_THRESHOLD`，则需要转换为红黑树。
 
-  ```java
-  public V get(Object key) {
-      Node<K,V>[] tab; Node<K,V> e, p; int n, eh; K ek;
-      // key所在的hash位置
-      int h = spread(key.hashCode());
-      if ((tab = table) != null && (n = tab.length) > 0 &&
-          (e = tabAt(tab, (n - 1) & h)) != null) {
-          // 如果指定位置元素存在，头结点hash值相同
-          if ((eh = e.hash) == h) {
-              if ((ek = e.key) == key || (ek != null && key.equals(ek)))
-                  // key hash 值相等，key值相同，直接返回元素 value
-                  return e.val;
-          }
-          else if (eh < 0)
-              // 头结点hash值小于0，说明正在扩容或者是红黑树，find查找
-              return (p = e.find(h, key)) != null ? p.val : null;
-          while ((e = e.next) != null) {
-              // 是链表，遍历查找
-              if (e.hash == h &&
-                  ((ek = e.key) == key || (ek != null && key.equals(ek))))
-                  return e.val;
-          }
-      }
-      return null;
-  }
-  ```
+```JAVA
+public V put(K key, V value) {
+    return putVal(key, value, false);
+}
 
-  * 根据hash值计算桶的位置；
-  * 查找到指定位置，如果头节点就是要找的，直接返回其value；
-  * 如果头节点hash值小于0，说明正在扩容或是红黑树，查找之；
-  * 如果是链表，遍历查找之。
+final V putVal(K key, V value, boolean onlyIfAbsent) {
+    // key和value不能为空
+    if (key == null || value == null) throw new NullPointerException();
+    int hash = spread(key.hashCode());	// hash扰动
+    int binCount = 0;
+    
+    for (Node<K,V>[] tab = table;;) {
+        // f指目标位置元素，fh后面存放目标位置元素的hash值
+        Node<K,V> f; int n, i, fh;
+        if (tab == null || (n = tab.length) == 0)
+            // 若桶为空，则通过CAS+自旋的方式初始化数组桶（自旋+CAS)
+            tab = initTable();
+        else if ((f = tabAt(tab, i = (n - 1) & hash)) == null) {
+            // 若桶内为空，则通过CAS+自旋的方式插入，成功了就直接break跳出
+            if (casTabAt(tab, i, null, new Node<K,V>(hash, key, value, null)))
+                break;
+        }
+        else if ((fh = f.hash) == MOVED)
+            // 需要扩容
+            tab = helpTransfer(tab, f);
+        else {
+            V oldVal = null;
+            // 使用synchronized加锁插入节点
+            synchronized (f) {
+                if (tabAt(tab, i) == f) {
+                    // 如果是链表执行的操作
+                    if (fh >= 0) {
+                        binCount = 1;
+                        // 循环加入新的或者覆盖节点
+                        for (Node<K,V> e = f;; ++binCount) {
+                            K ek;
+                            if (e.hash == hash &&
+                                ((ek = e.key) == key ||
+                                 (ek != null && key.equals(ek)))) {
+                                oldVal = e.val;
+                                if (!onlyIfAbsent)
+                                    e.val = value;
+                                break;
+                            }
+                            Node<K,V> pred = e;
+                            if ((e = e.next) == null) {
+                                pred.next = new Node<K,V>(hash, key,
+                                                          value, null);
+                                break;
+                            }
+                        }
+                    }
+                    else if (f instanceof TreeBin) {
+                        // 如果是红黑树执行的操作
+                        Node<K,V> p;
+                        binCount = 2;
+                        if ((p = ((TreeBin<K,V>)f).putTreeVal(hash, key, value)) != null) {
+                            oldVal = p.val;
+                            if (!onlyIfAbsent)
+                                p.val = value;
+                        }
+                    }
+                }
+            }
+            if (binCount != 0) {
+                if (binCount >= TREEIFY_THRESHOLD)
+                    treeifyBin(tab, i);
+                if (oldVal != null)
+                    return oldVal;
+                break;
+            }
+        }
+    }
+    addCount(1L, binCount);
+    return null;
+}
+```
+
+
+
+#### get方法分析
+
+* 根据hash值计算桶的位置；
+* 查找到指定位置，如果头节点就是要找的，直接返回其value；
+* 如果头节点hash值小于0，说明正在扩容或是红黑树，查找之；
+* 如果是链表，遍历查找之。
+
+```java
+public V get(Object key) {
+    Node<K,V>[] tab; Node<K,V> e, p; int n, eh; K ek;
+    // key所在的hash位置
+    int h = spread(key.hashCode());
+    if ((tab = table) != null && (n = tab.length) > 0 &&
+        (e = tabAt(tab, (n - 1) & h)) != null) {
+        // 如果指定位置元素存在，头结点hash值相同
+        if ((eh = e.hash) == h) {
+            if ((ek = e.key) == key || (ek != null && key.equals(ek)))
+                // key hash 值相等，key值相同，直接返回元素 value
+                return e.val;
+        }
+        else if (eh < 0)
+            // 头结点hash值小于0，说明正在扩容或者是红黑树，find查找
+            return (p = e.find(h, key)) != null ? p.val : null;
+        while ((e = e.next) != null) {
+            // 是链表，遍历查找
+            if (e.hash == h &&
+                ((ek = e.key) == key || (ek != null && key.equals(ek))))
+                return e.val;
+        }
+    }
+    return null;
+}
+```
 
 
 
@@ -12392,7 +12462,7 @@ transient LinkedHashMap.Entry<K,V> tail;
 final boolean accessOrder;
 ```
 
-`afterNodeAccess()`：在get等操作之后执行，当一个节点被访问时，如果字段accessOrder为true，则会将该节点移动到链表尾部。也就是说当指定了LRU顺序后，在每次访问节点时，都会将该节点移动到链表尾部，即保证了链表尾部是最近访问的节点，反之链表的首部就是最久未使用节点。
+**`afterNodeAccess()`**：在get等操作之后执行。当一个节点被访问时，如果字段accessOrder为true，则会将该节点移动到链表尾部。也就是说当指定了LRU顺序后，在每次访问节点时，都会将该节点移动到链表尾部，即保证了链表尾部是最近访问的节点，反之链表的首部就是最久未使用节点。
 
 ```JAVA
 void afterNodeAccess(Node<K,V> e) { // move node to last
@@ -12421,7 +12491,7 @@ void afterNodeAccess(Node<K,V> e) { // move node to last
 }
 ```
 
-`afterNodeInsertion()`：在put等操作之后执行，当removeEldestEntry()返回true时会移除最久未使用的节点，即链表首部节点first。
+**`afterNodeInsertion()`**：在put等操作之后执行。当 `removeEldestEntry()` 返回true时会移除最久未使用的节点，即链表首部节点first。
 
 ```JAVA
 void afterNodeInsertion(boolean evict) { // possibly remove eldest
@@ -12433,7 +12503,7 @@ void afterNodeInsertion(boolean evict) { // possibly remove eldest
 }
 ```
 
-`removeEldestEntry()`：默认返回false，如果需要让其返回true，需要继承LinkedHashMap并重写该方法实现。
+**`removeEldestEntry()`**：默认返回false，如果需要让其返回true，需要继承LinkedHashMap并重写该方法实现。
 
 ```JAVA
 protected boolean removeEldestEntry(Map.Entry<K,V> eldest) {
@@ -12469,6 +12539,11 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 ## MySQL-存储引擎
 
+* **是否支持行级锁**：MyISAM只支持表级锁。而InnoDB支持行级锁和表级锁；
+* **是否支持事务和崩溃后的安全恢复**：MyISAM更强调性能，每次查询都具有原子性，执行速度相对于InnoDB更快，但不提供事务的支持。InnoDB则提供事务，且具有提交、回滚和崩溃修复能力的事务安全性表；
+* **是否支持外键**：MyISAM不支持，InnoDB支持；
+* **是否支持MVCC**：只有InnoDB支持，用于应对高并发的事务，MVCC比单纯的加锁更高效，MVCC只在 `READ COMMITIED` 和 `REPEATABLE READ` 两个隔离级别下工作，且可以使用乐观锁和悲观锁来实现。
+
 |              |   MylSAM   |           InnoDB           |
 | :----------: | :--------: | :------------------------: |
 |   索引类型   | 非聚簇索引 |          聚簇索引          |
@@ -12479,23 +12554,18 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 | 支持全文检索 |     是     |             是             |
 | 适合操作类型 | 大量select | 大量insert、delete、update |
 
-* 是否支持行级锁：MyISAM只支持表级锁，而InnoDB支持行级锁和表级锁；
-* 是否支持事务和崩溃后的安全恢复：MyISAM更强调性能，每次查询都具有原子性，执行速度相对于InnoDB更快，但不提供事务的支持。InnoDB则提供事务，且具有提交、回滚和崩溃修复能力的事务安全性表；
-* 是否支持外键：MyISAM不支持，InnoDB支持；
-* 是否支持MVCC：只有InnoDB支持，用于应对高并发的事务，MVCC比单纯的加锁更高效，MVCC只在 `READ COMMITIED` 和 `REPEATABLE READ` 两个隔离级别下工作，且可以使用乐观锁和悲观锁来实现。
-
 
 
 ## MySQL-索引原理
 
-### MySQL的基本存储结构
+### MySQL基本存储结构
 
 <img src="assets/164c6d7a53a7920b" alt="img" style="zoom: 67%;" />
 
 ![img](assets/164c6d7a53b78847)
 
-* MySQL的基本存储结构是页式存储结构；
-* 各个数据页可以组成一个双向链表；
+* MySQL的基本存储结构是基于页式的存储结构；
+* 各个数据页之间可以组成一个双向链表；
 * 每个数据页中的记录又可以组成一个单向链表：
   * 每个数据页都会为其内部存储的记录创建一个页目录。当通过主键查找某条记录的时候可以在页目录中使用二分查找算法快速定位到对应的槽，然后再遍历该槽对应分组中的记录即可快速找到指定的记录；
   * 若是以其他非主键的列作为搜索条件，则只能从头开始遍历单链表中的每条记录。
@@ -12513,14 +12583,35 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-### 磁盘预读
+### 磁盘结构/磁盘预读
 
-* 预读的长度一般是页（page）的整数倍；
-* 页是存储器的逻辑块，OS往往将主存和磁盘存储区分割为连续且大小相等的块，单个存储块被称为页（通常为4k），主存和磁盘以页为单位交换数据。
+**磁盘结构**：
+
+* 磁盘是一种能够大量保存数据（GB~TB级别），但读取速度较慢（因为涉及到机器操作，读取速度为ms级）的硬件存储器。
+
+* 磁盘是由**盘片**构成，每个盘片有两个面，称为**盘面**。盘片中央有一个可以旋转的**主轴**，会让盘片以固定的速度旋转（通常是5400rpm或7200rpm），一个磁盘中包含多个这样的盘片并封装在一个密闭的容器中。盘片的每个表面是由一组称为**磁道**的同心圆组成，每个磁道被划分为一组**扇区**，每个扇区包含相等数量的数据位（通常是512byte），扇区之间由一些间隙隔开，这些间隙中不存储数据。
+
+![image-20201208120534728](assets/image-20201208120534728.png)
+
+* 磁盘是用**磁头**来读写存储在盘片表面的数据位，而磁头连接到一个**移动臂**上，移动臂沿着盘片半径前后移动，可以将磁头定位到任何磁道上，这被称为寻道操作。一旦定位到磁道后，盘片转动，磁道上的每个位经过磁头时，读写磁头就可以感知和修改该位的值。对磁盘的访问时间分为寻道时间、旋转时间和传送时间。
+
+![image-20201208121816618](assets/image-20201208121816618.png)
 
 
 
-### 什么是索引？
+**磁盘预读**：
+
+* **为什么要预读？**由于存储介质的特性，磁盘本身的存取速度就慢于主存，再加上机械运动的消耗，因此为了提高效率，要尽量减少磁盘IO，减少读写操作。为了达到这个目的，磁盘往往不会严格的按需读取，而是每次都会预读，即使只需要一个字节，磁盘也会从这个位置开始，顺序向后读取一定长度的数据放入内存，这样做的理论依据是计算机科学中著名的局部性原理（时间、空间局部性）。由于磁盘顺序读取的效率很高（不需要寻道，只需要旋转），因此预读可以提高IO的效率。
+
+* **页存储**：页是计算机管理内存的逻辑块，硬件及操作系统往往将主存和磁盘存储区分割为连续的大小相等的块，每个存储块被称为一页（1024字节或其整数倍），预读的长度一般为页的整数倍。主存和磁盘以页为单位交换数据，当程序要读取的数据不在主存中时，会触发一个缺页异常，此时系统会向磁盘发出信号，磁盘会找到数据的起始位置并向后连续读取一页或几页装入内存中，然后异常中断返回，程序继续执行。
+
+* **文件系统结构设计**：文件系统的设计上利用了磁盘预读的原理，将一个结点大小设为等于一个页，这样每个结点只需要一次IO操作就可以完全载入。那么3层的B树可以容纳 `1024*1024*1024` 将近10亿左右的数据，如果使用二叉树类结构来存储，则需要30层的深度。假设操作系统一次读取一个结点，且根结点保留在内存中，那么B树在10亿个数据中查找目标，只需要最大3次的磁盘IO就可以找到目标，但二叉树类结构如红黑树则需要30次以内的磁盘IO，因此B树做为文件系统的底层结构远远优于二叉树。
+
+
+
+### 索引基本概念
+
+#### 什么是索引？
 
 * 是帮助数据库高效获取数据的一种数据结构；
 * 索引存储在文件系统中；
@@ -12529,7 +12620,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-### 为什么使用索引？
+#### 为什么使用索引？
 
 * 可以大幅加快数据的检索速度，即大幅减少检索的数据量；
 * 帮助服务器避免排序和临时表；
@@ -12538,15 +12629,15 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-### 为什么不对表中的每列都创建索引呢？
+#### 为什么不对表中的每列都创建索引呢？
 
-* 当表中的数据进行增加、删除和修改时，索引也会**动态维护**，就降低了数据的维护速度；
-* 索引需要**占用物理空间**，除了数据表需要占用数据空间，每一个索引还要占一定的物理空间，如果要建立聚簇索引，那么需要的空间就会更大；
-* 创建索引和维护索引要**耗费时间**，这种时间随着数据量的增加而增加。
+* **动态维护**：当表中的数据进行增加、删除和修改时，索引也会动态维护，就降低了数据的维护速度；
+* **额外空间占用**：索引需要占用额外的物理空间，除了数据表需要占用数据空间，每一个索引还要占一定的物理空间，如果要建立聚簇索引，那么需要的空间就会更大；
+* **时间消耗**：创建索引和维护索引要耗费时间，这种时间随着数据量的增加而增加。
 
 
 
-### 索引的分类
+#### 索引的分类
 
 * **主键索引**：唯一性索引，每个表只能有一个；
 * **唯一索引**：索引列中的值只能出现一次，即必须唯一，但值可以为空；
@@ -12556,77 +12647,83 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-### 为什么MySQL使用B+树作为索引的数据结构？
+### MySQL索引结构的选择
 
-**为什么不使用哈希表？**
+#### 为什么不使用哈希表？
 
 <img src="assets/164c6d7a55fd52b3" alt="img" style="zoom: 80%;" />
 
 * 需要将数据文件添加到内存中，耗费内存空间；
 * 如果所有的查询都是等值查询，哈希表的性能会很高，但实际生产环境下范围查询的情况非常多，这时哈希表就不太合适了。
 
-**为什么不使用二叉树/红黑树？**
+
+
+#### 为什么不使用二叉树/红黑树？
+
+一棵树结构在极端的情况下（如：元素有序的被插入），会退化为链表，导致树的查询优势不复存在。
 
 <img src="assets/164c6d7a56110d4d" alt="img" style="zoom: 50%;" />
 
-* 一棵树结构在极端的情况下，会退化成为链表，导致树的查询优势不复存在；
+二分查找树/红黑树都是二叉树，每个节点最多只能有两个子节点，在特殊情况下都会导致树的深度过深而造成IO次数变多，影响数据的查询效率。并且红黑树为了保证平衡的旋转操作也会影响整体的效率。
 
 <img src="assets/image-20201117205044305.png" alt="image-20201117205044305" style="zoom:80%;" />
 
-* 树的深度过深会导致IO的次数过多，影响数据的读取效率。
 
-**为什么不使用B树？**
 
-* B树的特点：
+#### 为什么不使用B树？
 
-  * 所有键值分布在整棵树中；
-* 搜索有可能在非叶子节点结束，在关键字全集内做一次查找，性能接近二分查找；
-  
-  * 每个节点最多拥有m棵子树；
+**B树的特点**：是所有键值分布在整棵树中。一次搜索有可能在非叶子节点就会结束，在关键字全集内做一次查找，性能接近二分查找。每个节点最多拥有m棵子树。
+
 * 根节点至少拥有2棵子树；
-  * 分支节点至少拥有m/2棵子树（分支节点就是除根节点和叶子节点外的节点）；
-  * 所有叶子节点都在同一层，每个节点最多可以拥有m-1个key，并且以升序排序。
-  
-* B树索引原理：每个节点占用一个页（InnoDB是16kb），一个节点上有2个升序排序的关键字+对应记录和3个指向子树根节点的指针，指针存储的是子节点所在页的地址。2个关键字划分成的3个范围域对应3个指针指向的子树的数据范围域。以根节点为例，关键字为16和34，P1指针指向的子树数据范围小于16，P2指针值指向的子树数据范围为16~34，P3指针指向的子树的数据范围大于34。
+* 分支节点至少拥有m/2棵子树（分支节点就是除根节点和叶子节点外的节点）；
+* 所有叶子节点都在同一层，每个分支节点最多可以拥有m-1个key，并且以升序排序。
 
-  ![image-20201205223048242](assets/image-20201205223048242.png)
+**B树索引原理**：每个结点占用一页（InnoDB是16kb），一个结点上有**2个升序排序的键值+对应数据记录+3个指向子树根节点的指针**，指针存储的是子节点所在页的地址。如下图所示，2个键值划分成的3个范围域对应3个指针指向的子树的数据范围域。以根节点为例，关键字为16和34，P1指针指向的子树数据范围小于16，P2指针值指向的子树数据范围为16~34，P3指针指向的子树的数据范围大于34。
 
-* B树索引根据关键字28查找记录的过程：
-  1. 根据根节点找到磁盘块1，读入内存（磁盘IO第1次）；
-  2. 比较出关键字28在（16，34）区间内，获取磁盘块1的P2指针；
-  3. 根据P2指针找到磁盘块3，读入内存（磁盘IO第2次）；
-  4. 比较出关键字28在（27，29）区间内，获取磁盘块3的P2指针；
-  5. 根据P2指针找到磁盘块8，读入内存（磁盘IO第3次）；
-  6. 在磁盘块8中的关键字列表中找到关键字28，并读取其对应的记录。
-* 缺点：每个节点都有关键字和其对应的记录，但每个页存储空间是有限的，如果记录比较大的话会导致每个节点存储的关键字数量变小。当节点存储的数据量很大时会导致树的深度加深，即会增大查询时磁盘IO的次数，进而影响查询性能。
+![image-20201205223048242](assets/image-20201205223048242.png)
+
+**B树索引根据关键字28查找记录的过程**：
+
+1. 根据根结点找到磁盘块1，读入内存（磁盘IO第1次）；
+2. 比较出关键字28在（16，34）区间内，获取磁盘块1的P2指针；
+3. 根据P2指针找到磁盘块3，读入内存（磁盘IO第2次）；
+4. 比较出关键字28在（27，29）区间内，获取磁盘块3的P2指针；
+5. 根据P2指针找到磁盘块8，读入内存（磁盘IO第3次）；
+6. 在磁盘块8中的关键字列表中找到关键字28，并读取其对应的记录。
+
+**缺点**：每个结点都有键值和其对应的记录，但每个页存储空间是有限的，如果记录比较大的话会导致每个结点存储的键值数量变小。当结点存储的数据量很大时会导致树的深度加深，即会增大查询时磁盘IO的次数，进而影响查询性能。
 
 
 
-### B+树索引的原理
+### B+树索引原理
 
-**B+树索引结构：**
+#### B+树索引结构
 
-* B+Tree的非叶子节点不会再包含记录而是包含更多的关键字和指针，这样做是为了降低树的高度减少磁盘的IO次数，同时也能将数据的范围变成更多的区间，区间越多，检索数据越快；
-* B+Tree结构的索引只有叶子节点包含记录，非叶子节点只包含关键字和指针；
-* 叶子节点之间通过指针相互连接（符合磁盘预读的特性），顺序查询性能更高。
-* 注：B+Tree上有两个头指针，一个指向根节点，另一个指向最小关键字的节点，且所有叶子节点构成了一个环形链表结构。因此可以对B+Tree进行两种查找操作，一种是根据主键进行范围查找和分页查找，另一种就是从根节点开始进行随机查找。
+**B+树索引和B树索引的区别**：B+Tree的分支结点不会再包含记录而是包含更多的键值和指针，这样做是为了降低树的高度以减少磁盘的IO次数，同时也能将数据的范围细分为更多的区间，区间越多，检索速度越快。
 
-![image-20201117204328625](assets/image-20201117204328625.png)
+* B+Tree结构的索引只有叶子结点包含记录，分支结点只包含键值和指针；
+* 叶子结点之间通过指针相互连接（符合磁盘预读的特性），使顺序查询性能更高。
+* B+Tree上有两个头指针，一个指向根结点，另一个指向键值最小的结点，且所有叶子结点构成了一个环形链表结构。因此可以对B+Tree进行两种查找操作，一种是根据主键进行范围查找和分页查找，另一种就是从根结点开始进行随机查找。
 
-**InnoDB引擎实现的B+树索引：**
+![image-20201228163701364](assets/image-20201228163701364.png)
 
-* 聚簇索引：InnoDB的文件存储方式是索引和数据存放在一个文件中，所以叶子节点中之间包含数据记录（只有通过主键建立的索引才是聚簇索引）；
-* InnoDB是通过B+Tree结构对主键创建索引，然后叶子节点中存储记录，如果不存在主键，则会选择唯一键，如果没有唯一键，那么会生成一个6位的row_id来作为索引；
+
+
+#### InnoDB引擎实现的B+树索引
+
+**聚簇索引**：InnoDB的文件存储方式是索引和数据存放在同一个文件中，所以叶子节点中之间包含数据记录（只有通过主键建立的索引才是聚簇索引）。InnoDB默认通过B+Tree结构对主键创建索引，然后叶子节点中存储记录，如果不存在主键，则会选择唯一键，如果没有唯一键，那么会生成一个6位的row_id来作为索引。
 
 ![image-20201117182731505](assets/image-20201117182731505.png)
 
-* 如果是由其他字段创建的索引，那么在叶子节点中存储的是其对应记录的主键，之后再根据主键去主键索引中获取记录，这个步骤称为回表（这种通过其他字段创建的索引是非聚簇索引）。
+**回表**：如果是由其他字段创建的索引，那么在叶子节点中存储的是其对应记录的主键，之后再根据主键去主键索引中获取记录，这个步骤称为回表。这种通过其他字段创建的索引是非聚簇索引。
 
 ![image-20201117213120161](assets/image-20201117213120161.png)
 
-**MyISAM引擎实现的B+树索引：**
 
-* 非聚簇索引：MyISAM的文件存储方式是索引和数据分开存放为两个文件，叶子节点中包含的是数据记录的地址。
+
+#### MyISAM引擎实现的B+树索引
+
+**非聚簇索引**：MyISAM的文件存储方式是索引和数据分开存放为两个文件，B+Tree中叶子结点包含的是数据记录的地址。
 
 ![image-20201117183608686](assets/image-20201117183608686.png)
 
@@ -12635,11 +12732,11 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 ### 使用索引的注意事项
 
 * 在经常需要搜索的列上创建索引，可以加快搜索的速度；
-* 在经常使用在where上的列创建索引，加快条件的判断速度；
-* 在经常需要排序的列上创建索引，因为索引已经排序，这样查询可以利用索引的排序，加快排序查询的时间；
-* 对于中到大型表来说索引都是非常有效的，但是特大型表的话维护开销会很大，不适合创建索引；
-* 在经常用在连接的列上使用，这些列主要是一些外键，可以加快连接的速度；
-* 避免在where子句中对字段使用函数，这会造成索引无法命中；
+* 在经常使用在 `where` 上的列创建索引，加快条件的判断速度；
+* 在经常需要排序的列上创建索引，因为索引会完成排序，这样查询可以利用索引的排序，加快排序查询的时间；
+* 对于中大型表来说索引都是非常有效的，但是特大型表的话维护开销会很大，不适合创建索引；
+* 在经常使用在 `join` 上的列使用，这些列主要是一些外键，可以加快 `join` 的速度；
+* 避免在 `where` 子句中对字段使用函数，这会造成索引无法命中；
 * 在InnoDB中使用与业务无关的自增主键，而不要使用业务主键；
 * 删除长期未使用的索引，不使用的索引会造成不必要的性能损耗；
 
@@ -12647,25 +12744,25 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
   * 单行访问速度很慢，如果服务器从存储器中读取一个数据块只是为了获取其中一行，那么就浪费了很多工作，最好的情况是读取的块中能包含尽可能多的所需行，提高效率；
   * 按顺序访问范围数据是很快的，是因为顺序IO不需要多次磁盘寻道，所以比随机IO要快很多，还有就是如果服务器能够按需要的顺序读取数据，就不再需要额外的排序操作；
-  * 索引覆盖查询是很快的，如果一个索引包含了查询所需的所有列，那么存储引擎就不需要再回表查找行，避免了大量的单行范围。
+  * 使用**索引覆盖**查询效率是很高的，即如果一个索引包含了查询所需的所有列，那么存储引擎就不需要再回表查找需要的行。
 
 
 
-### 最左前缀原则
+### 最左前缀匹配原则
 
-* MySQL可以为多个列按照一定的顺序建立联合索引，如User表的nam和city字段添加联合索引(name, city)。所谓的最左前缀原则是如果查询时查询条件精确匹配索引的左边连续一列或几列，则可以命中索引；
-
-  ```sql
-  --可以命中索引
-  select * from user where name='albert' and city='hz';
-  --可以命中索引
-  select * from user where name='ablert';
-  --无法命中索引
-  select * from user where city='hz';
-  ```
+**概念**：MySQL可以为多个列按照一定的顺序建立联合索引，如：User表的nam和city字段添加联合索引 `(name, city)`。所谓的最左前缀原则是如果查询时查询条件精确匹配索引左边的连续一列或几列，则可以命中索引。
 
 * 若查询的时候两个条件都被使用，但是顺序不同，那么查询引擎可以根据联合索引的顺序进行优化，使查询能够命中索引；
 * 根据最左前缀匹配原则，再创建联合索引时，索引字段的顺序需要考虑字段值去重后的个数，较多的放在前面，ORDER BY子句也遵循此规则。
+
+```sql
+--可以命中索引
+select * from user where name='albert' and city='hz';
+--可以命中索引
+select * from user where name='ablert';
+--无法命中索引
+select * from user where city='hz';
+```
 
 
 
@@ -12683,9 +12780,9 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 ### 事务并发带来的问题
 
 * **脏读（Dirty Read）**：一个事务读取到了另一个事务未提交的数据。事务B在执行过程中修改了数据X，在未提交之前，事务A读取了X，而事务B却回滚了，这时事务A读取的X就是脏数据，就形成了脏读的现象。即当前事务读到的是其他事务想要修改但没有修改成功的数据。脏读的本质就是因为操作完数据后就立即释放了锁，导致读数据的一方可能读取的是无用或错误的数据。
-* **丢失更新（Lost to modify）**：
-* **不可重复读（Unrepeatableread）**：一个事务读取到另一个事务修改（update操作）成功的数据。事务A首先读取数据X，在执行接下来的逻辑前，事务B将数据X修改并提交了，然后事务A再次读取时发现前后两次读到的数据不匹配，这种情况就是不可重复读。即当前事务前后两次读取存在一次数据已被其他事务修改的情况，导致前后不匹配。
-* **幻读（Phantom Read）**：一个事务读取到另一个事务插入或删除（insert或delete操作）成功的数据。事务A首先根据条件获得了N条数据，然后事务B增加或删除了M条符合A查询条件的数据，从而导致事务A再次查询发现有N+M或N-M条数据，就产生了幻读。即事务前后两次读取存在前一次和后一次读出的数据条目不一致的情况，导致前后不匹配。
+* **丢失更新（Lost to modify）**：两个事务同时进行更新，后一个事务的更新覆盖了前一个事务的更新。丢失更新是数据没有保证一致性导致的，如：事务A修改了一条记录，事务B在事务A提交之后也进行了一次修改并且提交，当事务A查询的时候，会发现刚才修改的内容没有被正确体现，好像更新丢失了一样。
+* **不可重复读（Unrepeatableread）**：一个事务读取到另一个事务修改（update操作）成功的数据。事务A首先读取数据X，在执行接下来的逻辑前，事务B将数据X修改并提交了，然后事务A再次读取时发现前后两次读到的数据不匹配，这种情况就是不可重复读。即同一事务前后两次读取间隔存在数据已被其他事务修改的情况，导致前后不匹配。
+* **幻读（Phantom Read）**：一个事务读取到另一个事务插入或删除（insert或delete操作）成功的数据。事务A首先根据条件获得了N条数据，然后事务B增加或删除了M条符合A查询条件的数据，从而导致事务A再次查询发现有N+M或N-M条数据，就产生了幻读。即同一事务前后两次读取存在前一次和后一次读出的数据集不一致的情况，导致前后不匹配。
 
 
 
@@ -12693,10 +12790,10 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 * **读未提交（Read uncommitted）**：会出现脏读、不可重复读、幻读。
 * **读已提交（Read committed）**：会出现不可重复读、幻读。
-  * 避免脏读：将释放锁的位置调整到事务提交之后，在事务提交之前，其他任何用户都无法对数据进行操作。
+  * **避免脏读**：将释放锁的位置调整到事务提交之后，在事务提交之前，其他任何用户都无法对数据进行操作。
 * **可重复读（Repeatable read）**：会出现幻读。
-  * 避免不可重复读：Read committed是语句级别的快照，每次读取的都是当前最新的版本，所以会出现被其他事务影响的情况。Repeatable read则通过事务级别的快照，每次读取的都是当前事务的版本，即使数据被修改了，本次操作也只会读取当前快照的版本。
-  * 避免幻读：MySQL的Repeatable read隔离级别加上GAP间隔锁处理了幻读。
+  * **避免不可重复读**：Read committed是语句级别的快照，每次读取的数据都是最新版本，所以会出现被其他事务影响的情况。Repeatable read则通过事务级别的快照，每次读取的数据都是当前事务的版本，即使数据被修改了，本次操作也只会读取当前快照的版本。
+  * **如何避免幻读？**：MySQL的Repeatable read隔离级别+GAP间隙锁就可以处理幻读。
 * **可串行化（Serializable）**：事务串行化，避免所有并发的问题。
 
 
@@ -12705,11 +12802,11 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 ### 锁机制概述
 
-* 从锁的粒度可以将MySQL的锁分为表锁和行锁；
-* 表锁：开销小，加锁快。不会出现死锁。锁定粒度大，发生锁冲突的概率高，并发度低；
-* 行锁：开销大，加锁慢。会出现死锁。锁定粒度小，发生锁冲突的概率高，并发度高。
-* InnoDB支持表锁和行锁，MyISAM仅支持表锁。
-* InnoDB只有通过索引条件检索数据才使用行级锁，否则将使用表锁，即InnoDB的行锁是基于索引的。
+从锁的粒度可以将MySQL的锁分为表锁和行锁：
+* **表锁**：开销小，加锁快。不会出现死锁。锁定粒度大，发生锁冲突的概率高，并发度低；
+* **行锁**：开销大，加锁慢。会出现死锁。锁定粒度小，发生锁冲突的概率高，并发度高。
+
+InnoDB支持表锁和行锁，MyISAM仅支持表锁。InnoDB只有通过索引条件检索数据才使用行级锁，否则将使用表锁，即InnoDB的行锁是基于索引的。
 
 ![img](assets/164c6d7ae44d8ac6)
 
@@ -12735,50 +12832,40 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 ### MVCC
 
-* **MVCC（Multi-Version Concurrency Control）多版本并发控制**。可以简单的认为是行锁的一个升级，事务的隔离就是通过锁机制来实现的。
-* 表锁中读写操作是阻塞的，基于提升并发性能的考虑，MVCC一般读写是非阻塞的。即通过一定机制生成一个数据请求时间点的一致性数据快照（Snapshot），并用这个快照来提供一定级别（语句级或事务级）的一致性读取。从用户的角度来看，就像是数据库可以提供同一数据的多个版本。
+* **MVCC（Multi-Version Concurrency Control）多版本并发控制**：可以简单的认为是行锁的一个升级，事务的隔离就是通过锁机制来实现的。
+* **快照**：表锁中读写操作是阻塞的，基于提升并发性能的考虑，MVCC一般读写是非阻塞的。即通过一定机制生成一个数据请求时间点的一致性数据快照（Snapshot），并用这个快照来提供一定级别（语句级或事务级）的一致性读取。从用户的角度来看，就像是数据库可以提供同一数据的多个版本。
+  * **语句级别快照**：对单条语句操作的数据生成请求时间点的一致性快照，如：读已提交隔离级别。
+  * **事务级别快照**：对一个事务操作的数据生成请求时间点的一致性快照，如：可重复读隔离级别。
 
 
 
 ### 悲观锁和乐观锁
 
-* **悲观锁**：是一种基于悲观的态度来防止并发带来冲突的加锁机制，所谓悲观是认为并发冲突一定会发生，所以在数据修改前就将其锁住，然后再对数据进行读写，在释放锁之前任何人都不能对数据进行操作。数据库本身的锁机制都是悲观锁机制。
+* **悲观锁**：是一种基于悲观的态度来防止并发带来数据冲突的加锁机制，所谓悲观是认为并发冲突一定会发生，所以在数据被操作前就将其锁住，然后再对数据进行读写，在释放锁之前任何人都不能对数据进行操作。数据库本身的锁机制都是悲观锁机制。
 * **乐观锁**：对数据的冲突保持乐观的态度，操作时不会对数据进行加锁，使得多个任务可以并行。只有在数据提交时才通过一种机制验证数据是否存在冲突，一般的实现方式是通过加版本号对比的方式实现。如：数据表多加一个version字段，每次修改前先查询，获取修改前的版本号，提交修改操作时添加version的判断，若版本不同则表示会发生冲突，版本相同则在修改后升级版本。
 
 
 
-### 间隔锁GAP
+### 间隙锁GAP
 
-* **概念**：当通过范围条件检索数据而不是相等条件检索数据，并请求共享或排他锁时，InnoDB会给符合范围条件的已有数据记录的索引项加锁。对于未来可能存在的符合条件范围的但此时并不存在的记录（被称为间隙GAP），InnoDB也会对个间隙加锁，这种锁机制就是间隙锁（间隙锁只会在可重复读这种隔离级别下使用）。
+* **概念**：当通过范围条件检索数据而不是相等条件检索数据，并请求共享或排他锁时，InnoDB会给符合范围条件的已有数据记录的索引项加锁。对于未来可能存在的符合条件范围的但此时并不存在的记录（被称为间隙GAP），InnoDB也会对这个间隙加锁，这种锁机制就是间隙锁（间隙锁只会在可重复读这种隔离级别下使用）。
 
-* **例子**：
+* **例子**：在索引记录之间、之前和之后的区间加上GAP锁。
 
-  在索引记录之间、之前和之后的区间加上GAP锁。
-  
   ```SQL
-SELECT c1 FROM t WHERE c1 BETWEEN 10 and 20 FOR UPDATE;
+  SELECT c1 FROM t WHERE c1 BETWEEN 10 and 20 FOR UPDATE;
   ```
-  
-  间隙锁GAP对c1<10、c1=10~20和c1>20这3种情况都会加锁，在当前事务持有锁的过程中，任何其他事务都不能针对以上3种情况做操作，保证了当前事务多个范围查询时前后结果的一致，即解决了幻读问题。
+
+  间隙锁GAP对 `c1<10`、`c1=10~20` 和 `c1>20` 这3种情况都会加锁，在当前事务持有锁的过程中，任何其他事务都不能针对以上3种情况做操作，保证了当前事务多次范围查询时前后结果的一致，即解决了幻读问题。
 
 
 
-### 死锁
+### 死锁解决
 
-* **以固定的顺序访问表和行**。比如对两个job批量更新的情形，简单的方法是对id列表先排序，后执行。这样就避免了交叉等待锁的情形。将两个事务的SQL顺序调整为一致，也能避免死锁；
-* **将一个大的事务拆为小的事务**，操作资源的范围越窄越不容易发生死锁；
-* **降低隔离级别**。如果业务允许，将隔离级别调低也是较好的选择，比如将隔离级别从可重复读调整为读已提交，可以避免掉很多因为GAP锁造成的死锁；
-* **为表添加合理的索引**。如果不走索引将会为表的每一行记录添加上锁，死锁的概率大大增加。
-
-
-
-## MySQL-执行SQL语句的流程
-
-## MySQL-高性能优化规范
-
-## MySQL-一条SQL执行很慢的原因有哪些？
-
-## MySQL-书写高质量SQL的30条建议
+* **以固定的顺序访问表和行**：如对两个job批量更新的情形，简单的方法是对id列表先排序，后执行。这样就避免了交叉等待锁的情形。将两个事务的SQL顺序调整为一致，能避免死锁；
+* **将一个大的事务拆为小的事务**：操作资源的范围越窄越不容易发生死锁；
+* **降低隔离级别**：如果业务允许，将隔离级别调低也是较好的选择，比如将隔离级别从可重复读调整为读已提交，可以避免掉很多因为GAP锁造成的死锁；
+* **为表添加合理的索引**：添加索引将会为表的每一行记录上锁，死锁的概率大大增加。
 
 
 
@@ -12786,9 +12873,9 @@ SELECT c1 FROM t WHERE c1 BETWEEN 10 and 20 FOR UPDATE;
 
 ### 文件事件处理器概述
 
-* Redis内部使用**文件事件处理器（file event handler）**，这个处理器是单线程的，所以Redis才叫做单线程的模型。其采用了**IO多路复用机制**同时监听多个Socket，根据Socket上的事件来选择对应的事件处理器进行处理。
+**文件事件处理器（file event handler）**是单线程的，所以Redis才叫做单线程的模型。其采用了IO多路复用机制同时监听多个Socket，根据Socket上就绪的事件来选择对应的事件处理器进行处理。
 
-* 文件事件处理器的结构包含**多个Socket、IO多路复用器、文件事件分派器和事件处理器**（连接应答处理器、命令请求处理器、命令回复处理器）；
+* 文件事件处理器的结构包含多个Socket、IO多路复用器、文件事件分派器和事件处理器（连接应答处理器、命令请求处理器、命令回复处理器）；
 
 * 多个Socket可能会并发产生不同的操作，每个操作对应不同的文件事件，但是IO多路复用器会监听多个Socket，并将Socket产生的事件放入队列，事件分派器每次从队列中取出一个事件，把该事件交给相应的事件处理器进行处理。
 
@@ -12798,7 +12885,7 @@ SELECT c1 FROM t WHERE c1 BETWEEN 10 and 20 FOR UPDATE;
 
 <img src="assets/48590-20190402142046683-685021278.jpg" alt="img" style="zoom:200%;" />
 
-* **建立连接**：客户端通过Socket01向Redis的Server Socket请求建立连接，Server Socket会产生一个 `AE_READABLE` 事件，多路复用器监听到Server Socket产生的事件后，将该事件入队。文件事件分派器从队列中获取该事件，交给连接应答处理器。连接应答处理器会创建一个与客户端通信的 Socket01，并将该Socket01的 `AE_READABLE` 事件与命令请求处理器关联；
+* **建立连接**：客户端通过Socket01向Redis的Server Socket请求建立连接，Server Socket会产生一个 `AE_READABLE` 事件，多路复用器监听到Server Socket产生的事件后，将该事件入队。文件事件分派器从队列中获取该事件，交给连接应答处理器。连接应答处理器会创建一个与客户端通信的Socket01，并将该Socket01的 `AE_READABLE` 事件与命令请求处理器关联；
 * **命令请求**：客户端发送了一个 `set key value` 请求，Redis的Socket01会产生 `AE_READABLE` 事件，多路复用器将事件入队，事件分派器从队列中获取到该事件，由于Socket01的 `AE_READABLE` 事件已与命令请求处理器关联，因此事件分派器直接将事件交给命令请求处理器。命令请求处理器读取Socket01的 `key value` 并在内存中完成设置。操作完成后，它会将Socket01的 `AE_WRITABLE` 事件与命令回复处理器关联；
 * **结果响应**：若客户端准备好接收返回结果了，那么Redis的Socket01会产生一个 `AE_WRITABLE` 事件并由多路复用器入队，事件分派器找到相关联的命令回复处理器，由其对Socket01输入本次操作的结果（如 `ok`），然后解除Socket01的 `AE_WRITABLE` 事件与命令回复处理器的关联。
 
@@ -12820,7 +12907,7 @@ SELECT c1 FROM t WHERE c1 BETWEEN 10 and 20 FOR UPDATE;
 * Redis的一个数据库对应一个redisDb结构；
 * redisDb中的dict字典字段维护了一个被封装HashTable，即dictht；
 * dictht存储dictEntry类型的元素，若是不同的dictEntry哈希定位到了同一个位置，则通过dictEntry的next指针构成链表；
-* redisObject中维护了元素的各种特性，如元素指针、编码、LRU和引用计数器等。
+* redisObject中维护了元素的各种特性，如：类型指针、编码、LRU和引用计数器等。
 
 ![image-20201211184234161](assets/image-20201211184234161.png)
 
@@ -12828,36 +12915,41 @@ SELECT c1 FROM t WHERE c1 BETWEEN 10 and 20 FOR UPDATE;
 
 ### String
 
-![image-20201211192919299](assets/image-20201211192919299.png)
-
-* 底层使用二进制安全的字节数组存储；
-* 字符串操作：分布式锁（`SETNS key: value)`）、集群Session共享、小文件存储（小图片的二进制流）、单值缓存（商品库存）、对象缓存（JSON序列化 `SET key:value`）；
-
-* 数值操作：秒杀、限流（信号量）、计数器（文章阅读量 `INCR key:value`）、分布式全局ID；
-* 位图操作（二进制操作）：
-
+* 底层使用二进制安全的字节数组存储。
+* **字符串操作**：
+  * 分布式锁（`SETNS key:value)`）；
+  * 集群Session共享；
+  * 小文件存储（存储图片的二进制流）；
+  * 对象缓存（JSON序列化后 `SET key:value`）。
+* **数值操作**：
+  * 秒杀（缓存内实时扣减商品数量）；
+  * 限流（信号量）；
+  * 计数器（文章阅读量 `INCR key:value`）；
+  * 分布式全局id。
+* **位图操作（二进制操作）**：
   * 统计任意时间窗口内用户的登录次数：
-
-    1. 用户id做为key，日期做为offset，一年的天数设置为365个二进制位（0~364），用户在某天上线则将该天对应的二进制位置为1；
-    2. 要统计任意时间窗口内用户的登录天数只要使用 `bitcount user_id 0 364` 命令统计二进制位1的出现次数即可。
-* OA系统中各个用户对应的不同模块所具有的权限；
+    * 用户id做为key，日期做为offset，一年的天数设置为365个二进制位（0~364），用户在某天上线则将该天对应的二进制位置为1；
+    * 要统计任意时间窗口内用户的登录天数只要使用 `bitcount user_id 0 364` 命令统计二进制位1的出现次数即可。
+  * OA系统中各个用户对应的不同模块所具有的权限；
   * 用户是否参加过某次活动、是否已读过某篇文章、是否是注册会员；
-* 布隆过滤器。
+  * 布隆过滤器。
+
+![image-20201211192919299](assets/image-20201211192919299.png)
 
 
 
 ### List
 
+* List是一个按插入时间排序的数据结构，底层通过QuickList（维护双向链表结构）和ZipList（存储数据）两个结构体实现；
+* 可以实现栈（`LPUSH+LPOP`）、双端队列（`LPUSH+RPOP/RPUSH+LPOP`）、数组（正负索引）、阻塞队列（`LPUSH+BRPOP`）和进行范围截取操作（`LRANGE key start end`）；
+* 数据的共享、迁出和粉丝列表、文章评论列表；
+* **微博和微信公众号的消息流**：
+  * 用户关注的用户发微博：`LPUSH msg:{userId} {msgId}`；
+  * 用户查看最新的微博消息：`LRANGE msg:{userId} 0 5`。
+
 ![image-20201211225951571](assets/image-20201211225951571.png)
 
 ![image-20201211230831424](assets/image-20201211230831424.png)
-
-* List是一个按插入时间排序的数据结构，底层使用QuickList（维护双向链表）和ZipList（存储数据）实现；
-* 可以实现栈（`LPUSH+LPOP`）、双端队列（`LPUSH+RPOP/RPUSH+LPOP`）、数组（正负索引）、阻塞队列（`LPUSH+BRPOP`）和进行范围截取操作（`LRANGE key start end`）；
-* 数据的共享、迁出和粉丝列表、文章评论列表；
-* 微博和微信公众号的消息流：
-  * 用户关注的用户发微博：`LPUSH msg:{userId} {msgId}`；
-  * 用户查看最新的微博消息：`LRANGE msg:{userId} 0 5`。
 
 
 
@@ -12865,55 +12957,46 @@ SELECT c1 FROM t WHERE c1 BETWEEN 10 and 20 FOR UPDATE;
 
 ![image-20201211233449097](assets/image-20201211233449097.png)
 
-* 类似于Java的HashMap；
-
-* 存储结构化数据：如对象缓存 `HMSET key field:value `）；
-
-* 好友关注：用户id做为key，field为所有好友的id，value为对应的关注时间；
-
+* 底层使用存储K-V对的字典结构；
+* 存储结构化数据：对象缓存 `HMSET key field:value `；
+* 好友/关注列表：用户id做为key，field为所有好友id，value为对应的关注时间；
 * 用户维度统计：用户id为key，不同的统计维度为field，对应的统计数据为value；
-
-* 电商购物车（用户id为key，商品id为field，商品数量为value）：
-
-  * 添加商品：`HSET cart:1001 10088 1`；
+* **电商购物车**（用户id为key，商品id为field，商品数量为value）：
+* 添加商品：`HSET cart:1001 10088 1`；
   * 增加数量：`HINCRBY cart:1001 10088 1`；
   * 商品总数：`HLEN cart:1001`；
   * 删除商品：`HDEL cart:1001 10088`；
   * 获取购物车中所有商品：`HGETALL cart:1001`。
-
-* 优点：
-
-  * 同类数据归类整合存储，方便数据管理；
+* **优点**：
+* 同类数据归类整合存储，方便数据管理；
   * 相比于String操作消耗的内存和CPU更小；
   * 相比于String更节省空间。
-
-* 缺点：
-
-  ![image-20201211162827338](assets/image-20201211162827338.png)
-
+* **缺点**：
   * 过期功能不能使用在field上，只能使用在key上；
   * Redis集群下不适合大规模使用。
+
+![image-20201211162827338](assets/image-20201211162827338.png)
 
 
 
 ### Set
 
 * 底层使用无序且唯一的哈希表存储；
-* 抽奖：
+* **抽奖**：
   * 用户参与抽奖：`SADD key {userId}`；
   * 查看参与抽象的所有用户：`SMEMBERS key`；
-  * 随机抽取指定数量的中奖用户：`SRANDMEMBER key [count]/SPOP key [count]`。
-* 微博点赞、收藏、标签：
+  * 随机抽取指定数量的中奖用户（放回/不放回）：`SRANDMEMBER key [count]/SPOP key [count]`。
+* **微博点赞、收藏、标签**：
   * 点赞操作：`SADD like:{msgId} {userId}`；
   * 取消点赞：`SREM like:{msgId} {userId}`；
   * 检查用户是否已经点过赞了：`SISMEMBER like:{msgId} {userId}`；
   * 获取所有点赞的用户：`SMEMBERS like:{msgId}`；
   * 获取点赞的用户数：`SCARD like:{msgId}`。
-* 微博微信关注模型：
+* **微博/微信关注模型**：
   * 用户和好友的公共关注（交集）：`SINER userSet friendSet1`；
   * 我关注的人也关注他：`SISMEMBER friendSet1 friendSer2`；
   * 推荐给用户的好友（差集）：`SDIFF userSet friendSet1`。
-* 电商商品按各维度标签筛选：
+* **电商商品按各维度标签筛选（交集）**：
   * `SADD brand:huawei P30`；
   * `SADD brand:xiaomi RedMi 8`；
   * `SADD brand:iPhone iPhone X`;
@@ -12924,12 +13007,11 @@ SELECT c1 FROM t WHERE c1 BETWEEN 10 and 20 FOR UPDATE;
 
 
 
-
 ### Sorted Set
 
 * 底层使用带分值排序的压缩表/跳表存储；
 
-* 微博新闻排行榜：
+* **微博新闻排行榜**：
 
   * 点击新闻：`ZINCRBY hotNews:20201211 1 xxx`；
 
@@ -12937,25 +13019,37 @@ SELECT c1 FROM t WHERE c1 BETWEEN 10 and 20 FOR UPDATE;
   * 计算近七日的排行榜（并集）：`ZUNIONSTORE hotNews:20201205-20201211 7 hotNews:20201205 ... hotNews:20201211`；
   * 展示近七日排行Top10：`ZREVRANGE hotNews:202005-20201211 0 9 WITHSCORES`。
 
-* 微博动态翻页：
+* **微博动态翻页**：
+  
   * 每条微博做为元素，对应的发布时间戳做为分值； 
-  * 通过 `zrevrange key start stop` 逆序获取最新发布的微博n条（如果在翻页时微博出现新的动态，有序集合会动态的重新排序）。
-
-* 延迟队列：
+  * 通过 `zrevrange key start stop` 逆序获取最新发布的微博n条。如果在翻页时微博出现新的动态，有序集合也会动态的重新排序。
+  
+* **延迟队列**：
 
   * 当前时间戳+需要延迟的时长做为score，消息内容做为元素；
   * 使用ZADD生产消息，消费者使用ZRANGEBYSCORE获取当前时间之前的数据做轮询处理，消费完后删除。
+  
+* **跳表**：是一种基于链表的数据结构，在数据层的基础上额外添加了多个索引层。使得查询数据时可以跳过某些节点，减少迭代次数。
+
+  ![img](assets/d52a2834349b033b81b1a2b655c7e6d7d539bdab.png)
+
+  * **查询**：如查询元素11，先从最上层的索引层出发，到达5，发现下一个元素是13，大于11，则不会next而是进入下一层查找。下一层的下一个是9，next向后，下一个是13大于11则再次进入下一层，向后找到11。查找的时间复杂度是 `O(logN)`。
+
+  ![img](assets/d009b3de9c82d1587da38b47c003c9dcbc3e4235.png)
+
+  * **插入**：插入的时候，首先要进行查询，然后从最底层开始，插入被插入的元素。然后看看从下而上，是否需要逐层插入。可是到底要不要插入上一层呢？我们都知道，我们想每层的跳跃都非常高效，越是平衡就越好（第一层1级跳，第二层2级跳，第3层4级跳，第4层8级跳）。但是用算法实现起来，确实非常地复杂的，并且要严格地按照2地指数次幂，我们还要对原有地结构进行调整。所以跳表的思路是抛硬币，听天由命，产生一个随机数，50%概率再向上扩展，否则就结束。这样子，每一个元素能够有X层的概率为0.5^(X-1)次方。反过来，第X层有多少个元素的数学期望大家也可以算一下。
+  * **删除**：同插入一样，删除也是先查找，查找到了之后，再从下往上逐个删除。比较简单，就不再赘叙。
 
 
 
-## Redis的过期策略和内存淘汰机制
+## Redis-过期策略和内存淘汰机制
 
 ### 过期策略
 
-* **定性删除**：Redis默认每隔100ms就随机抽取一些设置了过期时间的key，并检查其是否过期，如果过期就删除。所谓的随机抽取就是为了避免大数据量下顺序遍历带来的性能消耗；
+* **定性删除**：Redis默认每隔100ms就随机抽取一些设置了过期时间的key，并检查其是否过期，如果过期就删除。所谓的随机抽取就是为了避免大数据量下顺序遍历带来的性能消耗。
 * **惰性删除**：定期删除可能会导致很多过期key到了时间却没有被删除，所以就引入了惰性删除。所谓的惰性删除就是过期却没被定性删除的key等到再次被访问的时候删除。
 
-* 如果定性删除漏掉了很多的key，这些key也没有被及时的访问，无法惰性删除。此时可能会有大量的key堆积在内存中，导致Redis的内存块耗尽。所以就引入了内存淘汰机制来解决这个问题；
+* **内存淘汰**：如果定性删除漏掉了很多的key，这些key也没有被及时的访问，无法惰性删除。此时可能会有大量的key堆积在内存中，导致Redis的内存块耗尽。所以就引入了内存淘汰机制来解决这个问题。
 
 
 
@@ -12984,163 +13078,235 @@ SELECT c1 FROM t WHERE c1 BETWEEN 10 and 20 FOR UPDATE;
   * `save 900 1` 在900秒即15min后，如果至少有1个key发生了变化，Redis就会自动触发BGSAVE命令创建快照；
   * `save 300 10	` 在300秒即5min后，如果至少有10个key发生了变化，Redis就会自动触发BGSAVE命令创建快照；
   * `save 60 10000` 在60秒即1min后，如果至少有10000个key发生了变化，Redis就会自动触发BGSAVE命令创建快照。
-* RDB的优缺点：
+* **RDB的优缺点**：
 
 
 
 ### 只追加文件（AOF）
 
 * AOF持久化方式的本质就是写命令日志，当Redis每执行一条会更改数据的命令时，就会将该命令写入硬盘中的AOF文件。每当服务器重启后，就将AOF中的命令重新执行一遍以还原内存状态。
-* Redis默认不开启AOF，可以通过添加参数 `appendonly yes` 开启；
+* Redis默认不开启AOF，可以通过添加参数 `appendonly yes` 开启。
 * 在Redis的配置文件中存在三种不同的AOF持久化方式：
   * `appendfsync always`：每次有数据修改发生时都会写入AOF文件，但这样会严重影响性能；
   * `appendfsync everysec`：每秒同步一次，显示的将多个写命令同步到硬盘。为了兼顾数据和性能，可以选择该选项，让Redis每秒同步一次AOF文件，Redis的性能不会受什么大影响，而且即使出现了系统崩溃，用户最多也只会丢失一秒内产生的数据；
-  * `appendfsync no`：让操作系统决定何时进行同步。
-* AOF的优缺点：
+  * `appendfsync no`：让系统决定何时进行同步。
+* **AOF的优缺点**：
 
 
 
 ### Redis4.0的混合持久化策略
 
-* 通过配置项 `aof-use-rdb-preamble` 开启RDB和AOF的混合持久化；
-* 如果混合持久化被开启，则AOF重写的时候就直接把RDB的内容写到AOF文件开头。这样做的好处是可以结合RDB和AOF的优点，快速加载同时避免丢失过多的数据。缺点就是AOF文件中的RDB部分是压缩格式存储的，可读性较差；
-* AOF重写：
+* 通过配置项 `aof-use-rdb-preamble` 开启RDB和AOF的混合持久化。
+* 如果混合持久化被开启，则AOF重写的时候就直接把RDB的内容写到AOF文件开头。这样做的好处是可以结合RDB和AOF的优点，快速加载同时避免丢失过多的数据。缺点就是AOF文件中的RDB部分是压缩格式存储的，可读性较差。
+* **AOF重写**：
   * 重写机制可以产生一个新的文件，这个新AOF文件和原有的AOF文件所保存的数据库状态一样，但体积更小；
   * 该功能其实是通过读取数据库中的键值对来实现的，程序无须对现有的AOF文件进行任何的读取、分析和写入操作；
   * 在执行 `BGREWRITEAOF` 命令时，Redis服务器会维护一个AOF重写缓冲区，该缓冲区会在子进程创建新AOF文件期间，去记录服务器执行的所有写命令。当子进程完成创建新AOF文件的工作后，服务器会将重写缓冲区中的所有内容追加到新AOF文件的末尾，使得新旧两个AOF文件所保存的数据库状态一致。最后，服务器用新AOF替换旧AOF，以此来完成AOF文件的重写操作。
 
 
 
-## Redis-缓存雪崩/穿透/击穿问题
+## Redis-缓存雪崩/穿透/击穿
 
 ### 缓存雪崩
 
-* 缓存同一时间大面积的失效，导致在高并发的场景下，大量的请求全部落到数据库上，造成数据库在短时间内承受超量的请求而崩溃。缓存短时间内大规模失效的原因与key的超时时间设置有关，即大量的key被同时写入缓存，也被同时设置了相同的超时时间。
+**概念**：缓存同一时间大面积的失效，导致在高并发的场景下，大量的请求全部落到数据库上，造成数据库在短时间内承受超量的请求而崩溃。缓存短时间内大规模失效的原因与key的超时时间设置有关，即大量的key被同时写入缓存，也被设置了相同的超时时间。
 
-* 解决方法：
+**解决方法**：
 
-  ![image-20201119213746694](assets/image-20201119213746694.png)
+* **事前**：Redis高可用、主从+哨兵、Redis Cluster、内存淘汰、超时时间添加随机值；
+* **问题发生时**：本地缓存 + 限流&服务降级，避免数据库崩溃；
+* **事后**：Redis重启后利用持久化机制快速恢复缓存。
 
-  * 事前：Redis高可用、主从+哨兵、Redis Cluster、内存淘汰、超时时间添加随机值；
-  * 事中：本地ehcache缓存 + 限流&服务降级，避免数据库崩溃；
-  * 事后：Redis重启后利用持久化机制快速恢复缓存。
+![image-20201119213746694](assets/image-20201119213746694.png)
 
 
 
 ### 缓存穿透
 
-* 所谓的穿透就是请求越过缓存直接落在数据库上，当大量请求访问一个缓存和数据库中均没有的key时，请求会全部落在数据库上（因为数据库中也没有，所以不会写缓存，会直接通过数据库返回），导致缓存无法发挥作用。
+**概念**：所谓的穿透就是请求越过缓存直接落在数据库上，当大量请求访问一个缓存和数据库中均没有的key时，请求会全部落在数据库上（因为数据库中也没有，所以不会写缓存，会直接通过数据库返回），导致缓存无法发挥作用。
 
-* 正常缓存处理流程：
+**正常缓存处理流程**：
 
-  ![image-20201119215039512](assets/image-20201119215039512.png)
+![image-20201119215039512](assets/image-20201119215039512.png)
 
-* 缓存穿透情况处理流程：
+**缓存穿透情况处理流程**：
 
-  ![image-20201119215126484](assets/image-20201119215126484.png)
+![image-20201119215126484](assets/image-20201119215126484.png)
 
-* 解决方法：
+**解决方法**：
 
-  * **缓存无效的key**：如果缓存和数据库都查不到某个key，就不管其是否存在都将写入Redis缓存并设置超时，这种方式可以解决请求的key变化不频繁的情况。但如果面临恶意攻击的情况，每个请求构建不同的key，就会导致Redis中缓存大量无效的key，所以不能完全的解决问题。
+* **缓存无效的key**：如果缓存和数据库都查不到某个key，就不管其是否存在都写入Redis缓存并设置超时，这种方式可以解决请求的key变化不频繁的情况。但如果面临恶意攻击的情况，每个请求构建不同的key，就会导致Redis中缓存大量无效的key，所以不能完全的解决问题。
 
-  * **布隆过滤器**：通过该数据结构可以判断一个给定的数据是否存在于海量数据中。首先把所有可能存在的请求的值都存放在布隆过滤器中，当用户请求发送过来，就会先判断用户请求的值是否存在于布隆过滤器中，若不存在的话直接返回非法key，若存在的话走正常处理流程。
+* **布隆过滤器**：通过该数据结构可以判断一个给定的数据是否存在于海量数据中。首先把所有可能存在的请求的值都存放在布隆过滤器中，当用户请求发送过来，就会先判断用户请求的值是否存在于布隆过滤器中，若不存在的话直接返回非法key，若存在的话走正常处理流程。
 
-    ![image-20201120111746992](assets/image-20201120111746992.png)
+![image-20201120111746992](assets/image-20201120111746992.png)
 
 
 
 ### 布隆过滤器
 
-* **布隆过滤器（Bloom Filter）**，是由二进制向量（位数组）和一系列随机映射函数（哈希散列）两部分组成的数据结构。优点是其占用空间和效率方面相对更高，缺点是返回结果是概率性的（与元素越多，误报的可能性就越大），而不是非常准确的，且存放在其中的数据不容易删除。
-* 其中位数组中的每个元素都只占用1bit，且每个元素只能是0或1。以这种方式申请一个100w元素的位数组只会占用 `1000000bit/8 = 125000byte = 125000/1024kb ≈ 122kb` 的空间。
-* 使用原理：
-  * 在使用布隆过滤器之前，位数组会初始化，即所有元素都置为0。当要将一个字符串存入其中时，先通过多个哈希函数对字符串生成多个哈希值，然后将数组对应位置的元素置为1。
-  * 若要判断某个字符串是否存在于布隆过滤器中时，只需要对给定的字符串进行相同的哈希计算，然后以此获取数组中对应位置的元素，若所有位置上的元素都为1，则说明字符串已经存在，若有一个值不为1，则说明字符串不存在。
-* 注意：但哈希函数也存在哈希碰撞的可能性，即不同的字符串可能计算出的哈希位置相同（可以相应的增加位数组大小或调整哈希函数）。因此，布隆过滤器判断数据是否存在有小概率会误判，但判断数据是否不存在一定会成功。
+**布隆过滤器（Bloom Filter）**：是由二进制向量（位数组）和一系列随机映射函数（哈希散列）两部分组成的数据结构。优点是其占用空间和效率方面相对更高，缺点是返回结果是概率性的（元素越多，误报的可能性就越大），而不是非常准确的，且存放在其中的数据不容易删除。其中位数组中的每个元素都只占用1bit，且每个元素只能是0或1。以这种方式申请一个100w元素的位数组只会占用 `1000000bit/8 = 125000byte = 125000/1024kb ≈ 122kb` 的空间。
 
-* 使用场景：
+**使用原理**：
 
-  * 判断给定的数据是否存在于海量的数据集中，如：防止缓存穿透（判断请求的数据是否有效，避免绕过缓存去请求数据库）、垃圾邮件过滤、黑名单功能等；
-  * 对大量数据集进行去重操作。
+* 在使用布隆过滤器之前，位数组会初始化，即所有元素都置为0。当要将一个字符串存入其中时，先通过多个哈希函数对字符串生成多个哈希值，然后将数组对应的多个位置上的元素置为1。
+* 若要判断某个字符串是否存在于布隆过滤器中时，只需要对给定的字符串进行相同的哈希计算，然后以此获取数组中对应位置的元素，若所有位置上的元素都为1，则说明字符串已经存在，若有一个值不为1，则说明字符串不存在。
 
-* Java实现布隆过滤器：
+**注意**：但哈希函数也存在哈希碰撞的可能性，即不同的字符串可能计算出的哈希位置相同（可以相应的增加位数组大小或调整哈希函数）。因此，布隆过滤器判断数据是否存在有小概率会误判，但判断数据是否不存在一定会成功。
 
-  ```JAVA
-  import java.util.BitSet;
-  
-  public class BloomFilter {
-      
-      private static final int DEFAULT_SIZE = 2 << 24;	// 位数组大小
-      private static final int[] SEEDS = new int[]{3, 13, 46, 71, 91, 134};	// 通过不同的随机数种子生成6种hash函数
-      private BitSet bits = new BitSet(DEFAULT_SIZE);	// 位数组
-      private SimpleHash[] func = new SimpleHash[SEEDS.length];	// hash函数数组
+**使用场景**：
+
+* 判断给定的数据是否存在于海量的数据集中，如：防止缓存穿透（判断请求的数据是否有效，避免绕过缓存去请求数据库）、垃圾邮件过滤、黑名单功能等；
+* 对大量数据集进行去重操作。
+
+**Java实现布隆过滤器**：
+
+```JAVA
+import java.util.BitSet;
+
+public class BloomFilter {
     
-      // 初始化hash函数数组，包含多个不同的hash函数
-      public BloomFilter() {
-          for (int i = 0; i < SEEDS.length; i++) {
-      		func[i] = new SimpleHash(DEFAULT_SIZE, SEEDS[i]);
-          }
-      }
-      
-      // 添加元素到位数组
-      public void add(Object value) {
-          for (SimpleHash f : func) {
-              bits.set(f.hash(value), true);
-          }
-      }
-      
-      // 判断元素是否在位数字中存在
-      public boolean contains(Object value) {
-   		boolean ret = true;
-          for (SimpleHash f : func) {
-              ret = ret & bits.get(f.hash(value));
-          }
-          return ret;
-      }
-      
-      public static class SimpleHash {
-          
-          private int cap;
-          private int seed;
-      	
-          public SimpleHash(int cap, int seed) {
-              this.cap = cap;
-              this.seed = seed;
-          }
-          
-          // hash操作
-          public int hash(Object value) {
-              int h;
-              return (value == null) ? 0 : Math.abs(seed * (cap-1) & ((h = value.hashCode()) ^ (h >>> 16)));
-          }
-      }
-  }
-  ```
+    // 位数组大小
+    private static final int DEFAULT_SIZE = 2 << 24;
+    // 通过不同的随机数种子生成6种hash函数
+    private static final int[] SEEDS = new int[]{3, 13, 46, 71, 91, 134};
+   	// 位数组
+    private BitSet bits = new BitSet(DEFAULT_SIZE);
+    // hash函数数组
+    private SimpleHash[] func = new SimpleHash[SEEDS.length];
+  
+    // 初始化hash函数数组，包含多个不同的hash函数
+    public BloomFilter() {
+        for (int i = 0; i < SEEDS.length; i++) {
+    		func[i] = new SimpleHash(DEFAULT_SIZE, SEEDS[i]);
+        }
+    }
+    
+    // 添加元素到位数组
+    public void add(Object value) {
+        for (SimpleHash f : func) {
+            bits.set(f.hash(value), true);
+        }
+    }
+    
+    // 判断元素是否在位数组中存在
+    public boolean contains(Object value) {
+ 		boolean ret = true;
+        for (SimpleHash f : func) {
+            ret = ret & bits.get(f.hash(value));
+        }
+        return ret;
+    }
+    
+    public static class SimpleHash {
+        
+        private int cap;
+        private int seed;
+    	
+        public SimpleHash(int cap, int seed) {
+            this.cap = cap;
+            this.seed = seed;
+        }
+        
+        // hash操作
+        public int hash(Object value) {
+            int h;
+            return (value == null) ? 0 : Math.abs(seed * (cap-1) & ((h = value.hashCode()) ^ (h >>> 16)));
+        }
+    }
+}
+```
 
 
 
 ### 缓存击穿
 
-* 所谓的缓存击穿就是某个热点key访问非常频繁，处于集中式高并发访问的情况，当这个key超时失效的瞬间，大量的请求就击穿了缓存，直接请求数据库，给数据库巨大的压力。
-* 解决方法：
-  * 若缓存的数据基本不会发生更新，则可将热点key设置为**永不过期**；
-  * 若缓存的数据更新不频繁，且缓存刷新的整个流程耗时较少，则可以采用基于Redis、Zookeeper等分布式中间件的**分布式锁**，或者本地互斥锁以保证仅有少量的请求能进入数据库并重新构建缓存，其余线程则在锁释放后能访问到新缓存；
-  * 若缓存的数据更新频繁或者在缓存刷新的流程耗时较长的情况下，可以利用**定时线程**在缓存过期前主动的重新构建缓存或者延后缓存的过期时间，以保证所有的请求能一直访问到对应的缓存。
+**概念**：所谓的缓存击穿就是某个热点key访问非常频繁，处于集中式高并发访问的情况，当这个key超时失效的瞬间，大量的请求就击穿了缓存，直接请求数据库，给数据库巨大的压力。
+
+**解决方法**：
+
+* 若缓存的数据基本不会发生更新，则可将热点key设置为**永不过期**；
+* 若缓存的数据更新不频繁，且缓存刷新的整个流程耗时较少，则可以采用基于Redis、Zookeeper等分布式中间件的**分布式锁**，或者本地互斥锁以保证仅有少量的请求能进入数据库并重新构建缓存，其余线程则在锁释放后能访问到新缓存；
+* 若缓存的数据更新频繁或者在缓存刷新的流程耗时较长的情况下，可以利用**定时线程**在缓存过期前主动的重新构建缓存或者延后缓存的过期时间，以保证所有的请求能一直访问到对应的缓存。
 
 
 
 ## Redis-并发竞争的问题
 
-* 所谓的并发竞争指的是多个用户同时对一个key进行操作，造成最后执行的顺序和期望的顺序不同，导致结果不同。
-* 分布式锁解决方法：推荐使用Zookeeper实现的分布式锁来解决，当客户端需要对操作加锁时，在zk上与该操作对应的节点的目录下，生成一个唯一的瞬时有序节点，判断是否获取锁的方式就是去判断有序节点中序号最小的一个，当释放锁时，只需要将这个瞬时节点删除即可。
+**概念**：所谓的并发竞争指的是多个用户同时对一个key进行操作，造成最后执行的顺序和期望的顺序不同，导致结果不同。
+
+**分布式锁解决方法**：推荐使用Zookeeper实现的分布式锁来解决，当客户端需要对操作加锁时，在Zookeeper上与该操作对应的节点的目录下，生成一个唯一的瞬时有序节点，判断是否获取锁的方式就是去判断有序节点中序号最小的一个。当释放锁时，只需要将这个瞬时节点删除即可。
+
+![zookeeper-distributed-lock](assets/zookeeper-distributed-lock.png)
 
 
 
-## Redis-保证缓存和数据库的双写时一致性
+## Redis-双写一致性
+
+**⼀般情况下使用缓存的过程**：先读缓存，缓存没有的话，就读数据库，然后取出数据后放⼊缓存，同时返回响应。这种⽅式很明显会存在缓存和数据库的数据不⼀致的情况。即只要使用了缓存，就可能会涉及到缓存与数据库双存储双写，就会有数据⼀致性的问题。
+
+* 如果先删除了缓存，还没来得及写入数据库，另一个线程就读取缓存，发现为空则读取数据库并写入缓存，此时缓存中为过期数据；
+* 如果先写入了数据库，在删除缓存之前写线程出现问题，导致缓存未成功删除，此时缓存中也是过期数据；
+
+**解决方法**：
+
+* ⼀般来说，如果系统不是严格要求缓存+数据库必须⼀致性的话，缓存可以稍微的跟数据库偶尔有不⼀致的情况。
+* 一种方法是，读请求和写请求串行化，串到⼀个内存队列⾥去，这样就可以保证⼀定不会出现不⼀致的情况，但串行化后，就会导致系统的吞吐量⼤幅度的降低，用比正常情况下多⼏倍的机器去⽀撑线上的⼀个请求。  
+* 另一种方法是通过第三方的消息队列，当数据库数据发生更新后发送消息给MQ，异步更新缓存。
+
+
 
 ## Redis-主从架构
 
+### 基本概念
+
+单机的Redis，能够承载的QPS大概就在上万到几万不等。对于缓存来说，一般都是用来支撑并发读的。因此出现了主从（master-slave）架构，即一个主节点多从节点，主负责写，并且将数据复制到从节点。而从节点负责读，所有的读请求全部走从节点。这样可以很轻松实现水平扩容，支撑并发读请求。
+
+![Redis-master-slave](assets/redis-master-slave.png)
+
+
+
+### Replication
+
+**特点**：
+
+- Redis采用异步方式复制数据到slave节点；
+- 一个master可以配置多个slave；
+- slave可以连接其他的slave；
+- slave进行复制时，不会阻塞master的正常工作；
+- slave进行复制时，也不会阻塞对自己的查询操作，它会用旧的数据集来提供服务。但是复制完成后，需要删除旧数据集，加载新数据集，这时就会暂停对外服务；
+- slave主要是用来进行横向扩容、读写分离的。扩容的slave可以提高读的吞吐量。
+
+**注意**：
+
+* 如果采用了主从架构，那么建议开启master的持久化，不建议使用slave作为master的数据热备。因为如果关掉master的持久化后，可能在master宕机重启后数据是空的，然后一经过复制， slave的数据也丢失了。
+* 另外，master各种备份方案也需要做。万一本地所有文件丢失了，从备份中挑选一份RDB去恢复master，这样才能确保启动时是有数据的。即使采用了高可用机制，slave可以自动接管master，也可能出现sentinel还没检测到master failure，master就自动重启了，还是可能导致所有的slave数据被清空。
+
+
+
+### 主从复制
+
+当启动一个slave时，会发送一个 `PSYNC` 命令给master。如果是slave初次连接到master，那么会触发一次 `full resynchronization` 全量复制。此时master会启动一个后台线程，开始生成一份 `RDB` 快照文件，同时还会将从客户端client新收到的所有写命令缓存在内存中。 `RDB` 文件生成完毕后， master会将这个 `RDB` 发送给slave，slave会先写入本地磁盘，然后再从本地磁盘加载到内存中，接着 master 会将内存中缓存的写命令发送到 slave，slave 也会同步这些数据。slave node 如果跟 master node 有网络故障，断开了连接，会自动重连，连接之后 master node 仅会复制给 slave 部分缺少的数据。
+
+![Redis-master-slave-replication](assets/redis-master-slave-replication.png)
+
+
+
 ## Redis-哨兵集群
+
+### 基本概念
+
+哨兵（sentinel）是 Redis 集群架构中非常重要的一个组件，主要有以下功能：
+
+- **集群监控**：负责监控 Redis master 和 slave 进程是否正常工作。
+- **消息通知**：如果某个 Redis 实例有故障，那么哨兵负责发送消息作为报警通知给管理员。
+- **故障转移**：如果 master node 挂掉了，会自动转移到 slave node 上。
+- **配置中心**：如果故障转移发生了，通知 client 客户端新的 master 地址。
+
+哨兵用于实现 Redis 集群的高可用，本身也是分布式的，作为一个哨兵集群去运行，互相协同工作：
+
+- **选举**：故障转移时，判断一个 master node 是否宕机了，需要大部分的哨兵都同意才行，涉及到了分布式选举的问题。
+- **高可用**：即使部分哨兵节点挂掉了，哨兵集群还是能正常工作的。
 
 
 
@@ -13148,31 +13314,201 @@ SELECT c1 FROM t WHERE c1 BETWEEN 10 and 20 FOR UPDATE;
 
 ### Redis分布式锁
 
-* 普通实现，即使用 `SET key value [EX seconds] [PX milliseconds] NX` 创建一个key，做为互斥锁：
-  * `NX`：表示只有key不存在时才会设置成功，如果此时redis中存在这个key，那么设置失败，返回nil；
-  
-  * `EX seconds`：设置key的过期时间，精确到秒级，即seconds秒后自动释放锁；
+#### 普通实现
 
-  * `PX milliseconds`：设置key的过期时间，精确到毫秒级。
-  
-* 加锁：`SET resource_name my_random_value PX 30000 NX`；
-  
-  * 释放锁：
-  
-    ```lua
-    -- 删除key之前先判断释放是自己创建的，即释放自己持有的锁
-    if redis.call('get', KEYS[1]) == ARGV[1] then
-        return redis.call('del', KEYS[1])
-    else
-      return 0
-    end
-    ```
-  ```
-  
-  * 缺点：如果是普通的Redis单实例，会存在单点故障问题。若是Redis主从异步复制，主节点宕机导致还未失效的key丢失，但key还没有同步到从节点，此时切换到从节点，其他用户就可以创建key从而获取锁。
-  ```
-  
-* RedLock算法实现：TODO
+使用 `SET key value [EX seconds] [PX milliseconds] NX` 创建一个key，做为互斥锁。
+
+* **`NX`**：表示只有key不存在时才会设置成功，如果此时redis中存在这个key，那么设置失败，返回0；
+
+* **`EX seconds`**：设置key的过期时间，精确到秒级，即seconds秒后自动释放锁；
+
+* **`PX milliseconds`**：设置key的过期时间，精确到毫秒级。
+
+**加锁**：`SET resource_name my_random_value PX 30000 NX`。
+
+**释放锁**：通过lua脚本执行释放锁的逻辑（在删除key之前先判断是否合法）。
+
+```lua
+-- 删除key之前先判断是否是自己创建的，即释放自己持有的锁
+if redis.call('get', KEYS[1]) == ARGV[1] then
+    return redis.call('del', KEYS[1])
+else
+    return 0
+end
+```
+
+**缺点**：如果是普通的Redis单实例，会存在单点故障问题。若是Redis主从异步复制，主节点宕机导致还未失效的key丢失，但key还没有同步到从节点，此时切换到从节点，其他用户就可以创建key从而获取锁。
+
+**代码示例**：
+
+```java
+@Override
+public String lock() {
+    // 生成UUID用于标识当前线程的锁
+    String uuid = UUID.randomUUID().toString().replaceAll("-", "");
+
+    // 1.执行到此的所有线程都会循环不断的尝试获取锁
+    boolean flag = false;
+    do {
+        // setnx命令只能设置一次，再次设置会操作失败，可以当作lock使用
+        // 添加锁的过期时间，避免发生死锁
+        Boolean lock = this.redisTemplate.opsForValue().setIfAbsent("lock", uuid, 5, TimeUnit.SECONDS);
+        if (lock != null) {
+            flag = lock;
+        }
+    } while (!flag);
+
+    // 2.执行需要加锁的业务逻辑
+    String numStr = this.redisTemplate.opsForValue().get("num");
+    if (!StrUtil.isEmpty(numStr)) {
+        int num = Integer.parseInt(numStr);
+        this.redisTemplate.opsForValue().set("num", String.valueOf(++num));
+    }
+
+    // 3.使用lua脚本判断并删除lock以维持操作的原子性，保证删除当前线程的锁（uuid相同）
+    String script = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+    this.redisTemplate.execute(new DefaultRedisScript<>(script), CollUtil.newArrayList("lock"), uuid);
+
+    return numStr;
+}
+```
+
+
+
+#### 注解+AOP+Redisson方式实现
+
+**注解的定义**：
+
+```java
+@Target(ElementType.METHOD) // 作用于方法
+@Retention(RetentionPolicy.RUNTIME) // 运行时
+@Documented
+public @interface ShopCache {
+
+    /**
+     * redis缓存key的前缀
+     * @return
+     */
+    String prefix() default "";
+
+    /**
+     * 缓存的过期时间，分为单位
+     * @return
+     */
+    int timeout() default 5;
+
+    /**
+     * 防止缓存雪崩指定的随机值范围
+     * @return
+     */
+    int random() default 5;
+}
+```
+
+**AOP环绕模式**：
+
+```java
+@Around("@annotation(com.abigtomato.shop.index.annotation.ShopCache)")  // 指定作用的注解
+public Object around(ProceedingJoinPoint pjp) throws Throwable {
+    MethodSignature signature = (MethodSignature) pjp.getSignature();
+    // 获取目标方法
+    Method method = signature.getMethod();
+
+    // 获取方法的注解
+    ShopCache shopCache = method.getAnnotation(ShopCache.class);
+    String prefix = shopCache.prefix();
+    
+    // 获取方法的参数列表
+    Object[] args = pjp.getArgs();
+    String key = prefix + Arrays.asList(args).toString();
+
+    // 获取方法的返回值
+    Class<?> returnType = method.getReturnType();
+    
+    // 尝试从缓存中获取，若存在直接返回
+    Optional<Object> optional = this.cacheHit(key, returnType);
+    if (optional.isPresent()) {
+        return optional.get();
+    }
+
+    // 获取锁
+    RLock lock = this.redissonClient.getLock("lock" + Arrays.asList(args).toString());
+    lock.lock();
+
+    // 再次尝试从缓存中获取数据
+    // 若是在此之前其他线程已经访问数据库并将数据放入缓存，则需要再次尝试获取缓存，避免重复访问数据库
+    optional = this.cacheHit(key, returnType);
+    if (optional.isPresent()) {
+        lock.unlock();
+        return optional.get();
+    }
+
+    // 执行目标方法
+    Object result = pjp.proceed(args);
+
+    // 获取注解的属性，超时时间和随机数范围
+    int timeout = shopCache.timeout();
+    int random = shopCache.random();
+    
+    // 写入redis缓存，设置的超时时间需要额外加上随机数（防止出现雪崩问题）
+    this.redisTemplate.opsForValue().set(key, JSON.toJSONString(result),
+                                         timeout + new Random().nextInt(random), TimeUnit.MINUTES);
+
+    // 释放锁
+    lock.unlock();
+    return result;
+}
+
+/**
+ * 尝试从缓存中获取数据
+ * @param key
+ * @param returnType
+ * @return
+ */
+private Optional<Object> cacheHit(String key, Class<?> returnType) {
+    String value = this.redisTemplate.opsForValue().get(key);
+    if (StrUtil.isEmpty(value)) {
+        return Optional.empty();
+    }
+    return Optional.of(JSON.parseObject(value, returnType));
+}
+```
+
+**使用注解式缓存**：
+
+```java
+@Override
+@ShopCache(prefix = "index:cates", timeout = 7200, random = 100)    // 自定义缓存注解
+public List<CategoryVO> querySubCategoriesV2(Long pid) {
+    Resp<List<CategoryVO>> listResp = this.shopPmsClient.querySubCategories(pid);
+    return listResp.getData();
+}
+```
+
+
+
+#### 保证分布式锁的可用的条件
+
+* 互斥性：在任意时刻，只有一个客户端能持有锁；
+* 不会发生死锁：即使有一个客户端在持有锁的期间内崩溃而没有主动解锁，也能保证后续其他客户端能获取锁；
+* 加解锁需要同一个客户端：
+  * 每个客户端都需要标识自己的锁，避免误删别人的锁；
+  * 释放其他服务器锁的场景：
+    1. index1获取到lock，业务逻辑没执行完，所拥有的lock过期自动释放；
+    2. index2获取到lock，执行业务逻辑，之后lock过期被释放。
+    3. index3获取到锁，执行业务逻辑；
+    4. 此时index1业务逻辑执行完成，开始调用del释放锁，这时释放的是index3的锁，导致index3的业务只执行1s就被别人释放。
+* 加锁和解锁操作需要原子性：
+  * 解锁时需要先判断是否为当前客户端的锁，然后再删除，这两步操作需要同时成功同时失败。
+  * 解锁操作缺乏原子性的场景：
+    1. index1先判断是否为自己的锁，查询到的lock值确实和自己的uuid相等；
+    2. index1在执行删除操作前，lock刚好过期时间，被redis自动释放；
+    3. index2获取到了自己的lock；
+    4. index1执行删除，此时会把index2的lock删除。
+
+
+
+#### RedLock算法实现
 
 
 
@@ -13264,7 +13600,7 @@ public class ZookeeperSession {
             if (KeeperState.SyncConnected == event.getState()) {
                 connectedSemphore.countDown();
             }
-            // 若监听器发现节点已被删除，就立即解除闭锁的阻塞，让等待自旋等待的线程去抢锁
+            // 若监听器发现节点已被删除，就立即解除闭锁的阻塞，让自旋等待的线程去抢锁
             if (this.latch != null) {
                 this.latch.countDown();
             }
@@ -13440,53 +13776,69 @@ public class ZookeeperDistributedLock implements Watcher {
 
 
 
-### Redis分布式锁和ZK分布式锁的区别
+### 二者的区别
 
-* Redis的分布式锁需要不断去尝试获取锁，比较消耗性能。而zk的分布式锁，在获取不到锁时注册监听器即可，不需要不断的主动尝试获取锁，性能开销小。
-* 当Redis获取锁的客户端挂了，那么只能等待超时时间过期才能释放锁。而zk只是创建了临时znode，只要客户端挂了，znode也就没了，就会自动释放锁。
+* Redis的分布式锁需要不断去尝试获取锁，比较消耗性能。而Zookeeper的分布式锁，在获取不到锁时注册监听器即可，不需要不断的主动尝试获取锁，性能开销小。
+* 当Redis获取锁的客户端挂了，那么只能等待超时时间过期才能释放锁。而Zookeeper只是创建了临时ZNode，只要客户端挂了，ZNode也就没了，就会自动释放锁。
 
 
 
 ## 分布式事务
 
-### 两阶段提交方案（XA方案）
+### XA两阶段提交方案
 
-* 两阶段提交有一个事务管理器的概念，负责协调多个数据库（即资源管理器）的事务，事务管理器先询问各个数据库是否准备提交，如果每个数据库都恢复ok，则正式提交事务，在各个数据库上执行操作，如果其中任何一个数据库回答不ok，则立即回滚事务。
+**概念**：两阶段提交有一个事务管理器的概念，负责协调多个数据库（即资源管理器）的事务，事务管理器先询问各个数据库是否准备提交，如果每个数据库都回复ok，则正式提交事务，在各个数据库上执行操作，如果其中任何一个数据库回答不ok，则立即回滚事务。
 
-  ![distributed-transacion-XA](assets/distributed-transaction-XA.png)
+**缺点**：XA适用于**单应用跨多个数据库**的分布式事务，因为严重依赖于数据库层面来处理复杂的事物，效率很低，不适合高并发场景。一个服务内部出现了跨多个库的访问操作，是不符合微服务的设计规定的，一般来说每个服务只能操作自己对应的一个数据库，如果需要操作其他数据库，必须通过调用目标数据库对应服务提供的接口来实现。
 
-* XA适用于单应用跨多个数据库的分布式事务，因为严重依赖于数据库层面来处理复杂的事物，效率很低，不适合高并发的场景。
-
-* 一个服务内部出现了跨多个库的访问操作，是不符合微服务的设计规定的，一般来说每个服务只能操作自己对应的一个数据库，如果需要操作其他数据库，必须通过调用目标数据库对应服务提供的接口来实现。
+![913887-20160328134232723-1604465391](assets/913887-20160328134232723-1604465391.png)
 
 
 
 ### TCC方案
 
-* TCC是其内部三个阶段首字母的组合：
+**TCC是其内部三个阶段首字母的组合**：
 
-  * Try阶段：该阶段是对各个服务的资源做检测以及对资源进行锁定或者预留；
-  * Confirm阶段：该节点是在各个服务中执行实际的操作；
-  * Cancel阶段：如果任何一个服务的业务方法执行出错，那么就需要进行补偿，就是执行已执行成功的业务逻辑的回滚操作。
+* **Try阶段**：该阶段是对各个服务的资源做检测以及对资源进行锁定或者预留；
+* **Confirm阶段**：该节点是在各个服务中执行实际的操作；
+* **Cancel阶段**：释放Try阶段预留的业务资源。如果任何一个服务的业务方法执行出错，那么就需要进行补偿，就是执行已执行成功的业务逻辑的回滚操作。
 
-  ![distributed-transacion-TCC](assets/distributed-transaction-TCC.png)
+![434101-20180414152822741-1232436610](assets/434101-20180414152822741-1232436610.png)
 
-* TCC的事务回滚实际上是严重依赖于代码来完成补偿操作的。如支付、交易相关的场景，会使用TCC进行严格的代码补偿，保证分布式事务要么全部成功，要么全部复原。
+**TCC业务流程分成两个阶段完成**：
+
+* **第一阶段**：主业务服务分别调用所有从业务的Try操作，并在活动管理器中登记所有从业务服务。当所有从业务服务的Try操作都调用成功或者某个从业务服务的Try操作失败，进入第二阶段。
+* **第二阶段**：活动管理器根据第一阶段的执行结果来执行Confirm或Cancel操作。如果第一阶段所有Try操作都成功，则活动管理器调用所有从业务活动的Confirm操作。否则调用所有从业务服务的Cancel操作。
+
+**例**：Bob 要向 Smith 转账100元，执行一个转账方法，里面依次调用。
+
+* 首先在 Try 阶段，要先检查Bob的钱是否充足，并把这100元锁住，Smith账户也冻结起来；
+* 在 Confirm 阶段，执行远程调用的转账操作；
+* 如果第2步执行成功，那么转账成功，如果第二步执行失败，则调用远程冻结接口对应的回滚方法 （Cancel）。
+
+**缺点**：
+
+* Canfirm和Cancel的**幂等性**很难保证；
+* 这种方式通常在**复杂场景下不推荐使用**，除非是非常简单的场景，非常容易提供回滚的Cancel，而且依赖的服务也非常少的情况；
+* 这种实现方式会造成**代码量庞大，耦合性高**。而且非常有局限性，因为有很多的业务是无法很简单的实现回滚的，如果串行的服务很多，回滚的成本实在太高。
 
 
 
 ### Saga方案
 
-* 业务流程中每个参与者都提交本地事务，若某一个参与者失败，则补偿前面已经成功的参与者。下图中的事务流程，当执行到T3时发生错误，则开始向上依次执行补偿流程T3、T2、T1，直到将所有已修改的数据复原。
+**概念**：业务流程中每个参与者都提交本地事务，若某一个参与者失败，则补偿前面已经成功的参与者。下图中的事务流程，当执行到T3时发生错误，则开始向上依次执行补偿流程T3、T2、T1，直到将所有已修改的数据复原。
+
+**适用场景**：业务流程多、业务流程长，使用TCC的话成本高，同时无法要求其他公司或遗留的系统也遵循TCC。
+
+**优点**：
+
+* 一阶段提交本地事务，无锁，高性能；
+* 参与者可异步执行，高吞吐；
+* 补偿服务易于实现。
+
+**缺点**：不保证事务的隔离性。
 
 ![distributed-transacion-TCC](assets/distributed-transaction-saga.png)
-
-* 适用场景：业务流程多、业务流程长，使用TCC的话成本高，同时无法要求其他公司或遗留的系统也遵循TCC。
-* 优点；
-  * 一阶段提交本地事务，无锁，高性能；
-  * 参与者可异步执行，高吞吐；
-  * 补偿服务易于实现。
-* 缺点：不保证事务的隔离性。
 
 
 
@@ -13503,6 +13855,12 @@ public class ZookeeperDistributedLock implements Watcher {
 
 
 ### 可靠消息最终一致性方案
+
+**概念**：基于消息中间件的两阶段提交往往用在高并发场景下，将一个分布式事务拆分成一个消息事务（A系统的本地事务+发消息）和一个B系统的本地事务。其中B系统的事务是由消息驱动的，只要消息事务成功，证明A事务一定成功，消息也一定发出来了，这时候B会收到消息去执行本地事务。如果本地操作失败，消息会重投，直到B操作成功，这样就变相地实现了A与B的分布式事务。
+
+**特点**：虽然方案能够完成A和B的事务，但是A和B并不是严格一致的，而是最终一致的，在这里牺牲了一致性，换来了性能的大幅度提升。当然，这种方法也是有风险的，如果B一直执行不成功，那么一致性会被破坏，具体要不要使用，还是得看业务能够承担多少风险。
+
+![1567702580183](assets/1567702580183.png)
 
 * A系统发送一个prepared消息到MQ，若消息发送失败则取消操作。若发送成功则执行本地事务，如果成功则通知MQ发送确认消息，失败则通知MQ回滚消息；
 * 如果发送的是确认消息，则此时B系统会接收到确认消息，然后执行本地事务；
@@ -13521,35 +13879,54 @@ public class ZookeeperDistributedLock implements Watcher {
 
 
 
-# Spring/SpringBoot/SpringCloud
+# Spring技术栈
 
-## Spring-概念和特性
+## Spring-基本概念
 
-**什么是Spring框架？**即Spring Framework，是一种轻量级的开发框架，是很多模块的集合，使用这些模块可以提高开发人员的开发效率以及系统的维护性。
+**概念**：
 
-**Spring的特性：**
+* Spring即Spring Framework，是一个轻量级的Java开发框架，目的是为了解决企业级应用开发的业务逻辑层和其他各层的耦合问题。
 
-* 核心技术（Core technologies）：依赖注入（DI）、AOP、事件（events）、资源、i18n、验证、数据绑定、类型转换、SpEL；
-* 测试（Testing）：模拟对象、TestContext框架、Spring MVC测试、WebTestClient；
-* 数据访问（Data Access）：事务、DAO支持、JDBC、ORM、编组XML；
-* Web支持（Spring MVC）：Spring MVC和Spring WebFlux框架；
-* 集成（Integration）：远程处理、JMS、JCA、JMX、电子邮件、任务、调度、缓存；
-* 语言（Languages）：Kotlin、Groovy、动态语言。
+* 是一个分层的多模块的一站式的提高基础架构支持的开源框架，可以提高开发人员的开发效率以及系统的维护性和减少应用开发的复杂性，让Java开发者可以专注于业务逻辑的开发。
+
+**特性**：
+
+* **核心技术（Core technologies）**：依赖注入（DI）、AOP、事件（events）、资源、i18n、验证、数据绑定、类型转换、SpEL；
+* **测试（Testing）**：模拟对象、TestContext框架、Spring MVC测试、WebTestClient；
+* **数据访问（Data Access）**：事务、DAO支持、JDBC、ORM、编组XML；
+* **Web支持（Spring MVC）**：Spring MVC和Spring WebFlux框架；
+* **集成（Integration）**：远程处理、JMS、JCA、JMX、电子邮件、任务、调度、缓存；
+* **语言（Languages）**：Kotlin、Groovy、动态语言。
 
 
 
 ## Spring-重要模块
 
-* Spring Core：基础模块，Spring的其他所有功能都基于该模块，其主要提供IOC依赖注入功能；
-* Spring Aspects：为AspectJ的集成提供支持；
-* Spring AOP：提供了面向切面的编程实现；
-* Spring JDBC：Java数据库连接；
-* Spring JMS：Java消息服务；
-* Spring ORM：用于支持Hibernate等对象关系映射框架；
-* Spring Web：为创建Web应用程序提供支持；
-* Spring Test：提供了对JUnit和TestNG测试的支持。
+* **Spring Core**：基础模块，Spring的其他所有功能都基于该模块，主要包括控制反转（Inversion of Control，IoC）和依赖注入（Dependency Injection，DI）功能；
+* **Spring Beans**：提供了BeanFactory对象工厂，是工厂设计模式的一个经典实现，Spring将其管理的对象称为Bean；
+* **Spring Context**：构建于Core基础上的Context封装，提供了一种框架式的对象访问方法；
+* **Spring JDBC**：提供了JDBC数据库连接的抽象层，消除了原生JDBC编码的繁杂和数据库厂商特有的错误代码解析，用于简化JDBC；
+* **Spring AOP**：提供了面向切面的编程实现，让用户可以自定义拦截器、切点等；
+* **Spring Web**：提供了针对Web应用开发的集成特性，如：文件上传、使用Servlet Listeners进行IoC容器的初始化等；
+* **Spring Test**：主要为测试提供支持，支持使用JUnit或TestNG对Spring组件进行单元测试和集成测试；
+
+* **Spring Aspects**：为AspectJ的集成提供支持；
+* **Spring JMS**：Java消息服务；
+* **Spring ORM**：用于支持Hibernate等对象关系映射框架。
 
 ![Spring的重要模块](assets/Spring的重要模块.png)
+
+
+
+## Spring-设计模式
+
+* **工厂设计模式**：Spring的BeanFactory和ApplicationContext都使用工厂模式创建Bean对象；
+* **代理设计模式**：Spring AOP功能使用了JDK的动态代理和CGLIB字节码生成技术；
+* **单例设计模式**：Spring的Bean对象默认都是单例的；
+* **模板方法设计模式**：Spring的JpaTemplate、RestTemplate和JmsTemplate等都使用了模板方法设计，用于解决代码复用问题；
+* **包装器设计模式**：当项目需要连接多个数据库，且不同的客户在每次访问中根据需要会去访问不同的数据库。这种包装器设计模式可以根据客户的需求动态切换不同的数据源；
+* **观察者设计模式**：Spring的事件驱动模型，如ApplicationListener就是观察者模式的典型应用。定义对象的一对多依赖关系，当一个对象状态发生改变时，所有依赖于它的对象都会得到通知被自动更新；
+* **适配器设计模式**：Spring AOP的增强或通知Advice使用了适配器模式。Spring MVC中的Controller也使用了适配器模式。
 
 
 
@@ -13569,29 +13946,195 @@ public class ZookeeperDistributedLock implements Watcher {
 
 
 
-## Spring-IOC&AOP
+## Spring-IoC
 
-### IOC
+### 基本概念
 
-控制反转（IOC，Inverse of Control）是一种程序的设计思想，即将原本在程序中手动创建的对象的控制权交由Spring框架管理。IOC容器是Spring用来实现IOC的载体，其底层维护了Map结构用于存放对象。
+**概念**：
 
-将对象间的相互依赖交给IOC容器管理，并由其完成对象的注入。这样可以很大程度上简化应用程序的开发流程，把开发流程从复杂的依赖关系中解放出来。
+* 控制反转（IOC，Inverse of Control）是一种程序的设计思想，将原本在程序中手动创建的对象的控制权交由Spring管理，通过IoC容器来实现对象组件的装配和管理，容器底层通过Map结构维护对象。
+* 所谓的控制反转就是对组件对象控制权的转移，从程序代码本身反转到了外部框架。
+* IoC负责创建对象、管理对象（DI）、装配对象、配置对象和管理对象的整个生命周期。
 
-IOC容器就像是一个工厂，当需要创建对象时，只需要写好配置文件或注解即可，将对象的创建过程交给IOC来完成。
+**作用**：
 
-Spring IOC的初始化过程：
+* **简化开发流程**：将对象间的依赖关系交给IoC容器管理，并由其完成对象的注入。这样可以很大程度上简化应用程序的开发流程，把开发者从复杂的依赖关系中解放出来。
+* **解耦**：由独立于应用程序的第三方框架去维护具体的对象。
+* **托管类的生产过程**：
 
-![SpringIOC](assets/SpringIOC.png)
+**优点**：
+
+* 降低应用程序开发的代码量，易于维护；
+* 使应用程序容易测试，单元测试不再需要单例和JNDI查找机制；
+* 最小的代价和最小的代码侵入性使得松散耦合得以实现；
+* 支持加载服务时的饿汉式初始化和懒加载。
 
 
 
-### AOP
+### 实现机制
 
-面向切面编程（AOP，Aspect-Oriented Programming）能够将与业务无关的，却为业务模块所共同调用的逻辑或责任（如事务处理、日志管理、权限控制）封装起来，便于减少系统的重复代码，降低模块的耦合度，有利于为了的可扩展性和可维护性。
+IoC的实现原理就是工厂模式+反射机制：
 
-AOP基于动态代理，如果要代理对象且实现了某个接口，则Spring AOP就会使用JDK Proxy去创建代理对象，而对于没有实现接口的对象，就无法使用JDK Proxy进行代理，这时Spring AOP会使用Cglib生成一个被代理对象的子类做为代理，如下图：
+```java
+interface Fruit {
+    
+	public abstract void eat();
+}
 
-![Spring AOP](assets/Spring AOP.jpg)
+class Apple implements Fruit {
+	
+    public void eat() {
+		System.out.println("Apple");
+	}
+}
+
+class Orange implements Fruit {
+    
+    public void eat(){
+		System.out.println("Orange");
+	}
+}
+
+class Factory {
+    
+    public static Fruit getInstance(String className) {
+        Fruit f = null;
+        try {
+            f = (Fruit) Class.forName(className).newInstance();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return f;
+    }
+}
+
+class Client {
+    
+	public static void main(String[] a) {
+		Fruit f = Factory.getInstance("io.github.example.spring.Apple");
+		if (f != null) {
+			f.eat();
+		}	
+	}
+}
+```
+
+
+
+### 功能支持
+
+* **依赖注入**：从XML配置上来说，即ref标签，对应Spring的RuntimeBeanReference对象。
+* 依赖检查：
+* 自动装配：
+* 支持集合：
+* 指定初始化方法和销毁方法：
+* 支持回调某些方法：
+* **容器**：管理Bean的生命周期，控制着Bean的依赖注入。
+
+
+
+### BeanFactory和ApplicationContext的区别
+
+
+
+
+
+## Spring-Beans
+
+## Spring-注解
+
+## Spring-数据访问
+
+## Spring-AOP
+
+
+
+## Spring-事务
+
+### Spring管理事务的方式
+
+* 编程式事务，即在代码中硬编码；
+* 声明式事务，即在配置文件中配置：
+  * 基于XML的声明式事务；
+  * 基于注解的声明式事务。
+
+
+
+### Spring事务的隔离级别
+
+* TransactionDefinition.ISOLATION_DEFAULT：即使用数据库的默认隔离级别，MySQL的默认隔离级别是REPEATABLE_READ；
+* TransactionDefinition.ISOLATION_READ_UNCOMMITTED：读未提交。最低的隔离级别，允许读取尚未提交的数据变更，可能会导致脏读、幻读和不可重复读；
+* TransactionDefinition.ISOLATION_READ_COMMITTED：读已提交。允许读取并发事务已经提交的数据，可以阻止脏读，但幻读和不可重复读仍有可能发生；
+* TransactionDefinition.ISOLATION_REPEATABLE_READ：可重复读。对同一字段的多次读取结果都是一致的，除非数据是被当前事务所修改，可以阻止脏读和不可重复读，但不能阻止幻读；
+* TransactionDefinition.ISOLATION_SERIALIZABLE：可串行化。最高的隔离级别，让所有事务依次执行，完全避免事务之间产生的相互影响，可以阻止脏读、不可重复读和幻读，但严重影响程序的性能。
+
+
+
+### Spring事务的传播行为
+
+支持当前事务的情况：
+
+* TransactionDefinition.PROPAGATION_REQUIRED：如果当前存在事务，则加入该事务，如果当前没有事务，则创建一个新的事务；
+* TransactionDefinition.PROPAGATION_SUPPORTS：如果当前存在事务，则加入该事务，如果当前没有事务，则以非事务的方式继续执行；
+* TransactionDefinition.PROPAGATION_MANDATORY：如果当前存在事务，则加入该事务，如果当前没有事务，则抛出异常。
+
+不支持当前事务的情况：
+
+* TransactionDefinition.PROPAGATION_REQUIRES_NEW：创建一个新事务，如果当前存在事务，则把新事务挂起；
+* TransactionDefinition.PROPAGATION_NOT_SUPPORTED：以非事务的方式运行，如果当前存在事务，则把当前事务挂起；
+* TransactionDefinition.PROPAGATION_NEVER：以非事务的方式运行，如果当前存在事务，则抛出异常。
+
+其他情况：TransactionDefinition.PROPAGATION_NESTED：如果当前存在事务，则创建一个事务做为当前事务的嵌套事务来运行，如果当前没有事务，则等价于TransactionDefinition.PROPAGATION_REQUIRED。
+
+
+
+### @Transactional(rollback=Exception.class)注解
+
+当@Transactional注解作用于类上时，该类的所有public方法都将具有该类型的事务属性，同时也可以在方法级别使用该注解，被注解表示的类或方法一旦抛出异常，就会回滚。在@Transactional中如果不指定rollback属性，那么只有在遇到RuntimeException运行时异常时才会回滚，指定rollback=Exception.class时会让事务在遇到非运行时异常时也能回滚。
+
+
+
+## SpringMVC-基本概念
+
+## SpringMVC-核心组件
+
+## SpringMVC-工作流程
+
+## SpringMVC-注解
+
+## SpringMVC-其他特性
+
+## SpringBoot-基本概念
+
+## SpringBoot-配置
+
+## SpringBoot-安全
+
+## SpringBoot-监视器
+
+## SpringBoot-整合
+
+## SpringBoot-其他特性
+
+## SpringCloud-基本概念
+
+## SpringCloud-整体架构
+
+## SpringCloud-核心组件
+
+## MyBatis-基本概念
+
+## MyBatis-运行原理
+
+## MyBatis-映射器
+
+## MyBatis-高级查询
+
+## MyBatis-动态SQL
+
+## MyBatis-插件模块
+
+## MyBatis-多级缓存
 
 
 
@@ -13675,64 +14218,9 @@ MVC是一种设计模式，Spring MVC就是基于了这种设计模式的框架�
 
 
 
-## Spring-用到的设计模式
+## Spring-IoC源码分析
 
-* 工厂设计模式：Spring的BeanFactory、ApplicationContexttong使用工厂模式创建bean对象；
-* 代理设计模式：Spring AOP功能基于动态代理实现；
-* 单例设计模式：Spring的Bean对象默认都是单例的；
-* 模板方法设计模式：Spring的jdbTemplate、hibernateTemplate等以Template结尾的对数据库操作的类，使用了模板方法；
-* 包装器设计模式：当项目需要连接多个数据库，且不同的客户在每次访问中根据需要会去访问不同的数据库。这种包装器设计模式可以根据客户的需求动态切换不同的数据源；
-* 观察者设计模式：Spring的事件驱动模型就是观察者模式的典型应用；
-* 适配器设计模式：Spring AOP的增强或通知Advice使用了适配器模式。Spring MVC中的Controller也使用了适配器模式。
-
-
-
-## Spring-事务
-
-### Spring管理事务的方式
-
-* 编程式事务，即在代码中硬编码；
-* 声明式事务，即在配置文件中配置：
-  * 基于XML的声明式事务；
-  * 基于注解的声明式事务。
-
-
-
-### Spring事务的隔离级别
-
-* TransactionDefinition.ISOLATION_DEFAULT：即使用数据库的默认隔离级别，MySQL的默认隔离级别是REPEATABLE_READ；
-* TransactionDefinition.ISOLATION_READ_UNCOMMITTED：读未提交。最低的隔离级别，允许读取尚未提交的数据变更，可能会导致脏读、幻读和不可重复读；
-* TransactionDefinition.ISOLATION_READ_COMMITTED：读已提交。允许读取并发事务已经提交的数据，可以阻止脏读，但幻读和不可重复读仍有可能发生；
-* TransactionDefinition.ISOLATION_REPEATABLE_READ：可重复读。对同一字段的多次读取结果都是一致的，除非数据是被当前事务所修改，可以阻止脏读和不可重复读，但不能阻止幻读；
-* TransactionDefinition.ISOLATION_SERIALIZABLE：可串行化。最高的隔离级别，让所有事务依次执行，完全避免事务之间产生的相互影响，可以阻止脏读、不可重复读和幻读，但严重影响程序的性能。
-
-
-
-### Spring事务的传播行为
-
-支持当前事务的情况：
-
-* TransactionDefinition.PROPAGATION_REQUIRED：如果当前存在事务，则加入该事务，如果当前没有事务，则创建一个新的事务；
-* TransactionDefinition.PROPAGATION_SUPPORTS：如果当前存在事务，则加入该事务，如果当前没有事务，则以非事务的方式继续执行；
-* TransactionDefinition.PROPAGATION_MANDATORY：如果当前存在事务，则加入该事务，如果当前没有事务，则抛出异常。
-
-不支持当前事务的情况：
-
-* TransactionDefinition.PROPAGATION_REQUIRES_NEW：创建一个新事务，如果当前存在事务，则把新事务挂起；
-* TransactionDefinition.PROPAGATION_NOT_SUPPORTED：以非事务的方式运行，如果当前存在事务，则把当前事务挂起；
-* TransactionDefinition.PROPAGATION_NEVER：以非事务的方式运行，如果当前存在事务，则抛出异常。
-
-其他情况：TransactionDefinition.PROPAGATION_NESTED：如果当前存在事务，则创建一个事务做为当前事务的嵌套事务来运行，如果当前没有事务，则等价于TransactionDefinition.PROPAGATION_REQUIRED。
-
-
-
-### @Transactional(rollback=Exception.class)注解
-
-当@Transactional注解作用于类上时，该类的所有public方法都将具有该类型的事务属性，同时也可以在方法级别使用该注解，被注解表示的类或方法一旦抛出异常，就会回滚。在@Transactional中如果不指定rollback属性，那么只有在遇到RuntimeException运行时异常时才会回滚，指定rollback=Exception.class时会让事务在遇到非运行时异常时也能回滚。
-
-
-
-## Spring-IOC源码分析
+源码注释：
 
 ```JAVA
 BeanNameAware's setBeanName
@@ -14128,14 +14616,6 @@ public void preInstantiateSingletons() throws BeansException {
     }
 }
 ```
-
-
-
-
-
-## Spring-AOP源码分析
-
-
 
 
 
@@ -15140,26 +15620,6 @@ B树中允许一个结点中包含多个key，看具体情况实现。假设一�
 
 ![image-20201208115929957](assets/image-20201208115929957.png)
 
-**B树在磁盘文件中的应用**：
-
-在程序中不可避免的会存在通过IO操作磁盘中存储的文件，而操作系统操作磁盘上的文件是通过文件系统进行操作的，在文件系统中就使用了B树。
-
-磁盘：是一种能够大量保存数据（GB到TB级别），但读取速度较慢（因为涉及到机器操作，读取速度为毫秒级）的硬件存储器。
-
-磁盘是由盘片构成，每个盘片有两个面，称为盘面。盘片中央有一个可以旋转的主轴，会让盘片以固定的速度旋转（通常是5400 rpm或7200 rpm），一个磁盘中包含多个这样的盘片并封装在一个密闭的容器中。盘片的每个表面是由一组称为磁道的同心圆组成，每个磁道被划分为一组扇区，每个扇区包含相等数量的数据位（通常是512 byte），扇区之间由一些间隙隔开，这些间隙中不存储数据。
-
-![image-20201208120534728](assets/image-20201208120534728.png)
-
-磁盘是用磁头来读写存储在盘片表面的位，而磁头链接到一个移动臂上，移动臂沿着盘片半径前后移动，可用将磁头定位到任何磁道上，这被称为寻道操作。一旦定位到磁道后，盘片转动，磁道上的每个位经过磁头时，读写磁头就可以感知和修改该位的值。对磁盘的访问时间分为寻道时间、旋转时间和传送时间。
-
-![image-20201208121816618](assets/image-20201208121816618.png)
-
-由于存储介质的特性，磁盘本身的存取速度就慢于主存，再加上机械运动的消耗，因此为了提高效率，要尽量减少磁盘IO，减少读写操作。为了达到这个目的，磁盘往往不会严格的按需读取，而是每次都会预读，即使只需要一个字节，磁盘也会从这个位置开始，顺序向后读取一定长度的数据放入内存，这样做的理论依据是计算机科学中著名的局部性原理（时间、空间局部性）。由于磁盘顺序读取的效率很高（不需要寻道，只需要旋转），因此预读可以提高IO的效率。
-
-页是计算机管理存储器的逻辑块，硬件及操作系统往往将主存和磁盘存储区分割为连续的大小相等的块，每个存储块被称为一页（1024字节或其整数倍），预读的长度一般为页的整数倍。主存和磁盘以页为单位交换数据，当程序要读取的数据不在主存中时，会触发一个缺页异常，此时系统会向磁盘发出信号，磁盘会找到数据的起始位置并向后连续读取一页或几页装入内存中，然后异常中断返回，程序继续执行。
-
-文件系统的设计上利用了磁盘预读的原理，将一个结点大小设为等于一个页，这样每个结点只需要一次IO操作就可以完全载入。那么3层的B树可以容纳 `1024*1024*1024` 将近10亿左右的数据，如果使用二叉树类结构来存储，则需要30层的深度。假设操作系统一次读取一个结点，且根结点保留在内存中，那么B树在10亿个数据中查找目标，只需要3次以内的磁盘IO就可以找到目标，但二叉树类结构如红黑树则需要30次以内的磁盘IO，因此B树做为文件系统的底层结构远远优于二叉树。
-
 
 
 #### B+树
@@ -16135,7 +16595,7 @@ public class BucketSort {
 
 数组arr中右若干元素，其中A元素和B元素相等，并且A元素在B元素前面，如果使用某种排序算法排序后，能够保证A元素依然在B元素的前面，就可以说该算法是稳定的。
 
-![image-20201210100321459](assets/image-20201210100321459.png)
+<img src="assets/image-20201210100321459.png" alt="image-20201210100321459" style="zoom: 67%;" />
 
 常见算法的稳定性：
 
@@ -16145,3 +16605,476 @@ public class BucketSort {
 * **希尔排序**：该排序算法是按照步长对元素分组进行各自的插入排序，虽然单次的插入排序是稳定的，但在不同的插入排序过程中，相同的元素可能会在各自的插入排序中移动，导致稳定性被破坏；
 * **归并排序**：该算法在归并的过程中，只有arr[i]<arr[i+1]才会交换位置，如果两个元素相等则不会改变，所以归并排序也是稳定的；
 * **快速排序**：该算法需要一个基准值，在基准值右侧找一个更小的元素，在基准值左侧找一个更大的元素，然后交换，会破坏稳定性。
+
+
+
+# 大数据相关
+
+## Hadoop-HDFS存储模型
+
+* 文件线性切割成block块，偏移量offset的单位是byte；
+* block块分散存储在集群的各个节点中；
+* 单一文件切分的block块大小是一致的，默认大小为128mb，可以设置block大小；
+* block存在副本，副本分散在不同的节点中，默认副本数是3，可以设置副本数（注：副本数不要设置超过节点数）；
+* 已上传的文件block副本数可以调整，block大小不能变化；
+* hdfs只支持一次写入多次读取，同一时刻只有一个写入者；
+* 文件可以append追加数据，hdfs会新增block块存储新数据，并创建副本；
+* block副本放置策略：
+  * 第一个副本：
+    * 集群内提交：
+      * 放置在上传文件的datanode中。
+    * 集群外提交：
+      * 随机挑选一台磁盘不太慢，cpu不太忙的节点。
+  * 第二个副本：
+    * 放置在与第一个副本不同机架的节点上。
+  * 第三个副本：
+    * 放置在与第二个副本相同机架的节点上。
+  * 更多副本：
+    * 随机挑选节点
+
+
+
+## Hadoop-HDFS架构模型
+
+**HDFS Client**：
+
+* client与namenode交互元数据信息；
+* client与datanode交互文件block数据。
+
+**NameNode（NN）**：
+
+* 保存文件的元数据（如文件大小，时间，block列表，分片位置信息，副本位置信息）；
+* 基于内存存储元数据信息，不会和磁盘发生交换；
+* 持久化：
+  * fsimage：元数据存储到磁盘的文件名为fsimage（内存的快照），fsimage只在集群第一次启动时创建空的文件；
+  * editslog：记录了对元数据的操作日志，每隔一段时间与fsimage合并（执行日志记录的操作），生成新的fsimage。
+
+**DataNode（DN）**：
+
+* 保存文件的block数据在磁盘上，同时存储block的元数据文件（MD5校验是否损坏）；
+* datanode会向namenode上报心跳数据（3秒一次），提交block列表；
+  * 如果namenode10分钟没有收到datanode的心跳，则判定次DN挂掉，从其他DN复制副本到新DN保持副本数。
+
+**SecondaryNameNode（SNN）**：
+
+* 帮助namenode合并fsimage和editslog（避免namenode磁盘IO消费资源）；
+* SNN执行合并的时机：
+  * 根据配置文件的时间间隔配置项fs.checkpoint.period，默认3600秒；
+  * 根据配置文件设置editslog大小配置项fs.checkpoint.size规定，edits文件的最大默认值为64mb。
+
+
+
+## Hadoop-HDFS读/写流程
+
+**写流程**：
+
+* client端将要写入的文件进行切分，block大小128mb；
+* 与NN交互获取第一个block副本存放的DN列表；
+* 将切分后的block再次切分为小文件，小文件大小为64kb；
+* client根据从NN获取的DN列表，与其中DN交互，将小文件进行流式传输；
+* 第一个DN接收到文件后流式传输副本到下一个DN，以pipeline的方式依次类推直到所有存放副本的DN都将副本写入完毕为止；
+* block传输结束后：
+  * DN向NN汇报block的信息，NN进行元数据的存储；
+  * DN向client汇报写入完成；
+  * client向NN汇报写入完成。
+* client获取下一个block存放的DN列表，反复执行流式传输，直到文件的block全部写入完毕；
+* 最终client汇报完成；
+* NN会在写流程更新文件状态。
+
+**读流程**：
+
+* 与NN建立通信，获取一部分block副本的位置列表；
+* 线性的从DN获取block，最终合并为一个文件；
+* 在block副本列表中按距离择优选择DN。
+
+
+
+## Hadoop-HA高可用集群
+
+**HDFS 2.x**
+
+* 解决单点故障：
+  * HDFS HA（高可用）：通过主备NN解决，Active NN发生故障，切换到Standby NN。
+* 解决内存受限：
+  * HDFS Federation（联邦）：水平扩展支持多个NN，所有NN共享DN的存储资源，每个NN分管一部分的目录树结构（保存元数据）。
+
+**HadoopHA 架构：**
+
+* client与NN Active交互元数据，与DN交互block块，但不与NN Standby做交互；
+* 所有的DN会同时向两个NN汇报block位置信息；
+* NN Active会将元数据写入JournalNode集群（NN之间数据共享），JNN集群过半的节点返回成功消息则代表NN写入成功；
+* NN Standby会读取JNN中的元数据，和NN Active保持数据同步；
+* 两台NN节点中都存在Zookeeper Failover Controller（ZK的客户端进程）进程，ZKFC进程会与NN和ZK集群两端通信，与NN通信的进程监控NN的健康状态，这两个进程会在ZK集群的目录树结构中争抢创建文件的权利，当某个ZKFC进程成功创建文件，那这个进程管理的NN就是NN Active；
+* 当NN Active挂掉，ZKFC进程接收不到心跳，会立即将ZK目录树节点上的文件删除产生事件触发回调，ZKFC Standby进程监听该事件（等待），一但发生事件，ZK将回调ZKFC Standby进程，在ZK集群中创建文件，并将NN Standby提升为NN Active，此时由此节点为client提供服务；
+* 当ZKFC Active挂掉，ZK集群的session机制会启动，此时ZKFC Active与ZK集群的socket通信会断开，ZK集群会进行倒计时，计时完毕会产生事件回调，ZKFC Standby创建文件并提升NN Standby为NN Active（两个ZKFC进程还存在隐藏的与对方NN的通信，在提升自己管理的NN为主时会先尝试将对方的NN降级）。
+
+
+
+## Hadoop-MapReduce原理
+
+**MapTask**：
+
+* Input Split：原始数据通过split逻辑进行分割；
+* Map：多个map按照逻辑对分割后的所有块并行计算，结果会映射成（k，v）格式，并对处理的数据进行分区；
+* Buffer In Memory：map处理后的数据会先写入内存缓冲，累加到100MB时会溢写到磁盘；
+* Sort：写入磁盘会落地成小文件，小文件内部按照快速排序对相同key的数据分组；
+* Merge：所有小文件会通过归并排序合并成一个文件，并行计算的map task阶段会产生多个文件，文件由reduce处理。
+
+**ReduceTask**：
+
+* Merge：reduce task会从多个map task拉取文件，会将一定数量的文件通过归并算法合并；
+* Merge：合并后的文件会以归并算法传入reduce的逻辑进行处理；
+* Reduce：会按照reduce的逻辑对数据进行处理；
+* Output：将计算后的结果输出。
+
+
+
+## Hadoop-Yarn资源调度集群
+
+**Yarn集群架构**：
+
+* yarn集群属于主从架构：
+  * Resource Manager：管理集群所有的资源
+  * NodeManager：管理本节点的资源，任务，并以心跳的方式向RM汇报
+  * container：计算框架中的所有角色都由container表示，代表节点的资源单位；
+* client提交job后，RM会挑选一台不太忙的节点启动Applocation Master管理当前job的资源调度；
+* AM启动完成会回去向RM汇报，由RM决策job任务移动的目标点（container），NM默认启动线程监控container大小，一旦提交的job任务超出了申请资源的额度，会将job杀死；
+* 由AM决定job任务的阶段（如MR的map和reduce阶段）提交到哪块container执行，并且job任务的执行情况还会汇报给AM；
+* 如果其他的计算框架提交job，RM会在其他节点启动属于该框架的app master，框架之间的资源调度互相隔离。
+
+
+
+## HBase-数据模型
+
+| Row Key  | Time Stamp | CF1          | CF2         | CF3         |
+| -------- | ---------- | ------------ | ----------- | ----------- |
+|          | T6         |              | CF2:q1=val1 | CF3:q3=val3 |
+| 11248112 | T3         |              |             |             |
+|          | T2         | CF1：q2=val2 |             |             |
+
+**Row Key（行键）**：
+
+* 决定一行数据，相当于主键；
+* 写数据时按照字典顺序插入（ASCII排序）；
+* 行键只能存储64k的字节数据（越短越提高检索性能）。
+
+**Time Stamp（时间戳）**：
+
+* 列数据的版本号，当对某一列提交新数据时hbase表通过添加数据并标记版本实现update；
+* 每个列族都可以设置maxversion，表示版本的最大有效数。
+
+**Column Family（列族）& qualifier（列）**：
+
+* HBase表中的每列都归属于列族（列族必须在表创建时预先定义）；
+* 列族存在多个列成员，列族名作为该列族所有列名的前缀，列可以动态添加；
+* HBase将列族数据存储在同一目录下，分多个文件保存。
+
+**Cell（单元格）**：
+
+* 由rowkey与列族：列交叉决定；
+* 单元格表示列数据，存在版本；
+* 内容是未解析的字节数组（字节码）；
+* 由 {row key，column =（<family> + <qualifier>），version} 唯一决定。
+
+
+
+## HBase-架构模型
+
+**Client（客户端）**：
+
+* 访问HBase的接口；
+* 维护cache加快对hbase的访问。
+
+**Zookeeper（分布式协同）**：
+
+* 保证集群中只存在一个HMaster主节点，实现HA（高可用）；
+* 监控Region Server的健康状态，出现宕机等情况会实时通知HMaster进行数据迁移；
+* 存储所有Region的寻址入口；
+* 存储HBase表的元数据信息。
+
+**HMaster（主节点）**：
+
+* 为Region Server从节点分配Region；
+* 对Region Server做负载均衡；
+* 重新分配宕机的Region Server上的Region；
+* 管理用户对表的增删改查。
+
+**HRegion Server（从节点）**：
+
+* 维护Region，处理对Region的IO请求；
+* 负责切分在运行过程中达到阈值的Region（等分原则）。
+
+**HRegion（数据区域）**：
+
+* 一段连续的表数据存储区域（Row Key会顺序排列）；
+* Region中的数据达到某个阈值就会进行水平拆分（同一行的数据一定会存在同一个Region中）。
+
+**Store（列族）**：
+
+* 多个Store组成Region，1个Store对应1个列族；
+* 由1个MemStore组成和0至多个StoreFile组成。
+
+**MemStore（写缓存）**：
+
+* MemStore是Client提交操作进行后Store先写入内存的缓存数据（1个）。
+
+**StoreFile（持久化）**：
+
+* StoreFile是MemStore达到阈值溢写到磁盘（Linux文件系统 or HDFS）的小文件（0或多个）；
+* StoreFile的数量到达阈值时系统会进行合并（minor小范围合并，major大范围合并）；
+* 当一个Region中的所有StoreFile大小数量达到阈值时，会拆分当前的Region，并由HMaster迁移到相应的从节点；
+* Client检索数据会先在MemStore中找，找不到再在StoreFile中找；
+* Store以HFile的格式保存在HDFS中。
+
+**HLog（日志文件）**：
+
+* 存储Client提交数据的动作和数据。
+
+
+
+## Hive-架构模型
+
+* 用户接口：命令行模式（CLI），客户端模式（JDBC），WebUI模式；
+  * 在cli启动的同时会启动hive的副本；
+  * 启动client模式需要指出hive server所在的节点，并在该节点启动hive server。
+* hive的元数据存储在关系型数据库中，如mysql，derby；
+  * hive的元数据包括表的名字，表的列，分区和属性，表的数据所在目录。
+* 解释器、编译器、优化器完成HQL查询语句从词法分析、语法分析、编译、优化以及查询计划的生成；
+  * 生成的查询计划存储在HDFS中，并在随后有MapReduce调用执行。
+* Hive的数据存储在HDFS中，大部分的查询、计算由MapReduce完成（包含\*的查询，比如 ```select * from tbl``` 不会生成MapRedcue任务）；
+* 编译器将一个Hive SQL转换操作符，操作符是Hive的最小的处理单元，每个操作符代表HDFS的一个操作或者一道MapReduce作业。
+
+
+
+## Spark-组成部分
+
+* **Spark Core**：包含 Spark 的基本功能；尤其是定义 RDD 的 API、操作以及这两者上的动作。其他 Spark 的库都是构建在 RDD 和 Spark Core 之上的。
+
+* **Spark SQL**：提供通过 Apache Hive 的 SQL 变体 Hive 查询语言（HiveQL）与 Spark 进行交互的 API。每个数据库表被当做一个 RDD， Spark SQL 查询被转换为 Spark 操作。
+
+* **Spark Streaming**：对实时数据流进行处理和控制。 Spark Streaming 允许程序能够像普通 RDD 一样处理实时数据。
+
+* **Spark Mllib**：一个常用机器学习算法库，算法被实现为对 RDD 的 Spark 操作。这个库包含可扩展的学习算法，比如分类、回归等需要对大量数据集进行迭代的操作。
+
+* **Spark GraphX**：控制图、并行图操作和计算的一组算法和工具的集合。 GraphX 扩展了 RDD API，包含控制图、创建子图、访问路径上所有顶点的操作。
+
+
+
+## Spark-架构模型
+
+* Cluster Manager：制整个集群，监控 worker在 standalone 模式中即为 Master 主节点，控制整个集群，监控 worker。在 YARN 模式中为资源管理器
+* Worker 节点：负责控制计算节点从节点，负责控制计算节点，启动 Executor 或者 Driver。
+* Driver：运行 Application 的 main() 函数。
+* Executor：执行器，是为某个 Application 运行在 worker node 上的一个进程。
+
+
+
+## Spark-编程模型
+
+Spark 应用程序从编写到提交、执行、输出的整个过程如图所示，图中描述的步骤如下：
+
+1. 用户使用 SparkContext 提供的 API（常用的有 textFile、 sequenceFile、 runJob、 stop 等）编写 Driver application 程序。此外 SQLContext、 HiveContext 及 StreamingContext 对 SparkContext 进行封装，并提供了 SQL、 Hive 及流式计算相关的 API；
+2. 使用 SparkContext 提交的用户应用程序，首先会使用 BlockManager 和 BroadcastManager将任务的 Hadoop 配置进行广播。然后由 DAGScheduler 将任务转换为 RDD 并组织成 DAG，DAG 还将被划分为不同的 Stage。最后由 TaskScheduler 借助 ActorSystem 将任务提交给集群管理器（Cluster Manager）；
+3. 集群管理器（ClusterManager）给任务分配资源，即将具体任务分配到Worker上， Worker创建 Executor 来处理任务的运行。 Standalone、 YARN、 Mesos、 EC2 等都可以作为 Spark的集群管理器。 
+
+
+
+## Spark-计算模型
+
+RDD 可以看做是对各种数据计算模型的统一抽象， Spark 的计算过程主要是 RDD 的迭代计算过程。RDD 的迭代计算过程非常类似于管道。分区数量取决于 partition 数量的设定，每个分区的数据只会在一个 Task 中计算。所有分区可以在多个机器节点的 Executor 上并行执行。 
+
+
+
+## Spark-运行流程
+
+1. 构建 Spark Application 的运行环境，启动 SparkContext
+2. SparkContext 向资源管理器（可以是 Standalone， Mesos， Yarn）申请运行 Executor 资源，并启动 StandaloneExecutorbackend，
+3. Executor 向 SparkContext 申请 Task
+4. SparkContext 将应用程序分发给 Executor
+5. SparkContext 构建成 DAG 图，将 DAG 图分解成 Stage、将 Taskset 发送给 Task Scheduler，最后由 Task Scheduler 将 Task 发送给 Executor 运行
+6. Task 在 Executor 上运行，运行完释放所有资源 
+
+
+
+## Spark-RDD模型
+
+1. 创建 RDD 对象；
+2. DAGScheduler 模块介入运算，计算 RDD 之间的依赖关系， RDD 之间的依赖关系就形成了DAG；
+3. 每一个 Job 被分为多个 Stage。划分 Stage 的一个主要依据是当前计算因子的输入是否是确定的，如果是则将其分在同一个 Stage，避免多个 Stage 之间的消息传递开销。
+
+创建RDD：
+
+1. 从 Hadoop 文件系统（或与Hadoop兼容的其他持久化存储系统，如Hive、 Cassandra、
+   HBase）输入（例如 HDFS）创建；
+2. 从父 RDD 转换得到新 RDD；
+3. 通过 parallelize 或 makeRDD 将单机数据创建为分布式 RDD。
+
+转换（Transformation）： Transformation 操作是延迟计算的，也就是说从一个 RDD 转换生成另一个 RDD 的转换操作不是马上执行，需要等到有 Action 操作的时候才会真正触发运算。 
+
+行动（Action）：Action 算子会触发 Spark 提交作业（Job），并将数据输出 Spark 系统。 
+
+
+
+# 微服务认证授权
+
+## Spring security Oauth2认证流程
+
+* 用户请求认证服务完成认证；
+* 认证服务下发用户身份令牌，拥有身份令牌表示身份合法；
+* 用户携带令牌请求资源服务，需要先经过网关；
+* 网关校验用户身份令牌的合法性，不合法则表示未登录，合法则表示放行请求；
+* 资源服务获取令牌，根据令牌完成授权；
+* 资源服务响应资源信息。
+
+![image-20200410114530410](assets/image-20200410114530410.png)
+
+
+
+## JWT令牌授权过程
+
+* 用户携带用户名密码请求认证服务；
+* 认证服务校验后为用户颁发JWT令牌，使用RSA私钥进行加密；
+* 客户端携带令牌访问资源服务，资源服务通过RSA公钥进行解密并校验令牌；
+* 验证完成后根据权限返回相应的资源。
+
+![image-20200410120042191](assets/image-20200410120042191.png)
+
+
+
+## JWT令牌结构
+
+JWT令牌由三部分组成，每部分中间使用点（.）分隔，比如：xxxxx.yyyyy.zzzzz  
+
+* Header：
+
+  * 头部包括令牌的类型（即JWT）及使用的哈希算法（如HMAC SHA256或RSA）；  
+
+  * ```json
+    {
+    	"alg": "HS256",
+    	"typ": "JWT"
+    }
+    ```
+
+  * 将上边的内容使用Base64Url编码，得到一个字符串就是JWT令牌的第一部分。
+
+* Payload：
+
+  * 第二部分是负载，内容也是一个json对象，它是存放有效信息的地方，它可以存放jwt提供的现成字段，比如：iss（签发者）,exp（过期时间戳）, sub（面向的用户）等，也可自定义字段；
+
+  * 此部分不建议存放敏感信息，因为此部分可以解码还原原始内容；
+
+  * 最后将第二部分负载使用Base64Url编码，得到一个字符串就是JWT令牌的第二部分。
+
+  * ```json
+    {
+        "sub": "1234567890",
+        "name": "456",
+        "admin": true
+    }
+    ```
+
+* Signature：
+
+  * 第三部分是签名，此部分用于防止jwt内容被篡改；
+
+  * 这个部分使用base64url将前两部分进行编码，编码后使用点（.）连接组成字符串，最后使用header中声明签名算法进行签名；
+
+  * ```json
+    HMACSHA256(
+    	base64UrlEncode(header) + "." +
+    	base64UrlEncode(payload),
+    	secret
+    )
+    ```
+
+  * base64UrlEncode(header)：jwt令牌的第一部分；
+
+  * base64UrlEncode(payload)：jwt令牌的第二部分；
+
+  * secret：签名所使用的密钥。
+
+
+
+## 用户登录/身份认证
+
+* 用户登录：
+  * 请求认证服务通过认证，生成jwt令牌，将完整令牌信息写入redis，并将身份令牌写入cookie；
+  * 用户访问资源服务，携带cookie经过网关；
+  * 网关从cookie中获取身份令牌，查询redis校验令牌的合法性，不存在则拒绝访问，反之放行；
+* 用户退出：
+  * 先请求认证服务，清除redis中的令牌信息，并删除cookie中的身份令牌。
+
+![image-20200410121207871](assets/image-20200410121207871.png)
+
+
+
+## 认证服务
+
+![image-20200410125103516](assets/image-20200410125103516.png)
+
+
+
+## 用户认证流程
+
+![image-20200410125421435](assets/image-20200410125421435.png)
+
+* 认证服务认证流程：
+  * 认证服务请求用户中心查询用户信息；
+  * 认证服务通过spring security申请令牌；
+  * 认证服务将身份令牌和jwt令牌写入redis；
+  * 认证服务向cookie写入身份令牌。
+* 客户端显示用户信息：
+  * 客户端携带身份令牌请求认证服务获取jwt令牌；
+  * 客户端将jwt令牌存储到SessionStorage；
+  * 客户端从jwt令牌中解析出用户信息并显示在页面。
+* 客户端访问资源服务：
+  * 客户端请求资源服务需要携带两个token，一个是cookie中的身份令牌，一个是http header中的jwt令牌。
+* 网关校验令牌的合法性：
+  * 用户的请求必须携带两个令牌；
+  * 查询redis中的token是否和用户携带的token匹配，若过期则要求重新登录；
+
+
+
+## 用户授权流程
+
+资源服务授权：资源服务校验header中携带的jwt令牌，获取用户拥有的权限，根据权限开放相应的方法访问权限。
+
+![image-20200410130637631](assets/image-20200410130637631.png)
+
+
+
+# Dubbo/gRPC/Thrift
+
+## RPC基本概念
+
+## Dubbo-基本概念
+
+## Dubbo-架构设计
+
+## Dubbo-类似框架
+
+## Dubbo-注册中心
+
+## Dubbo-集群
+
+## Dubbo-配置
+
+## Dubbo-通信协议
+
+## Dubbo-设计模式
+
+## Dubbo-运维管理
+
+## Dubbo-SPI
+
+## Dubbo-其他特性
+
+
+
+# Zookeeper
+
+
+
+# 消息中间件
+
