@@ -14035,192 +14035,79 @@ class Client {
 
 ### BeanFactory和ApplicationContext的区别
 
+BeanFactory和ApplicationContext是Spring的两大核心接口，都可以做为Spring容器。其中ApplicationContext是BeanFactory的子接口。
 
+* **依赖关系**：
 
+  * BeanFactory是Spring中的最底层接口，包含了各种Bean的定义，读取Bean配置文件，管理Bean的加载和实例化，控制Bean的生命周期，维护Bean之间的依赖关系。
+  * ApplicationContext接口是BeanFactory的派生，除了具有BeanFactory的功能外，还提供了更完整的框架功能。如：继承MessageSource支持国际化，同一的资源文件访问方式，提供在监听器中注册Bean事件，同时加载多个配置文件等。
 
+* **加载方式**：
 
-## Spring-Beans
+  * BeanFactory通过延迟加载的形式注入Bean，即只有在使用某个Bean时（调用 `getBean()`），才对该Bean进行加载实例化。这样的缺点是不能及时发现Spring的配置问题，如果Bean的某个属性没有被注入，当BeanFactory加载后，直到第一次使用时才会抛出异常。
+  * ApplicationContext是在容器启动时，一次性创建所有的Bean。这样做的可以在容器启动时就发现Spring中存中的配置问题，有利于检查所依赖属性是否注入。另一个好处是在启动后预载入所有的单实例Bean，当需要时无需等待直接使用。相对于BeanFactory，ApplicationContext唯一不足的是占用更多的内存空间，当应用程序配置的Bean较多时，启动较慢。
 
-## Spring-注解
+* **创建方式**：BeanFactory通常以编码的方式被创建，ApplicationContext还可以通过声明的方式创建，如使用ContextLoader。
 
-## Spring-数据访问
+* **注册方式**：BeanFactory和ApplicationContext都支持BeanPostProcessor、BeanFactoryPostProcessor的使用。二者的区别在于BeanFactory需要手动注册，而ApplicationContext则是自动注册。
 
-## Spring-AOP
+* **容器设计**：
 
+  * BeanFactory可以理解为一个HashMap，Key是BeanName，Value是Bean实例。通常只提供put注册和get获取这两个功能。
 
+  * ApplicationContext继承了多个接口，具备更多的功能，如：资源的获取，支持多种消息（JSP tag的支持），工具级别的支持等待。该接口定义了一个refresh方法，用于刷新整个容器，即重新加载所有的Bean。
 
-## Spring-事务
+  * 通过ClassPathXmlApplicationContext类展示整个容器的UML层级关系：
 
-### Spring管理事务的方式
+    * 最上层是BeanFactory，下面3个绿色的是功能扩展接口；
+    * 红色的派生于ApplicationContext的是高级容器，依赖着低级容器，即依赖着低级容器的getBean功能，且自己具有更多高级功能。如：支持不同的信息源头，文件资源访问，支持应用事件等；
+    * 左边的灰色区域是低级容器，只负责加载和获取Bean。即加载配置文件，解析成BeanDefinition存入Map，当调用getBean获取时，从BeanDefinition所属的Map中获取Class对象实例化，如果存在依赖关系，则递归调用getBean方法，完成依赖注入。
 
-* 编程式事务，即在代码中硬编码；
-* 声明式事务，即在配置文件中配置：
-  * 基于XML的声明式事务；
-  * 基于注解的声明式事务。
+    ![img](assets/20191105111441363.png)
 
 
 
-### Spring事务的隔离级别
+### ApplicationContext的通常实现
 
-* TransactionDefinition.ISOLATION_DEFAULT：即使用数据库的默认隔离级别，MySQL的默认隔离级别是REPEATABLE_READ；
-* TransactionDefinition.ISOLATION_READ_UNCOMMITTED：读未提交。最低的隔离级别，允许读取尚未提交的数据变更，可能会导致脏读、幻读和不可重复读；
-* TransactionDefinition.ISOLATION_READ_COMMITTED：读已提交。允许读取并发事务已经提交的数据，可以阻止脏读，但幻读和不可重复读仍有可能发生；
-* TransactionDefinition.ISOLATION_REPEATABLE_READ：可重复读。对同一字段的多次读取结果都是一致的，除非数据是被当前事务所修改，可以阻止脏读和不可重复读，但不能阻止幻读；
-* TransactionDefinition.ISOLATION_SERIALIZABLE：可串行化。最高的隔离级别，让所有事务依次执行，完全避免事务之间产生的相互影响，可以阻止脏读、不可重复读和幻读，但严重影响程序的性能。
+* **FileSystemXmlApplicationContext**：该容器从XML文件中加载Beans的定义。会根据全路径名查找Bean的配置文件。
+* **ClassPathXmlApplicatuionContext**：该容器从XML文件中加载Beans的定义。会在classpath下查找Bean的配置文件。
+* **WebXmlApplicationContext**：允许从相对于Web根目录的路径中加载配置文件完成初始化工作。
 
 
 
-### Spring事务的传播行为
+### 依赖注入
 
-支持当前事务的情况：
+**概念**：IoC的两个主要实现方式是依赖注入和依赖查找。所谓的依赖注入（Dependency Injection）是组件之间依赖关系由容器在应用程序运行期间来决定，即由容器动态的将某种依赖关系的目标对象实例注入到应用程序中的各个关联组件中。组件不做定位查询，只提供普通的Java方法让容器去决定依赖关系。
 
-* TransactionDefinition.PROPAGATION_REQUIRED：如果当前存在事务，则加入该事务，如果当前没有事务，则创建一个新的事务；
-* TransactionDefinition.PROPAGATION_SUPPORTS：如果当前存在事务，则加入该事务，如果当前没有事务，则以非事务的方式继续执行；
-* TransactionDefinition.PROPAGATION_MANDATORY：如果当前存在事务，则加入该事务，如果当前没有事务，则抛出异常。
+**基本原则**：应用组件不应该负责查找资源或者其他依赖的协作对象。配置对象的工作应该由IoC容器负责，查找资源的逻辑应该从应用组件的代码中抽取出来，交给IoC负责。容器全权负责组件的装配，会把符合依赖关系的对象通过属性（Java Bean的setter）或是构造器传递给需要的对象。
 
-不支持当前事务的情况：
+**优点**：容器全权负责依赖查询，受管理的组件只需要暴露Java Bean的setter方法或是有参构造器，使容器可以在初始化时组装对象的依赖关系。
 
-* TransactionDefinition.PROPAGATION_REQUIRES_NEW：创建一个新事务，如果当前存在事务，则把新事务挂起；
-* TransactionDefinition.PROPAGATION_NOT_SUPPORTED：以非事务的方式运行，如果当前存在事务，则把当前事务挂起；
-* TransactionDefinition.PROPAGATION_NEVER：以非事务的方式运行，如果当前存在事务，则抛出异常。
+* 查找定位操作与应用代码无关；
+* 不依赖于容器的API，可以很容易的在任何容器以外使用应用对象；
+* 不需要特殊的接口，绝大多数对象可以做到完全不必依赖容器。
 
-其他情况：TransactionDefinition.PROPAGATION_NESTED：如果当前存在事务，则创建一个事务做为当前事务的嵌套事务来运行，如果当前没有事务，则等价于TransactionDefinition.PROPAGATION_REQUIRED。
+**实现方式**：
 
+* 接口注入（Interface Injection）：由于灵活性和易用性较差，从Spring4开始被废弃。
 
+* Setter方法注入（Setter Injection）：是容器通过调用无参构造器或无参static工厂方法实例化Bean之后，调用该Bean的setter方法为其设置依赖的类，即实现了基于setter方法的依赖注入。
+* 构造器注入（Constructor Injection）：通过容器触发一个类的构造器来实现，该类有一系列参数，每个参数代表一个对其他类的依赖。
 
-### @Transactional(rollback=Exception.class)注解
+* 二者区别：
 
-当@Transactional注解作用于类上时，该类的所有public方法都将具有该类型的事务属性，同时也可以在方法级别使用该注解，被注解表示的类或方法一旦抛出异常，就会回滚。在@Transactional中如果不指定rollback属性，那么只有在遇到RuntimeException运行时异常时才会回滚，指定rollback=Exception.class时会让事务在遇到非运行时异常时也能回滚。
-
-
-
-## SpringMVC-基本概念
-
-## SpringMVC-核心组件
-
-## SpringMVC-工作流程
-
-## SpringMVC-注解
-
-## SpringMVC-其他特性
-
-## SpringBoot-基本概念
-
-## SpringBoot-配置
-
-## SpringBoot-安全
-
-## SpringBoot-监视器
-
-## SpringBoot-整合
-
-## SpringBoot-其他特性
-
-## SpringCloud-基本概念
-
-## SpringCloud-整体架构
-
-## SpringCloud-核心组件
-
-## MyBatis-基本概念
-
-## MyBatis-运行原理
-
-## MyBatis-映射器
-
-## MyBatis-高级查询
-
-## MyBatis-动态SQL
-
-## MyBatis-插件模块
-
-## MyBatis-多级缓存
-
-
-
-## Spring Bean
-
-### Spring中bean的作用域
-
-* singleton：单例bean；
-* prototype：每次请求创建一个新的bean实例；
-* request：每次http请求创建新的bean，但仅在该次http请求内有效；
-* session：每次http请求创建新的bean，但仅在当前http的session会话有效。
-
-
-
-### Spring中单例bean的线程安全问题
-
-单例bean存在线程安全问题，主要i是因为当多个线程操作同一个对象时，对这个对象的非静态成员变量的写操作存在线程安全问题。
-
-解决方法就是在类中定义一个ThreadLocal的成员变量，将需要的可变成员变量保存在ThreadLocl中。
-
-
-
-### @Component和@Bean的区别
-
-* 作用对象不同，@Component作用于类，@Bean作用于方法；
-* @Component通常是通过类路径扫描来字段侦测以及自动装配到Spring容器中，通常使用@ComponentScan来定义要扫描的路径从中找出标识了需要装配的类并自动装配到Spring的bean容器中。@Bean通常是在标有该注解的方法中手动产生一个bean，通知Spring这是某个类的创建过程，当需要时再将其执行并返回对象。
-* @Bean注解比@Component注解的自定义性更强，而且很多情况下只能通过@Bean来注册bean。如引用第三方库中的类需要装配到Spring容器中时，则只能通过@Bean来实现。
-
-
-
-### 声明类为Spring bean的注解
-
-* @Component：通用注解，可以标注任意类为Spring组件。如果一个Bean不知道属于哪一层，可以使用@Component标注；
-* @Repository：对应持久层即Dao层，主要用于数据库相关操作；
-* @Service：对应服务层，主要涉及一些复杂的业务逻辑，需要用到Dao层；
-* @Controller：对应于Spring MVC的控制层，主要用于接受客户端的请求并调用服务层处理业务，最后返回数据给前端页面。
-
-
-
-### Spring bean的生命周期
-
-![Sring bean 生命周期1](assets/Sring bean 生命周期1.png) 
-
-* Bean容器找到配置文件中Spring Bean的定义；
-* Bean容器使用Java Reflection API创建一个Bean的实例；
-* 如果涉及到一些属性值则使用 `set()` 方法设置；
-* 如果Bean实现了BeanNameAware接口，则调用setBeanName()方法，传入Bean的名字；
-* 如果Bean实现了BeanClassLoaderAware接口，则调用setBeanClassLoader()方法，传入ClassLoader对象的实例；
-* 如果Bean还实现了其他的 *.Aware 接口，就调用相应的方法；
-* 如果存在和加载该Bean的Spring容器相关的BeanPostProcess对象，就执行postProcessBeforeInitialization()方法，即进行前置处理；
-* 如果Bean实现了InitializingBean接口，就执行afterPropertiesSet()方法；
-* 如果Bean在配置文件中定义了包含init-method属性，就执行指定方法；
-* 如果存在和加载该Bean的Spring容器相关的BeanPostProcess对象，就执行postProcessBeforeInitialization()方法，即进行后置处理；
-* 当要销毁Bean时，如果Bean实现了DisposableBean接口，则执行destroy()方法；
-* 当要销毁Bean时，如果Bean在配置文件中的定义包含destroy-method属性，执行指定的方法。
-
-![Spring bean  生命周期2](assets/Spring bean  生命周期2.jpg)
-
-
-
-## Spring MVC
-
-### SpringMVC的概念
-
-MVC是一种设计模式，Spring MVC就是基于了这种设计模式的框架。可以帮助开发任意更简洁的开发Web应用，且与Spring框架天然集成。Spring MVC将后端项目分为了Service层（业务层）、Dao层（持久化层）、Entity层（实体类）和Controller层（控制层）。
-
-
-
-### SpringMVC的工作原理
-
-* 客户端/浏览器发送请求，直接请求到前端控制器DispatcherServlet；
-* 前端控制器DispatcherServlet根据请求信息调用处理器映射器HandlerMapping，解析与请求对应的Handler；
-* 当解析到对应的Handler后（即Controller控制器），开始由处理器适配器HandlerAdapter处理；
-* 处理器适配器HandlerAdapter根据Handler来调用真正的处理器来处理请，并执行相应的业务逻辑；
-* 处理器处理完业务后，会返回一个ModelAndView对象，Model是返回的数据对象，View是逻辑上的视图；
-* 视图解析器ViewResolver会根据逻辑View查找实际的View；
-* 前端控制器DispatcherServlet会将返回的Model传给View，即渲染视图；
-* 最后将View返回给请求者。
-
-![Spring MVC工作原理](assets/Spring MVC工作原理.png)
+|      **构造函数注入**      |    **setter** **注入**     |
+| :------------------------: | :------------------------: |
+|        没有部分注入        |         有部分注入         |
+|    不会覆盖 setter 属性    |     会覆盖 setter 属性     |
+| 任意修改都会创建一个新实例 | 任意修改不会创建一个新实例 |
+|     适用于设置很多属性     |     适用于设置少量属性     |
 
 
 
 ## Spring-IoC源码分析
 
-源码注释：
+**源码注释**：
 
 ```JAVA
 BeanNameAware's setBeanName
@@ -14616,6 +14503,281 @@ public void preInstantiateSingletons() throws BeansException {
     }
 }
 ```
+
+
+
+## Spring-Beans
+
+### 什么是Spring Beans？
+
+Spring Beans是一系列形成Spring应用的主干Java对象。被Spring IoC容器初始化、装配和管理。这些Beans通过容器中配置的元数据创建，如：XML文件形式的配置文件。
+
+### 一个Spring Bean定义包含什么？
+
+一个Spring Bean中定义包含容器必知的所有配置元数据，包括如何创建一个Bean，Bean的声明周期以及Bean的依赖。
+
+### 如何给Spring容器提供配置元数据？Spring有几种配置方式？
+
+* XML配置文件的方式；
+* 基于注解的配置；
+* 基于Java代码的配置。
+
+### Spring配置文件包含了哪些信息？
+
+包含类信息，描述了如果配置类以及如果相互依赖相互调用。
+
+### Spring基于XML注入Bean的几种方式
+
+* Set方法注入；
+* 构造器注入：通过index设置参数位置，通过type参数设置参数类型；
+* 静态工厂注入；
+* 实例工厂注入。
+
+### 怎样自定义类的作用域？
+
+可以哦通过Bean定义中的scope属性来定义，如：当需要Spring在使用类时每次生产一个新的Bean实例，就将scope属性设置为prototype，若需要Bean每次使用时返回同一个实例，就将scope设置为singleton。
+
+### Spring Bean的作用域
+
+* singleton：默认，Bean在每个Spring IoC容器中只存在一个实例；
+* prototype：一个Bean的定义可以有多个实例；
+* request：每次HTTP请求创建新的Bean，但仅在该次HTTP请求内有效；
+* session：每次HTTP请求创建新的Bean，但仅在当前HTTP的session会话有效；
+* global-session：
+
+### Spring单例Bean的线程安全问题
+
+Spring并没有对单例Bean进行线程安全的保证。实际上大部分的Bean都是无状态的（如：dao层，不保存数据），所以某种程度上说Bean也是线程安全的，单如果Bean是有状态的（如：view、miodel对象，具有数据存储功能），那就需要开发者保证线程安全了。
+
+最简单的方式就是改变Bean的作用域，即将singleton变为prototype，让每次请求都对应一个Bean实例，保证线程安全。
+
+### Spring的线程并发问题
+
+一般情况下，只有无状态的Bean才能在多线程环境下被共享，Spring中绝大部分Bean都可以声明为singleton，Spring会对Bean中非线程安全的状态采用ThreadLocal处理。
+
+ThreadLocal和线程同步机制都是为了解决多线程中相同变量的访问冲突问题。同步机制采用时间换空间的方式，ThreadLocal采用了空间换时间的方式。
+
+ThreadLocal为每个线程提供一个独立的变量副本，从而隔离多线程对数据的访问冲突。在编写代码时可以将线程不安全的变量装进ThreadLocal。
+
+### Spring Bean的生命周期
+
+Bean在Spring容器中从创建到销毁经历了若干阶段，每一阶段都可以针对Spring如果管理Bean进行个性化定制。
+
+![201911012343410](assets/201911012343410.png)
+
+* Spring对Bean进行了实例化；
+* Spring将值和Bean的引用注入到Bean对应的属性中；
+* 如果Bean实现了BeanNameAware接口，那么会将Bean的ID传递给setBeanName()方法；
+* 如果Bean实现了BeanFactory‘Aware接口，那么会调用setBeanFactory()方法，将BeanFactory容器实例传入；
+* 如果Bean实现了ApplicationContextAware接口，那么会调用setApplicationContext()方法，将Bean所在的应用上下文引用传入；
+* 如果Bean实现了InitiaizingBean接口，那么会调用它们的afterPropertiesSet()方法。同样的，如果Bean使用init-method声明了初始化方法，也会调用；
+* 如果Bean实现了BeanPostProcessor接口，那么会调用它们的postProcessAfterInitialization()方法；
+* 最后，Bean已经准备就绪，可以被应用程序所使用，它们将会一直驻留在内存中，直到应用上下文被销毁；
+* 当容器关闭时，如果Bean实现了DisposableBean接口，Spring会调用其destroy()方法。同样的，如果Bean使用destroy-method声明了销毁方法，也会调用。
+
+### 重要的Bean生命周期方法
+
+Bean生命周期有两个重要的方法。第一个是setup，会在容器加载Bean时被调用。第二个是teardown，会在容器卸载类时被调用。
+
+XML配置的Bean标签有两个重要属性init-method和destroy-method。可以自定义初始化和销毁方法，它们对应的注解是@PostConstruct和@PreDestroy。
+
+### Spring Inner Beans
+
+在Spring中，当一个Bean仅被当作另一个Bean的属性时，就能被声明为内部Bean。内部Bean可以通过setter注入属性和构造器注入构造参数的方式实现，内部Bean通常是匿名的，它们的scope一般是prototype。
+
+### Spring注入Java集合
+
+### Bean自动装配
+
+**装配**：指在Spring容器中把Bean组装到一起，前提是容器需要知道Bean的依赖关系，以及如何通过依赖注入装配它们。
+
+**自动装配**：在Spring中，对象无需查找或创建与其关联的其他对象，而是由容器负责把需要相互协作的对象引用赋予给各个对象，使用XML方式的autowire来配置自动装配模式。
+
+* **no**：默认是不进行自动装配的，通过手动设置ref属性来进行Bean的装配；
+* **byName**：通过Bean的名称进行自动装配，即如果一个Bean的property与另一个Bean的name相同，就进行自动装配；
+* **byType**：通过参数的数据类型进行自动装配；
+* **constructor**：使用构造器进行装配，构造器的参数通过byType进行装配；
+* **autodetect**：自动探测，如果存在构造器，则通过construct的方式自动装配，否则使用byType的方式自动装配。
+
+**@Autowired注解自动装配的流程**：
+
+* 使用前需要在Spring配置文件中进行配置 `<context:annotation-config/>`；
+* 在启动Spring IoC时，容器自动装载了一个AutowiredAnnotationBeanPostProcessor后置处理器，当容器扫描到@Autowired、@Resource或@Inject时，就会在IoC容器自动查找需要的Bean，并装配给该对象的属性。
+* 在使用@Autowired时，首先在容器中查询对应类型的Bean：
+  * 如果查询结果刚好一个，则将该Bean装配给@Autowirted修饰的对象；
+  * 如果查询结果不止一个，那么@Autowired就会根据名称来查找；
+  * 如果上述查询结果为空，那么会抛出异常。
+
+**自动装配的局限性**：
+
+* **重写**：
+* **基本数据类型**：无法自动装配基本数据类型；
+* **模糊特性**：不如显式装配精确。
+
+
+
+## Spring-注解
+
+### @Component/@Controller/@Repository/@Service的区别
+
+* **@Component**：将Java类标记为Bean，是任何Spring管理组件都通用的类型；
+* **@Controller**：将Java类标记为Spring Web MVC的控制器，会自动导入IoC容器中；
+* **@Service**：是@Component的特化，没有提供任何其他功能，可以在服务层使用@Service来更加明确意图；
+* **@Repository**：是@Component的特化，将DAO层类到日IoC容器，并使未经检查的异常有资格转换未SpringDataAccessException。
+
+
+
+### @Required注解
+
+表明Bean的属性在配置时必须被设置，通过XML配置文件设置或通过自动装配，若@Required注解修饰的Bean属性未被设置，容器将抛出BeanInitializationException。
+
+
+
+### @Autowired注解
+
+该注解默认是按照类型装配注入的，默认情况下要求依赖对象必须存储（可以设置required=false，可以不存在）。该注解提供了细粒度的控制，包括在何处以及如何完成自动装配。用法和@Required一样，修饰setter方法、构造器或成员变量。
+
+
+
+### @Autowired和@Resource的区别
+
+* @Autowired默认按照类型装配注入，默认情况下要求依赖的对象必须存在；
+* @Resource默认按照名称装配注入，只有当找不到与名称匹配的Bean才会按照类型来装配注入。
+
+
+
+### @Qualifier注解
+
+当创建了多个相同类型的Bean并希望使用属性装配其中一个Bean时，可以使用该注解和@Autowired指定装配确切的Bean来消除歧义。
+
+
+
+### @RequestMapping注解
+
+用于将特定HTTP请求映射到MVC控制器中的相应处理类/方法上。
+
+* 类级别：映射请求的URL；
+* 方法级别：映射URL以及HTTP请求方法。
+
+
+
+## Spring-数据访问
+
+
+
+### Spring管理事务的方式
+
+* 编程式事务，即在代码中硬编码；
+* 声明式事务，即在配置文件中配置：
+  * 基于XML的声明式事务；
+  * 基于注解的声明式事务。
+
+
+
+### Spring事务的隔离级别
+
+* TransactionDefinition.ISOLATION_DEFAULT：即使用数据库的默认隔离级别，MySQL的默认隔离级别是REPEATABLE_READ；
+* TransactionDefinition.ISOLATION_READ_UNCOMMITTED：读未提交。最低的隔离级别，允许读取尚未提交的数据变更，可能会导致脏读、幻读和不可重复读；
+* TransactionDefinition.ISOLATION_READ_COMMITTED：读已提交。允许读取并发事务已经提交的数据，可以阻止脏读，但幻读和不可重复读仍有可能发生；
+* TransactionDefinition.ISOLATION_REPEATABLE_READ：可重复读。对同一字段的多次读取结果都是一致的，除非数据是被当前事务所修改，可以阻止脏读和不可重复读，但不能阻止幻读；
+* TransactionDefinition.ISOLATION_SERIALIZABLE：可串行化。最高的隔离级别，让所有事务依次执行，完全避免事务之间产生的相互影响，可以阻止脏读、不可重复读和幻读，但严重影响程序的性能。
+
+
+
+### Spring事务的传播行为
+
+支持当前事务的情况：
+
+* TransactionDefinition.PROPAGATION_REQUIRED：如果当前存在事务，则加入该事务，如果当前没有事务，则创建一个新的事务；
+* TransactionDefinition.PROPAGATION_SUPPORTS：如果当前存在事务，则加入该事务，如果当前没有事务，则以非事务的方式继续执行；
+* TransactionDefinition.PROPAGATION_MANDATORY：如果当前存在事务，则加入该事务，如果当前没有事务，则抛出异常。
+
+不支持当前事务的情况：
+
+* TransactionDefinition.PROPAGATION_REQUIRES_NEW：创建一个新事务，如果当前存在事务，则把新事务挂起；
+* TransactionDefinition.PROPAGATION_NOT_SUPPORTED：以非事务的方式运行，如果当前存在事务，则把当前事务挂起；
+* TransactionDefinition.PROPAGATION_NEVER：以非事务的方式运行，如果当前存在事务，则抛出异常。
+
+其他情况：TransactionDefinition.PROPAGATION_NESTED：如果当前存在事务，则创建一个事务做为当前事务的嵌套事务来运行，如果当前没有事务，则等价于TransactionDefinition.PROPAGATION_REQUIRED。
+
+
+
+### @Transactional(rollback=Exception.class)注解
+
+当@Transactional注解作用于类上时，该类的所有public方法都将具有该类型的事务属性，同时也可以在方法级别使用该注解，被注解表示的类或方法一旦抛出异常，就会回滚。在@Transactional中如果不指定rollback属性，那么只有在遇到RuntimeException运行时异常时才会回滚，指定rollback=Exception.class时会让事务在遇到非运行时异常时也能回滚。
+
+
+
+## Spring-AOP
+
+
+
+## SpringMVC-基本概念
+
+## SpringMVC-核心组件
+
+## SpringMVC-工作流程
+
+## SpringMVC-注解
+
+## SpringMVC-其他特性
+
+## SpringBoot-基本概念
+
+## SpringBoot-配置
+
+## SpringBoot-安全
+
+## SpringBoot-监视器
+
+## SpringBoot-整合
+
+## SpringBoot-其他特性
+
+## SpringCloud-基本概念
+
+## SpringCloud-整体架构
+
+## SpringCloud-核心组件
+
+## MyBatis-基本概念
+
+## MyBatis-运行原理
+
+## MyBatis-映射器
+
+## MyBatis-高级查询
+
+## MyBatis-动态SQL
+
+## MyBatis-插件模块
+
+## MyBatis-多级缓存
+
+
+
+## Spring MVC
+
+### SpringMVC的概念
+
+MVC是一种设计模式，Spring MVC就是基于了这种设计模式的框架。可以帮助开发任意更简洁的开发Web应用，且与Spring框架天然集成。Spring MVC将后端项目分为了Service层（业务层）、Dao层（持久化层）、Entity层（实体类）和Controller层（控制层）。
+
+
+
+### SpringMVC的工作原理
+
+* 客户端/浏览器发送请求，直接请求到前端控制器DispatcherServlet；
+* 前端控制器DispatcherServlet根据请求信息调用处理器映射器HandlerMapping，解析与请求对应的Handler；
+* 当解析到对应的Handler后（即Controller控制器），开始由处理器适配器HandlerAdapter处理；
+* 处理器适配器HandlerAdapter根据Handler来调用真正的处理器来处理请，并执行相应的业务逻辑；
+* 处理器处理完业务后，会返回一个ModelAndView对象，Model是返回的数据对象，View是逻辑上的视图；
+* 视图解析器ViewResolver会根据逻辑View查找实际的View；
+* 前端控制器DispatcherServlet会将返回的Model传给View，即渲染视图；
+* 最后将View返回给请求者。
+
+![Spring MVC工作原理](assets/Spring MVC工作原理.png)
+
+
 
 
 
