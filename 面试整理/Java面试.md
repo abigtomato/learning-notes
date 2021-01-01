@@ -14105,7 +14105,7 @@ BeanFactory和ApplicationContext是Spring的两大核心接口，都可以做为
 
 
 
-## Spring-IoC源码分析
+### IoC源码分析
 
 **源码注释**：
 
@@ -14616,6 +14616,10 @@ XML配置的Bean标签有两个重要属性init-method和destroy-method。可以
 
 
 
+### Spring的循环依赖问题
+
+
+
 ## Spring-注解
 
 ### @Component/@Controller/@Repository/@Service的区别
@@ -14663,46 +14667,38 @@ XML配置的Bean标签有两个重要属性init-method和destroy-method。可以
 
 ## Spring-数据访问
 
+### 事务管理方式
 
-
-### Spring管理事务的方式
-
-* 编程式事务，即在代码中硬编码；
-* 声明式事务，即在配置文件中配置：
-  * 基于XML的声明式事务；
-  * 基于注解的声明式事务。
+* **编程式事务**：通过编程的方式管理事务，带来极大灵活性的同时会难以维护。
+* **声明式事务**：将业务代码和事务管理代码分离，只需要用注解和XML配置来管理事务。
 
 
 
-### Spring事务的隔离级别
+### 事务隔离级别
 
-* TransactionDefinition.ISOLATION_DEFAULT：即使用数据库的默认隔离级别，MySQL的默认隔离级别是REPEATABLE_READ；
-* TransactionDefinition.ISOLATION_READ_UNCOMMITTED：读未提交。最低的隔离级别，允许读取尚未提交的数据变更，可能会导致脏读、幻读和不可重复读；
-* TransactionDefinition.ISOLATION_READ_COMMITTED：读已提交。允许读取并发事务已经提交的数据，可以阻止脏读，但幻读和不可重复读仍有可能发生；
-* TransactionDefinition.ISOLATION_REPEATABLE_READ：可重复读。对同一字段的多次读取结果都是一致的，除非数据是被当前事务所修改，可以阻止脏读和不可重复读，但不能阻止幻读；
-* TransactionDefinition.ISOLATION_SERIALIZABLE：可串行化。最高的隔离级别，让所有事务依次执行，完全避免事务之间产生的相互影响，可以阻止脏读、不可重复读和幻读，但严重影响程序的性能。
-
-
-
-### Spring事务的传播行为
-
-支持当前事务的情况：
-
-* TransactionDefinition.PROPAGATION_REQUIRED：如果当前存在事务，则加入该事务，如果当前没有事务，则创建一个新的事务；
-* TransactionDefinition.PROPAGATION_SUPPORTS：如果当前存在事务，则加入该事务，如果当前没有事务，则以非事务的方式继续执行；
-* TransactionDefinition.PROPAGATION_MANDATORY：如果当前存在事务，则加入该事务，如果当前没有事务，则抛出异常。
-
-不支持当前事务的情况：
-
-* TransactionDefinition.PROPAGATION_REQUIRES_NEW：创建一个新事务，如果当前存在事务，则把新事务挂起；
-* TransactionDefinition.PROPAGATION_NOT_SUPPORTED：以非事务的方式运行，如果当前存在事务，则把当前事务挂起；
-* TransactionDefinition.PROPAGATION_NEVER：以非事务的方式运行，如果当前存在事务，则抛出异常。
-
-其他情况：TransactionDefinition.PROPAGATION_NESTED：如果当前存在事务，则创建一个事务做为当前事务的嵌套事务来运行，如果当前没有事务，则等价于TransactionDefinition.PROPAGATION_REQUIRED。
+* **TransactionDefinition.ISOLATION_DEFAULT**：即使用数据库的默认隔离级别，MySQL的默认隔离级别是REPEATABLE_READ；
+* **TransactionDefinition.ISOLATION_READ_UNCOMMITTED**：读未提交。最低的隔离级别，允许读取尚未提交的数据变更，可能会导致脏读、幻读和不可重复读；
+* **TransactionDefinition.ISOLATION_READ_COMMITTED**：读已提交。允许读取并发事务已经提交的数据，可以阻止脏读，但幻读和不可重复读仍有可能发生；
+* **TransactionDefinition.ISOLATION_REPEATABLE_READ**：可重复读。对同一字段的多次读取结果都是一致的，除非数据是被当前事务所修改，可以阻止脏读和不可重复读，但不能阻止幻读；
+* **TransactionDefinition.ISOLATION_SERIALIZABLE**：可串行化。最高的隔离级别，让所有事务依次执行，完全避免事务之间产生的相互影响，可以阻止脏读、不可重复读和幻读，但严重影响程序的性能。
 
 
 
-### @Transactional(rollback=Exception.class)注解
+### 事务传播行为
+
+所谓的事务传播行为是指在当前事务内调用了其他方法，则其他方法如何处理事务，当前事务如何传播过去。 
+
+* **TransactionDefinition.PROPAGATION_REQUIRED**：如果当前没有事务，就创建一个新事务，如果当前存在事务，就加入该事务；
+* **TransactionDefinition.PROPAGATION_SUPPORTS**：如果当前存在事务，就加入该事务，如果当前不存在事务，就以非事务的方式执行；
+* **TransactionDefinition.PROPAGATION_MANDATORY**：如果当前存在事务，就加入该事务，如果当前不存在事务，就抛出异常；
+* **TransactionDefinition.PROPAGATION_REQUIRES_NEW**：无论当前是否存在事务，都会创建新事务；
+* **TransactionDefinition.PROPAGATION_NOT_SUPPORTED**：以非事务的方式运行，如果当前存在事务，则把当前事务挂起；
+* **TransactionDefinition.PROPAGATION_NEVER**：以非事务的方式运行，如果当前存在事务，则抛出异常；
+* **TransactionDefinition.PROPAGATION_NESTED**：如果当前存在事务，则创建一个事务做为当前事务的嵌套事务来运行，如果当前没有事务，则等价于PROPAGATION_REQUIRED。
+
+
+
+### @Transactional注解
 
 当@Transactional注解作用于类上时，该类的所有public方法都将具有该类型的事务属性，同时也可以在方法级别使用该注解，被注解表示的类或方法一旦抛出异常，就会回滚。在@Transactional中如果不指定rollback属性，那么只有在遇到RuntimeException运行时异常时才会回滚，指定rollback=Exception.class时会让事务在遇到非运行时异常时也能回滚。
 
@@ -14710,17 +14706,141 @@ XML配置的Bean标签有两个重要属性init-method和destroy-method。可以
 
 ## Spring-AOP
 
+### 什么是AOP？
+
+**OOP（Object-Oriented Programming）**：即面向对象编程，允许开发者自定义纵向关系，但不适用与定义横向关系，导致产生大量重复代码，且不利于各个模块的重用。
+
+**AOP（Aspect-Oriented Programming）**：即面向切面编程，是对面向对象的补充，用于将那些与业务无关的，但却对多个对象产生影响的公共行为和逻辑，抽取并封装为一个可重用的模块，这个模块被命名为切面（Aspect）。这样可以减少系统中的重复代码，降低模块间的耦合度，同时提高系统的可维护性。可用于权限认证、缓存查询、加锁解锁、日志记录和事务处理等场景。
+
+### Spring AOP和AspectJ AOP的区别
+
+AOP实现的关键在于代理模式，AOP代理主要分为静态代理和动态代理。
+
+* AspectJ是静态代理的增强，所谓静态代理就是AOP框架会在编译阶段生成AOP代理类，因此也称为编译时增强。即会在编译阶段将AspectJ切面织入到Java字节码中，当运行时就是增强后的AOP对象。
+* Spring AOP使用的是动态代理，所谓动态代理就是AOP框架不会修改字节码，而是在运行时生成AOP对象，这个AOP对象包含了目标对象的全部方法，并且在特定的切点做了增强处理，并且回调了原对象的方法。
+
+### JDK动态代理和CGlib动态代理的区别
+
+Spring AOP中的动态代理主要有两种方式，分别为是JDK动态代理和CGlib动态代理。
+
+* JDK动态代理只提供接口的代理，不支持类的代理。核心InvocationHandler接口和Proxy类，InvocationHandler通过invoke()方法反射来调用目标类的代码，动态的将横切逻辑和业务编织在一起。然后Proxy通过InvocationHandler动态创建一个符合某一接口的实例，生成目标类的代理对象。
+* 如果代理类没有InvocationHandler接口，那么Spring AOP会选择使用CGlib来动态代理目标类。CGlib（Code Generation Library）是一个代码生成类库，可以在运行时动态生成指定类的一个子类对象，并覆盖其中特定方法并添加增强代码，从而实现AOP。CGlib是通过继承的方式做的动态代理，因此如果某个类被标记为final，那么是无法使用CGlib做动态代理的。
+
+静态代理与动态代理的区别在于生成AOP代理对象的时机不同，相对来说AspectJ的静态代理方式具有更好的性能，但是AspectJ需要特定的编译器进行处理，而Spring AOP则无需特定的编译器处理。
+
+InvocationHandler的 `invoke(Object proxy, Method method, Object[] args);` ，其中proxy是最终生成的代理实例，method是被代理目标实例的某个具体方法，args是被代理目标实例某个方法的具体入参，在方法反射调用时使用。
+
+### Spring AOP中的名词
+
+Spring中的代理是将Advice应用于目标对象后创建的对象称为代理。在客户端对象的情况下，目标对象和代理对象是相同的。即：Advice + Target Object = Proxy。
+
+![img](assets/2020120700443256.png)
+
+* **切面（Aspect）**：切面是通知和切点的结合。通知和切点共同定义了切面的全部内容。在Spring AOP中，切面可以使用通用类（基于模式的风格）或者在普通类中以@AspectJ注解来实现；
+* **连接点（Join point）**：指方法，在Spring AOP中，一个连接点总是代表一个方法的执行。应用可能有数以千计的时机应用通知。这些时机被称为连接点。连接点是在应用执行过程中能够插入切面的一个点。这个点可以是调用方法时、抛出异常时、甚至修改一个字段时。切面代码可以利用这些点插入到应用的正常流程之中，并添加新的行为；
+* **通知（Advice）**：切面的工作被称为通知；
+* **切入点（Pointcut）**：切点用于定义要对哪些连接点进行拦截，切入点的定义会匹配通知所要织入的一个或多个连接点。通常使用明确的类和方法名称，或是利用正则表达式定义所匹配的类和方法名称来指定这些切点；
+* **引入（Introduction）**：向现有的类添加新方法或属性；
+* **目标对象（Target Object）**：被一个或多个切面所通知的对象。通常是一个代理对象，也被称为通知对象。既然Spring AOP是通过运行时代理实现的，那么这个对象永远是一个被代理对象；
+* **织入（Weaving）**：织入是把切面应用到目标对象并创建新代理对象的过程。在目标对象的生命周期里有多个点可以进行织入：
+  * **编译期**：切面在目标类编译时被织入。AspectJ的织入编译器就是以这种方式织入切面的；
+  * **类加载期**：切面在目标类加载到JVM时被织入。需要特殊的类加载器，它可以在目标类被引入应用之前增强该目标类的字节码。AspectJ5的加载时织入就支持这种方式；
+  * **运行期**：切面在应用运行的某个时刻被织入。一般在织入切面时，AOP容器会为目标对象动态的创建一个代理对象。Spring AOP就是以这种方式织入的。
+
+### Spring的运行时通知
+
+通过代理类包裹切面，Spring在运行期把切面织入到Spring管理的Bean中。代理封装了目标类，并拦截被通知的方法调用，再把调用转发给真正的目标Bean。当代理拦截到方法调用时，在调用目标Bean方法之前，会执行切面逻辑。
+
+直到应用是需要被代理的Bean时，Spring才创建代理对象。如果使用的是ApplicationContext的话，则在ApplicationContext从BeanFactory中加载所有Bean时，创建代理对象。因为Spring运行时才创建代理，所以不需要特殊的编译器来织入Spring AOP的切面。
+
+Spring有5种类型的通知：
+
+* **前置通知（Before）**：在目标方法被调用之前调用通知功能；
+* **后置通知（After）**：在目标方法退出时调用，不会关心方法的输出（返回或异常）；
+* **返回通知（After-returning）**：在目标方法成功执行后调用通知；
+* **异常通知（After-throwing）**：在目标方法抛出异常后调用通知；
+* **环绕通知（Around）**：通知包裹了被通知的方法，在被通知的方法调用之前和调用之后执行自定义的行为。
+
+### 切面Aspect
+
+Aspect切面由Pointcut切入点和Advice通知组成，切面是通知和切点的结合。既包含了横切逻辑的定义，也包含了连接点的定义，Spring AOP。Spring AOP就是负责实施切面的框架，它将切面所定义的横切逻辑编织到切面所指定的连接点中。
+
+AOP的工作重心在于如何将增强行为编织到目标对象的连接点上：
+
+* 如何通过Pointcut和Advice定位到特定的Join Point上；
+* 如何在Advice中编写切面代码；
+* 可以简单的认为，使用@Aspect注解就是定义了切面。
+
+![在这里插入图片描述](assets/2020021212264438.png)
+
 
 
 ## SpringMVC-基本概念
 
+**概念**：Spring MVC是一个基于Java的实现了MVC设计模式的请求驱动类型的轻量级Web框架。其通过把模型-视图-控制器分离，将Web层进行职责解耦，把复杂的Web应用处理分为逻辑独立的几个部分。简化开发流程、减少出错、方便开发人员之间的配合。
+
+**MVC**：是一种设计模式，即模型（Model）-视图（View）-控制器（Controller）三层架构的设计模式。用于实现前端页面展示与后端业务数据处理的分离。
+
+* 分层设计，实现了业务系统各个组件之间的解耦，有利于业务系统的可扩展性和可维护性；
+* 有利于系统的并行开发，提升开发效率。
+
+**优点**：
+
+* 支持各种视图技术，而不仅仅局限于JSP；
+* 与Spring框架的天然集成；
+* 清晰的角色分配：前对控制器、请求处理器映射、处理器适配器和视图解析器；
+* 支持各种请求资源的映射策略。
+
 ## SpringMVC-核心组件
+
+* **前端控制器（DispatcherServlet）**：作用是接收请求和响应结果。相当于各组件间的转发器，减少组件间的耦合度；
+* **处理器映射器（HandlerMapping）**：作用是根据请求的URL查找对应的Handler；
+* **处理器适配器（HandlerAdapter）**：适配器定义编写规则并执行开发人员编写的具体Handler；
+* **处理器（Handler）**：开发人员编写的具体处理逻辑；
+* **视图解析器（ViewResolver）**：进行视图的解析，根据逻辑名查找实际的视图；
+* **视图（View）**：渲染视图，其实现类可以由不同的类型，如JSP、Freemarker等。
 
 ## SpringMVC-工作流程
 
-## SpringMVC-注解
+* 客户端/浏览器发送请求到前端控制器DispatcherServlet；
 
-## SpringMVC-其他特性
+* 前端控制器调用处理器映射器HandlerMapping，请求获取Handler；
+* 处理器映射器根据请求的URL获取具体的处理器，生成处理器对象以及处理器拦截器，并返回给前端控制器；
+* 前端控制器调用处理器适配器HandlerAdapter，请求执行Handler；
+* 处理器适配器通过适配调用具体的处理器Handler执行业务逻辑；
+* 处理器执行完毕后返回ModelAndView对象，该对象包含模型数据和视图名称；
+* 处理器适配器将ModelAndView对象返回给前端控制器；
+* 前端控制器将结果对象传递给视图解析器ViewResolver进行解析，即通过视图名称查找视图；
+* 视图解析器解析完后返回具体的视图View对象；
+* 前端控制器进行视图的渲染，即将模型数据填充进视图中；
+* 返回渲染后的视图；
+* 最后前端控制器将View响应给用户。
+
+![img](assets/20180708224853769)
+
+## SpringMVC-常用注解
+
+### @Controller
+
+在Spring MVC中，控制器Controller负责处理由前端控制器分发的请求，它将用户请求的数据经过业务处理层处理后封装成一个Model，然后再把该Model返回给对应的View进行展示。
+
+被@Controller标记的类就是一个Spring MVC控制器对象。前端处理器将会扫描使用了该注解的类的方法，并检测方法是否被@RequestMapping修饰。
+
+@Controller只是定义一个控制器类，而使用@RequestMapping注解的方法才是真正处理请求的Handler。
+
+### @RequestMapping
+
+该注解用于处理请求地址映射，可用于类或方法上。当用于类上时，表示类中的所有响应请求的方法都是以该地址做为前缀的。
+
+### @ResponseBody
+
+该注解用于将Controller的方法返回的对象，通过适当的HttpMessageConverter转换为指定格式后，写入到Response对象的body数据区中。当返回的数据不是HTML页面而是其他格式的数据时使用（如：JSON、XML格式）。
+
+### @PathVariable和@RequestParam的区别
+
+当参数被拼接到请求路径中传递时可以通过@PathVariable获取。而@RequestParam是用于获取HTTP请求中携带的参数。
+
+
 
 ## SpringBoot-基本概念
 
@@ -14734,11 +14854,15 @@ XML配置的Bean标签有两个重要属性init-method和destroy-method。可以
 
 ## SpringBoot-其他特性
 
+
+
 ## SpringCloud-基本概念
 
 ## SpringCloud-整体架构
 
 ## SpringCloud-核心组件
+
+
 
 ## MyBatis-基本概念
 
@@ -14753,31 +14877,6 @@ XML配置的Bean标签有两个重要属性init-method和destroy-method。可以
 ## MyBatis-插件模块
 
 ## MyBatis-多级缓存
-
-
-
-## Spring MVC
-
-### SpringMVC的概念
-
-MVC是一种设计模式，Spring MVC就是基于了这种设计模式的框架。可以帮助开发任意更简洁的开发Web应用，且与Spring框架天然集成。Spring MVC将后端项目分为了Service层（业务层）、Dao层（持久化层）、Entity层（实体类）和Controller层（控制层）。
-
-
-
-### SpringMVC的工作原理
-
-* 客户端/浏览器发送请求，直接请求到前端控制器DispatcherServlet；
-* 前端控制器DispatcherServlet根据请求信息调用处理器映射器HandlerMapping，解析与请求对应的Handler；
-* 当解析到对应的Handler后（即Controller控制器），开始由处理器适配器HandlerAdapter处理；
-* 处理器适配器HandlerAdapter根据Handler来调用真正的处理器来处理请，并执行相应的业务逻辑；
-* 处理器处理完业务后，会返回一个ModelAndView对象，Model是返回的数据对象，View是逻辑上的视图；
-* 视图解析器ViewResolver会根据逻辑View查找实际的View；
-* 前端控制器DispatcherServlet会将返回的Model传给View，即渲染视图；
-* 最后将View返回给请求者。
-
-![Spring MVC工作原理](assets/Spring MVC工作原理.png)
-
-
 
 
 
@@ -17206,15 +17305,85 @@ JWT令牌由三部分组成，每部分中间使用点（.）分隔，比如：x
 
 
 
-# Dubbo/gRPC/Thrift
+# RPC框架
 
 ## RPC基本概念
 
 ## Dubbo-基本概念
 
+### 产生背景
+
+随着服务模块化进一步发展，导致服务被划分的越来越多，服务之间的依赖和调用关系也越来越复杂。从而诞生了面向服务的架构体现SOA，也因此衍生出了一系列相应的技术，如服务提供、服务调用、连接处理、通信协议、序列化方式、服务发现、服务路由、日志输出等，将这些行为进行封装的服务治理框架Dubbo也因此诞生。
+
+### 概念
+
+Dubbo是一款高性能、轻量级的开源RPC框架，提供服务自动注册、自动发现等高效的服务治理方案，可以和Spring框架无缝集成。
+
+### 优点
+
+* **透明化的远程方法调用**：就像是调用本地方法一样调用远程方法，只需要简单的配置，而没有任何API的侵入；
+* **软负载均衡及容错机制**：可在内网替代硬件负载均衡器，降低成本，减少单点故障问题；
+* **服务自动注册于发现**：不再需要写死服务提供方地址，注册中心基于接口名查询服务提供者的IP地址，并且能够平滑的添加或删除服务提供者。
+
+### 核心功能
+
+* **Remoting**：网络通信框架，提供对多种NIO框架的抽象封装，包括同步转异步和请求-响应模式的信息交换方式；
+* **Cluster**：服务框架，提供基于接口方法的透明远程过程调用，包括多协议支持、软负载均衡、失败容错、地址路由、动态配置等集群支持；
+* **Registry**：服务注册，基于注册中心的目录服务，使服务消费方能动态的查找服务提供方（使地址透明），使服务提供方可以平滑的增加或减少机器。
+
+
+
 ## Dubbo-架构设计
 
+### 核心组件
+
+* **Provide**：暴露服务的服务提供方；
+* **Consumer**：调用远程服务的服务消费方；
+* **Registry**：服务注册与发现中心；
+* **Monitor**：监控中心和访问调用统计；
+* **Container**：服务运行容器。
+
+![img](assets/20200316094717491.png)
+
+### 服务注册与发现流程
+
+* 服务容器Container负责启动、加载和运行服务提供者；
+* 服务提供者Provider在启动后，向注册中心注册自己提供的服务；
+* 服务消费者Consumer在启动后，向注册中心订阅自己所需的服务；
+* 注册中心Registry返回服务提供者的地址列表给服务消费者。如果发生了变更，则基于长连接推送变更数据给消费者；
+* 服务消费者Consumer从提供者的地址列表中，基于软负载均衡算法，选取一台提供者进行调用，如果调用失败，则选择其他调用；
+* 服务消费者Consumer和提供者Provider在内存中统计调用次数和调用时机，定时每分钟发送一次统计数据到监控中心Monitor中。
+
+### 架构分层
+
+* **接口服务层（Service）**：该层与业务逻辑相关，根据Provider和Consumer的业务设计对应的接口和实现；
+* **配置层（Config）**：对外配置接口。以ServiceConfig和ReferenceConfig为中心；
+* **服务代理层（Proxy）**：服务接口透明代理。生成服务的客户端Stub和服务端的Skeleton，以ServiceProxy为中心，扩展接口为ProxyFactory；
+* **服务注册层（Register）**：封装服务地址的注册和发现。以服务URL为中心，扩展接口为RegistryFactory、Registry、RegistryService；
+* **路由层（Cluster）**：封装多个提供者路由并提供负载均衡，并桥接注册中心。以Invoke为中心，扩展接口为Cluster、Directory、Router和LoadBlance；
+* **监控层（Monitor）**：RPC调用次数和调用时间监控。以Statistics为中心，扩展接口为MonitorFactory、Monitor和MonitorService；
+* **远程调用层（Protocal）**：封装RPC调用。以Invocation和Result为中心，扩展接口为Protocal、Invoker和Exporter；
+* **信息交换层（Exchange）**：封装请求响应模式和同步转异步。以Request和Response为中心，扩展接口为Exchanger、ExchangeChannel、ExchangeClient和ExchangeServer；
+* **网络传输层（Transport）**：抽象Mina和Netty为统一接口。以Message为中心，扩展接口为Channel、Transporter、Client、Server和Codec；
+* **数据序列化层（Serialize）**：可复用的一些工具。扩展接口为Serialization、ObjectInput、ObjectOutput和ThreadPool。
+
+![img](assets/20200316095208388.png)
+
+### Dubbo Monitor
+
+Consumer端在发起调用之前和Provider在接收到请求时都会先走filter链，然后才会进行真正的业务逻辑处理。默认情况下，在Consumer和Provider的filter链中都会有MonitorFilter。
+
+* MonitorFilter向Dubbo Monitor发送数据；
+* Dubbo Monitor将数据进行聚合后（默认聚合1min内的统计数据）暂存到ConcurrentMap<Statistics, AtomicReference> statisticsMap中。然后使用一个含有3个线程（线程名DubboMonitorSendTimer）的线程池每隔1min就调用SimpleMonitorService遍历发送statisticsMap中的统计数据，每发送完一个，就重置当前的Statistics的AtomicReference；
+* SimpleMonitorService具体的发送方式是将这些聚合数据塞入一个BlockingQueue queue中（队列大小为100000）；
+* SimpleMonitorService使用一个后台线程（线程名DubboMonitorAsyncWriteLogThread）将queue中的数据写入文件（该线程以死循环的形式来写）；
+* SimpleMonitorService还会使用一个含有1个线程（线程名DubboMonitorTimer）的线程池每隔5min将文件中的统计数据画成图表。
+
+
+
 ## Dubbo-类似框架
+
+
 
 ## Dubbo-注册中心
 
