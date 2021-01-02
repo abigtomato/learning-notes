@@ -17333,6 +17333,13 @@ Dubbo是一款高性能、轻量级的开源RPC框架，提供服务自动注册
 
 
 
+### Dubbo和Spring Cloud的区别
+
+* Dubbo底层使用Netty这样的NIO框架进行网络通信，是基于TCP协议传输的，配合Hession序列化完成RPC通信。
+* Spring Cloud是基于HTTP协议REST接口调用远程过程的通信，相对来说HTTP请求会有更大的报文，占的带宽也会更多。但是REST相比于RPC更为灵活，服务提供方和调用方法的依赖只依靠协议，不存在代码级别的强依赖。
+
+
+
 ## Dubbo-架构设计
 
 ### 核心组件
@@ -17381,31 +17388,195 @@ Consumer端在发起调用之前和Provider在接收到请求时都会先走filt
 
 
 
-## Dubbo-类似框架
-
-
-
 ## Dubbo-注册中心
+
+* **Multicast注册中心**：该注册中心无需任何中心节点，只需要广播地址，就能进行服务注册和发现，基于网络中组播传输实现；
+* **Zookeeper注册中心**：基于分布式协调系统Zookeeper实现，采用ZK的watch机制实现数据变更；
+* **Redis注册中心**：基于Redis实现，采用Hash存储，key存储服务名和类型，field存储服务URL，value存储服务过期时间，基于发布/订阅模式通知数据变更。
+
+
 
 ## Dubbo-集群
 
+### 负载均衡策略
+
+* **Random LoadBalance**：随机选取提供者策略，有利于动态调整提供者权重，调用次数越多，分布越均匀；
+* **RoundRobin LoadBalance**：轮询选取提供者策略，平均分布，但是存在请求累积问题；
+* **LeastActive LoadBalance**：最小活跃调用策略，解决慢提供者接收的请求较少问题；
+* **ConstantHash LoadBalance**：一致性Hash策略，使相同参数的请求总是发送到同一提供者，一台机器宕机，可以基于虚拟节点，分摊至其他提供者，避免引起提供者的大幅变动。
+
+
+
+### 集器容错方案
+
+* **Failover Cluster**：失败自动切换，当出现失败，重试其他服务器。通常用于读操作，但重试会带来更大的延迟；
+* **Failfast Cluster**：快速失败，只发起一次调用，失败立即报错。通常用于非幂等性的写操作，比如新增记录；
+  * **幂等性**：就是用户对于同一操作发起的一次请求或者多次请求的结果是一致的，不会因为多次点击而产生了副作用。
+* **Failsafe Cluster**：失败安全，出现异常时，直接忽略。通常用于写入审计日志等操作；
+* **Failback Cluster**：失败自动恢复，后台记录失败请求，定时重发。通常用于消息通知操作；
+* **Forking Cluster**：并行调用多个服务器，只要其中一个成功即返回。通常用于实时性要求较高的读操作，但需要浪费更多的服务资源；
+* **Broadcast Cluster**：广播调用所有提供者，逐个调用，任意一台报错则报错。通常用于通知所有提供者更新缓存或日志等本地资源信息。
+
+
+
 ## Dubbo-配置
+
+### 核心配置
+
+![img](assets/2020031609550130.png)
+
+
+
+### 超时设置
+
+* **服务提供方设置超时时间**：在Dubbo的用户文档中，推荐使用服务提供方配置，因为服务提供者比调用者更加清楚自己提供的服务特性；
+* **服务调用方设置超时时间**：如果在调用方设置了超时时间，则以调用方为主，即优先级更高。因为服务调用方设置超时时间控制性更灵活，如果调用方超时，提供方线程不会停止，会产生警告。
+
+
 
 ## Dubbo-通信协议
 
+* **Dubbo**：单一长连接和NIO异步通信，适合大并发小数据量的服务调用，以及消费者数量远大于提供者的场景。传输协议TCP，异步Hessian序列化。
+* **RMI**：采用JDK标准的RMI协议实现，传输参数和返回参数对象需要实现Serializable接口，使用Java标准序列化机制，使用阻塞式短连接，传输数据包大小混合，消费者和提供者个数差不多，可传文件，传输协议TCP。多个短连接TCP协议传输，同步传输，适用常规的远程服务调用和RMI互操作。在依赖低版本的Common-Collection包，Java序列化存在安全漏洞。
+* **WebService**：基于WebService的远程调用协议，集成CXF实现，提供和原生WebService的互操作。多个短连接，基于HTTP传输，同步传输，适用系统集成和跨语言调用。
+* **HTTP**：基于HTTP表单提交的远程调用协议，使用Spring的HttpInvoke实现。多个短连接，传输协议HTTP，传入参数大小混合，提供者个数多于消费者，需要给应用程序和浏览器JS调用。
+* **Hession**：集成Hession服务，基于HTTP通信，采用Servlet暴露服务，Dubbo内嵌Jetty做为服务器默认实现，提供与Hession的互操作。多个短连接，同步HTTP传输，Hession序列化，传入参数较大，提供者大于消费者，提供者压力较大，可传文件。
+* **Memcache**：基于Memcache实现的RPC协议；
+* **Redis**：基于Redis实现的RPC协议。
+
+
+
 ## Dubbo-设计模式
 
-## Dubbo-运维管理
+### 工厂模式
 
-## Dubbo-SPI
+Provider在提供服务时，会调用ServiceConfig的export方法。
 
-## Dubbo-其他特性
+```java
+private static final Protocol protocol = ExtensionLoader.getExtensionLoader(Protocol.class).getAdaptiveExtension();
+```
+
+Dubbo中有很多类似的代码，这也是一种工厂模式，只是实现类的获取采用了JDK SPI机制。这样实现的优点是可扩展性强，想要扩展实现，只需要在classpath下增加一个文件即可，代码零侵入。另外，向上面的Adaptive实现，可以做到调用时动态决定调用哪个实现，但是由于这种实现采用了动态代理，会造成代码调试比较麻烦，需要分析出实际调用的实现类，
+
+
+
+### 装饰器模式
+
+Dubbo在启动和调用阶段大量使用了装饰器模式。以Provider提供的调用链为例，具体的调用链代码是在ProtocolFilterWrapper的buildInvokerChain完成的，具体是将注解中含有group=provider的Filter实现，按照order排序，最后的调用顺序是：`EchoFilter -> ClassLoaderFilter -> GenericFilter -> ContextFilter -> ExecuteLimitFilter -> TraceFilter -> TimeoutFilter -> MonitorFilter -> ExceptionFilter `。
+
+准确的说，这里是装饰器和责任链模式的混合使用。如：EchoFilter的作用是判断是否是回声测试请求，若是则直接返回内容，这是一种责任链的体现。而像ClassLoaderFilter则只是在主功能上添加了功能，更改当前线程的ClassLoader，这是典型的装饰器模式。
+
+
+
+### 观察者模式
+
+Dubbo的提供方启动时，需要与注册中心交互，先注册自己的服务，再订阅自己的服务。订阅时则采用了观察者模式，即开启一个Listener监听器，注册中心会每5秒定时检查是否有服务更新，如果有更新，则向该服务的提供者发送一个notify消息，提供者收到消息后，运行NotifyListener即notif()方法，执行监听器方法。
+
+
+
+### 动态代理模式
+
+Dubbo扩展JDK SPI的类ExtensionLoader的Adaptive实现是典型的动态代理实现。Dubbo需要灵活的控制实现类，即在调用阶段动态的根据参数决定调用哪个实现类，所以采用先生成代理类的方法，能够做到灵活的调用。生成代理类的代码是ExtensionLoader的createAdaptiveExtensionClassCode方法。代理类主要逻辑是获取URL参数中的指定参数值做为获取实现类的key。
 
 
 
 # Zookeeper
 
+## 基本概念
+
+Zookeeper是一个开源的分布式系统中间协调服务。是一个为分布式系统提供一致性服务的应用，分布式应用程序可以基于Zookeeper实现诸如数据发布/订阅、负载均衡、服务命名、分布式协调/通知、集群管理、Master选举、分布式锁和分布式队列等功能。Zookeeper的目标就是封装复杂易出错的关键服务，将简易的接口和性能高效、功能稳定的系统提供给用户。
+
+Zookeeper保证了如下分布式一致性特性：
+
+* 顺序一致性；
+* 原子性；
+* 单一视图；
+* 可靠性；
+* 实时性（最终一致性）。
+
+客户端的读请求可以被集群中的任意一台机器处理，如果读请求在节点上注册了监听器，则这个监听器也是由所连接的Zookeeper机器来处理。对于写请求，会同时发给其他Zookeeper机器并且达成一致后，请求才会返回成功。因此，随着ZK的节点越多，读请求吞吐量增加但写请求吞吐量会减少。
+
+有序性是ZK的重要特性，所有的更新都是全局有序的，每个更新都有一个唯一的时间戳，这个时间戳被称为zxid（Zookeeper Transaction Id）。而读请求只会相对于更新有序，也就是读请求的返回结果中会带有这个ZK最新的zxid。
 
 
-# 消息中间件
+
+## 文件系统
+
+ZK提供一个多层级的节点命名空间（节点被称为znode）。与文件系统不同的是，这些节点都可以设置关联的数据，而文件系统中只有文件节点可以存放数据而目录节点不行。
+
+Zookeeper为了保证高吞吐和低延迟，会在内存中维护一个树状的目录结构，这种特性使得ZK不能用于存放大量数据，每个节点存放的数据上限为1MB。
+
+
+
+## 主节点的状态同步
+
+Zookeeper的核心是原子广播机制，该机制保证了各个Server之间的同步。实现这个机制的协议叫做Zab协议，Zab协议有两种模式，分别是恢复模式和广播模式。
+
+* **恢复模式**：当服务刚启动或是在领导者节点崩溃后，Zab就会进入恢复模式，直到领导者被选举出来，且大多数Server完成了和Leader的状态同步后，才会结束恢复模式。状态同步保证了Leader和Server具有相同的系统状态。
+* **广播模式**：一旦Leader已经和多数的Follower进行了状态同步后，就可以开始广播消息了，即进入广播状态。这时当一个Server加入ZK集群中，它会在恢复模式下启动，发现Leader并和进行状态同步，待同步结束，也会参与消息广播。ZK服务一直维持在Broadcast状态，直到Leader崩溃或是失去了大部分的Followers支持。
+
+
+
+## 数据节点
+
+* **持久节点（PERSISTENT）**：除非手动删除，否则节点将一直存在于Zookeeper中；
+* **临时节点（EPHEMERAL）**：临时节点的生命周期与客户端会话绑定，一旦客户端会话失效，那么这个客户端创建的所有临时节点都会被移除；
+* **持久顺序节点（PERSISTENT_SEQUENTIAL）**：在持久节点的基础上增加了顺序属性，节点名后会追加一个由父节点维护的自增型数字保证有序；
+* **临时顺序节点（EPHEMERAL_SEQUENTIAL）**：在临时节点的基础上增加了顺序属性，节点名后会最近一个由父节点维护的则增型数字保证有序。
+
+
+
+## Watcher机制
+
+### 基本概念
+
+Zookeeper允许客户端向服务端的某个ZNode注册一个Watcher监听，当服务端的一些指定事件触发了这个Watcher，服务端会向指定的客户端发送一个事件通知来实现分布式的通知功能，然后客户端根据Watcher通知状态和事件类型做具体处理来实现分布式的回调功能。
+
+
+
+### 特点
+
+* **一次性**：无论是服务端还是客户端，一旦有Watcher被触发，Zookeeper都会将其从相应的存储中移除。这样的设计有效的减轻了服务端的压力，不然对于更新非常频繁的节点，服务端不断的向客户端发送事件通知，无论对于网络还是服务端的压力都非常大；
+* **客户端串行执行**：客户端Watcher回调的过程是一个串行同步的过程；
+* **轻量**：Watcher通知非常简单，只会告诉客户端发生了事件，而不会说明事件的具体内容。客户端向服务端注册Watcher时，并不会把客户端真实的Watcher对象实体传递到服务端，仅仅是在客户端请求中使用布尔型属性进行标记；
+* **异步**：Watcher的通知事件从Server发送到Client是异步的，这样就会存在一个问题，不同的客户端和服务器之间通过Socket进行通信，由于网络延迟或其他因素导致客户端在不同的时刻监听到事件。由于ZK本身提供有序性，即客户端监听的事件发生后，才会感知它所监听的ZNode的变化，所以使用ZK不期望能够监控到节点的每次变化，只能保证最终一致性，而无法保证强一致性；
+* 注册Watcher通过getData、exists、getChildren相关操作；
+* 触发Watcher通过create、delete、setData相关操作；
+* 当一个客户端连接到一个新的服务器上时，Watche将会被以任意会话事件触发。当与一个服务器失去连接时，是无法接收到Watcher的。而当Client重新连接时，如果需要的话，所有之前注册过的Watcher都会被重新注册。
+
+
+
+### 客户端注册Watcher流程
+
+* 调用getData()/getChildren()/exist()传入Watcher对象；
+* 标记请求request，封装Watcher到WatchRegistration；
+* 封装成Packet对象，发送请求到服务端；
+* 收到服务端响应后，将Watcher注册到ZKWatcherManager中进行管理；
+* 请求返回，完成注册。
+
+
+
+### 服务端处理Watcher流程
+
+* **服务端接收Watcher并存储**：接收到客户端请求后，处理请求判断是否需要注册Watcher，需要的话将数据节点的节点路径和ServerCnxn（代表一个客户端和服务端的连接，实现了Watcher的process接口，此时可以看成是一个Watcher对象）存储在WatcherManager的WatchTable和watch2Paths中去。
+* **Watcher触发**：
+  * 封装WatchedEvent：
+  * 查询Watcher：
+  * 若找到了，
+  * 若没找到，
+* **调用process方法来触发Watcher**：这里的process就是通过ServerCnxn对应的TCP连接发送Watcher事件通知。
+
+
+
+### 客户端回调Watcher流程
+
+* 
+
+
+
+## ACL权限控制机制
+
+
+
+# 消息中间件MQ
 
