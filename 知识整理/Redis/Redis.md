@@ -607,12 +607,14 @@ $> redis-sentinel ~/sent/s3.conf
 * 由多个Redis服务器组成的分布式网络服务器集群，每一个Redis服务器称为节点Node，节点之间会互相通信，两两相连（Redis集群无中心节点）。
 
 ## 7.2 节点复制
+
 ![664db7d880ad8c6c44f6c6c1e74f2b59.png](en-resource://database/726:1)
 
 * Redis集群的每个节点都有两种角色可选，主节点master node和从节点slave node，其中主节点用于存储数据，而从节点则是对应主节点的镜像复制。
 * 当用户需要处理更多读请求的时候，添加从节点可以扩展系统的读性能，因为Redis集群重用了单机Redis复制特性的代码，所以集群的复制行为和单机复制特性的行为是完全一样的。
 
 ## 7.3 故障转移
+
 ![1129ba61a647b791f35aaa8b50cdaa54.png](en-resource://database/728:1)
 ![430a28c2a4eac6425624fccd7e6c6008.png](en-resource://database/730:1)
 
@@ -620,11 +622,13 @@ $> redis-sentinel ~/sent/s3.conf
 * 集群进行故障转移的方法和Redis Sentinel进行故障转移的方法基本一样，不同的是，在集群里面，故障转移是由集群中其他在线的主节点负责进行的，所以集群不必另外使用Redis Sentinel。
 
 ## 7.4 集群分片
+
 * 集群将整个数据库分为16384个slot槽位，所有key都属于这些slot中的一个，key的槽位计算公式为`slot_number=crc16(key)%16384`，其中crc16为16位的循环冗余校验和函数。
 * 集群中的每个主节点都可以处理0个至16383个槽，当16384个槽都由各自的节点在负责处理时，集群进入上线状态，并开始处理客户端发送的数据命令请求。
 * 数据库中所有的数据由集群中各个节点承载一段范围，clinet向某节点请求的数据如果不存在本地，则会指导clinet向存在该数据的节点重新发送请求。
 
 ## 7.5 请求转向
+
 ![ef170cfedca5e0ed6622797637101a68.png](en-resource://database/732:1)
 ![d0fcf815b3e15ac9f2027326a31a2713.png](en-resource://database/734:1)
 

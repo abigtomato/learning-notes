@@ -527,7 +527,8 @@ hive> select * from cell_drop_monitor;
 351760	1	1232	8.116883116883117E-4
 ```
 
-# 9.Hive WordCount案例：
+# 9.Hive WordCount案例
+
 * **分析目标**：统计所有单词出现的次数
 * **数据格式展示**：
 
@@ -855,7 +856,7 @@ hive.mapjoin.smalltable.filesize;（大表小表判断的阈值，如果表的�
 hive.ignore.mapjoin.hint;（默认值：true；是否忽略mapjoin hint 即mapjoin标记）
 hive.auto.convert.join.noconditionaltask;（默认值：true；将普通的join转化为普通的mapjoin时，是否将多个mapjoin转化为一个mapjoin）
 hive.auto.convert.join.noconditionaltask.size;（将多个mapjoin转化为一个mapjoin时，其表的最大值）
-```  
+```
 * Map-Side聚合：
 ```
 set hive.map.aggr=true; # 开启在Map端的聚合

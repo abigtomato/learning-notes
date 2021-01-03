@@ -4159,7 +4159,7 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
 
 
 
-# 从计算机组成到操作系统再到JVM
+# 计算机组成原理
 
 ## 计算机组成-冯·诺依曼体系
 
@@ -4516,6 +4516,8 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
   ![img](assets/1542615-20200430175422875-1203563604.png)
 
 
+
+# 操作系统原理
 
 ## 操作系统-基本概念
 
@@ -5188,6 +5190,8 @@ public static void main(String[] args) throws ExecutionException, InterruptedExc
   <img src="assets/磁盘调度算法2.png" alt="磁盘调度算法2" style="zoom:80%;" />
 
 
+
+# Java虚拟机原理
 
 ## JVM-运行时数据区
 
@@ -6393,7 +6397,7 @@ JIT（ just in time）即时编译器。使用即时编译技术，加速Java程
 
 
 
-# 从I/O模型到计算机网络再到Netty
+# I/O模型
 
 ## I/O模型-Linux的Socket API
 
@@ -7206,6 +7210,8 @@ public class SocketMultiplexingSingleThread {
 * 循环去通过 `epoll_wait` 监听事件、接收连接、添加套接字fd和处理读写请求，以此构建出使用epoll多路复用机制的服务器。
 
 
+
+# 计算机网络原理
 
 ## 计算机网络-层次结构
 
@@ -8681,6 +8687,8 @@ AH协议和ESP协议提供的安全服务：
   * <font color='red'>隧道模式ESP：是使用最为广泛的，最重要的IPSec形式</font>。
 
 
+
+# Netty
 
 ## Netty-基本概念
 
@@ -10898,7 +10906,7 @@ Netty提供了IdleStateHandler，ReadTimeoutHandler，WriteTimeoutHandler三个H
 
 
 
-# Linux操作和内核原理
+# Linux基本操作
 
 ## Linux操作-基本概念
 
@@ -10925,6 +10933,8 @@ Netty提供了IdleStateHandler，ReadTimeoutHandler，WriteTimeoutHandler三个H
 ## Linux操作-Shell
 
 
+
+# Linux内核原理
 
 ## Linux内核-进程管理
 
@@ -11094,7 +11104,7 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 
 
 
-# Java基础和容器
+# Java基础
 
 ## Java基础-基本概念
 
@@ -11381,6 +11391,8 @@ fork函数复制了一个自己，但是创建子进程并非要运行另一个�
 * **深拷贝：**对基本数据类型进行值拷贝。对引用数据类型，则创建新对象，并复制其内容。
 
 
+
+# Java容器
 
 ## Java容器-基本概念
 
@@ -12535,7 +12547,7 @@ class LRUCache<K, V> extends LinkedHashMap<K, V> {
 
 
 
-# MySQL+Redis
+# MySQL
 
 ## MySQL-存储引擎
 
@@ -12869,7 +12881,9 @@ InnoDB支持表锁和行锁，MyISAM仅支持表锁。InnoDB只有通过索引�
 
 
 
-## Redis-线程模型
+# Redis
+
+## 线程模型
 
 ### 文件事件处理器概述
 
@@ -12899,7 +12913,7 @@ InnoDB支持表锁和行锁，MyISAM仅支持表锁。InnoDB只有通过索引�
 
 
 
-## Redis-数据结构和使用场景
+## 数据结构和使用场景
 
 ### RedisDb数据结构
 
@@ -13042,7 +13056,7 @@ InnoDB支持表锁和行锁，MyISAM仅支持表锁。InnoDB只有通过索引�
 
 
 
-## Redis-过期策略和内存淘汰机制
+## 过期策略和内存淘汰机制
 
 ### 过期策略
 
@@ -13067,7 +13081,7 @@ InnoDB支持表锁和行锁，MyISAM仅支持表锁。InnoDB只有通过索引�
 
 
 
-## Redis-持久化机制
+## 持久化机制
 
 所谓的持久化就是将内存中的数据写入磁盘中，大部分原因是为了之后重用数据（如重启机器或机器故障之后恢复数据），或者是为了防止系统故障而将数据备份到一个远程位置。
 
@@ -13105,7 +13119,7 @@ InnoDB支持表锁和行锁，MyISAM仅支持表锁。InnoDB只有通过索引�
 
 
 
-## Redis-缓存雪崩/穿透/击穿
+## 缓存雪崩/穿透/击穿
 
 ### 缓存雪崩
 
@@ -13231,24 +13245,34 @@ public class BloomFilter {
 
 
 
-## Redis-并发竞争的问题
+## 并发竞争的问题
 
-**概念**：所谓的并发竞争指的是多个用户同时对一个key进行操作，造成最后执行的顺序和期望的顺序不同，导致结果不同。
+### 基本概念
 
-**分布式锁解决方法**：推荐使用Zookeeper实现的分布式锁来解决，当客户端需要对操作加锁时，在Zookeeper上与该操作对应的节点的目录下，生成一个唯一的瞬时有序节点，判断是否获取锁的方式就是去判断有序节点中序号最小的一个。当释放锁时，只需要将这个瞬时节点删除即可。
+所谓的并发竞争指的是多个用户同时对一个key进行操作，造成最后执行的顺序和期望的顺序不同，导致结果不同。
+
+
+
+### 解决方案
+
+**分布式锁解决方案**：推荐使用Zookeeper实现的分布式锁来解决，当客户端需要对操作加锁时，在Zookeeper上与该操作对应的节点的目录下，生成一个唯一的瞬时有序节点，判断是否获取锁的方式就是去判断有序节点中序号最小的一个。当释放锁时，只需要将这个瞬时节点删除即可。
 
 ![zookeeper-distributed-lock](assets/zookeeper-distributed-lock.png)
 
 
 
-## Redis-双写一致性
+## 双写一致性
+
+### 基本概念
 
 **⼀般情况下使用缓存的过程**：先读缓存，缓存没有的话，就读数据库，然后取出数据后放⼊缓存，同时返回响应。这种⽅式很明显会存在缓存和数据库的数据不⼀致的情况。即只要使用了缓存，就可能会涉及到缓存与数据库双存储双写，就会有数据⼀致性的问题。
 
 * 如果先删除了缓存，还没来得及写入数据库，另一个线程就读取缓存，发现为空则读取数据库并写入缓存，此时缓存中为过期数据；
 * 如果先写入了数据库，在删除缓存之前写线程出现问题，导致缓存未成功删除，此时缓存中也是过期数据；
 
-**解决方法**：
+
+
+### 解决方案
 
 * ⼀般来说，如果系统不是严格要求缓存+数据库必须⼀致性的话，缓存可以稍微的跟数据库偶尔有不⼀致的情况。
 * 一种方法是，读请求和写请求串行化，串到⼀个内存队列⾥去，这样就可以保证⼀定不会出现不⼀致的情况，但串行化后，就会导致系统的吞吐量⼤幅度的降低，用比正常情况下多⼏倍的机器去⽀撑线上的⼀个请求。  
@@ -13256,9 +13280,13 @@ public class BloomFilter {
 
 
 
-## Redis-主从架构
+## 主从架构
 
 ### 基本概念
+
+* 一个Redis服务可以有多个该服务的复制品，这个Redis服务称为Master，其他复制品称为Slaves；
+* 只要网络连接正常，Master会一直将自己的数据更新同步给Slaves，保持主从数据同步；
+* 只有Master可以执行写命令，Slaves只能执行读命令。
 
 单机的Redis，能够承载的QPS大概就在上万到几万不等。对于缓存来说，一般都是用来支撑并发读的。因此出现了主从（master-slave）架构，即一个主节点多从节点，主负责写，并且将数据复制到从节点。而从节点负责读，所有的读请求全部走从节点。这样可以很轻松实现水平扩容，支撑并发读请求。
 
@@ -13292,9 +13320,14 @@ public class BloomFilter {
 
 
 
-## Redis-哨兵集群
+## 哨兵网络
 
 ### 基本概念
+
+* Sentinel会不断检查Master和Slaves是否正常。
+* 每一个Sentinel可以监控任意多个Master和该Master下的Slaves。
+* 监控同一个Master的Sentinel会自动连接，组成一个分布式的Sentinel网络，互相通信并交换彼此关于被监视的服务器信息。
+* Sentinel会在Master下线后自动执行Failover操作，提升一台Slave为Master，并让其他Slaves重新成为新Master的Slaves。
 
 哨兵（sentinel）是 Redis 集群架构中非常重要的一个组件，主要有以下功能：
 
@@ -13309,6 +13342,38 @@ public class BloomFilter {
 - **高可用**：即使部分哨兵节点挂掉了，哨兵集群还是能正常工作的。
 
 
+
+## 分布式集群
+
+### 基本概念
+
+概念：由多个Redis服务器组成的分布式网络服务器集群，每一个Redis服务器称为节点Node，节点之间会互相通信，两两相连（Redis集群无中心节点）。
+
+节点复制：
+
+* Redis集群的每个节点都有两种角色可选，主节点master node和从节点slave node，其中主节点用于存储数据，而从节点则是对应主节点的镜像复制。
+* 当用户需要处理更多读请求的时候，添加从节点可以扩展系统的读性能，因为Redis集群重用了单机Redis复制特性的代码，所以集群的复制行为和单机复制特性的行为是完全一样的。
+
+故障转移：
+
+* Redis集群的主节点内置了类似Redis Sentinel的节点故障检测和自动故障转移功能，当集群中的某个主节点下线时，集群中的其他在线主节点会注意到这一点，并对已下线的主节点进行故障转移。
+* 集群进行故障转移的方法和Redis Sentinel进行故障转移的方法基本一样，不同的是，在集群里面，故障转移是由集群中其他在线的主节点负责进行的，所以集群不必另外使用Redis Sentinel。
+
+集群分片：
+
+* 集群将整个数据库分为16384个slot槽位，所有key都属于这些slot中的一个，key的槽位计算公式为`slot_number=crc16(key)%16384`，其中crc16为16位的循环冗余校验和函数。
+* 集群中的每个主节点都可以处理0个至16383个槽，当16384个槽都由各自的节点在负责处理时，集群进入上线状态，并开始处理客户端发送的数据命令请求。
+* 数据库中所有的数据由集群中各个节点承载一段范围，clinet向某节点请求的数据如果不存在本地，则会指导clinet向存在该数据的节点重新发送请求。
+
+请求转向：
+
+* 由于Redis集群无中心节点，clinet请求会发送给集群中的任意节点。
+* 当前主节点只会处理自己负责槽位的命令请求，如果是其它槽位的命令请求，该主节点会返回给客户端一个转向错误。
+* 客户端根据错误中包含的地址和端口重新向正确负责的主节点发起命令请求。
+
+
+
+# 分布式解决方案
 
 ## 分布式锁
 
@@ -13879,9 +13944,9 @@ public class ZookeeperDistributedLock implements Watcher {
 
 
 
-# Spring技术栈
+# Spring
 
-## Spring-基本概念
+## 基本概念
 
 **概念**：
 
@@ -13900,7 +13965,7 @@ public class ZookeeperDistributedLock implements Watcher {
 
 
 
-## Spring-重要模块
+## 重要模块
 
 * **Spring Core**：基础模块，Spring的其他所有功能都基于该模块，主要包括控制反转（Inversion of Control，IoC）和依赖注入（Dependency Injection，DI）功能；
 * **Spring Beans**：提供了BeanFactory对象工厂，是工厂设计模式的一个经典实现，Spring将其管理的对象称为Bean；
@@ -13918,7 +13983,7 @@ public class ZookeeperDistributedLock implements Watcher {
 
 
 
-## Spring-设计模式
+## 设计模式
 
 * **工厂设计模式**：Spring的BeanFactory和ApplicationContext都使用工厂模式创建Bean对象；
 * **代理设计模式**：Spring AOP功能使用了JDK的动态代理和CGLIB字节码生成技术；
@@ -13930,7 +13995,7 @@ public class ZookeeperDistributedLock implements Watcher {
 
 
 
-## Spring-基本注解
+## 基本注解
 
 **@Controller返回一个页面：**单独使用的话一般适用于需要返回视图的场景，属于传统的Spring MVC应用。
 
@@ -13946,7 +14011,7 @@ public class ZookeeperDistributedLock implements Watcher {
 
 
 
-## Spring-IoC
+## IoC
 
 ### 基本概念
 
@@ -14506,7 +14571,7 @@ public void preInstantiateSingletons() throws BeansException {
 
 
 
-## Spring-Beans
+## Beans
 
 ### 什么是Spring Beans？
 
@@ -14620,7 +14685,7 @@ XML配置的Bean标签有两个重要属性init-method和destroy-method。可以
 
 
 
-## Spring-注解
+## 注解
 
 ### @Component/@Controller/@Repository/@Service的区别
 
@@ -14665,7 +14730,7 @@ XML配置的Bean标签有两个重要属性init-method和destroy-method。可以
 
 
 
-## Spring-数据访问
+## 事务
 
 ### 事务管理方式
 
@@ -14704,7 +14769,7 @@ XML配置的Bean标签有两个重要属性init-method和destroy-method。可以
 
 
 
-## Spring-AOP
+## AOP
 
 ### 什么是AOP？
 
@@ -14775,6 +14840,8 @@ AOP的工作重心在于如何将增强行为编织到目标对象的连接点�
 
 
 
+# Spring MVC
+
 ## SpringMVC-基本概念
 
 **概念**：Spring MVC是一个基于Java的实现了MVC设计模式的请求驱动类型的轻量级Web框架。其通过把模型-视图-控制器分离，将Web层进行职责解耦，把复杂的Web应用处理分为逻辑独立的几个部分。简化开发流程、减少出错、方便开发人员之间的配合。
@@ -14842,47 +14909,65 @@ AOP的工作重心在于如何将增强行为编织到目标对象的连接点�
 
 
 
-## SpringBoot-基本概念
+# Spring Boot
 
-## SpringBoot-配置
+TODO
 
-## SpringBoot-安全
+## 基本概念
 
-## SpringBoot-监视器
+## 配置
 
-## SpringBoot-整合
+## 安全
 
-## SpringBoot-其他特性
+## 监视器
 
+## 整合
 
-
-## SpringCloud-基本概念
-
-## SpringCloud-整体架构
-
-## SpringCloud-核心组件
+## 其他特性
 
 
 
-## MyBatis-基本概念
+# Spring Cloud
 
-## MyBatis-运行原理
+TODO
 
-## MyBatis-映射器
+## 基本概念
 
-## MyBatis-高级查询
+## 整体架构
 
-## MyBatis-动态SQL
-
-## MyBatis-插件模块
-
-## MyBatis-多级缓存
+## 核心组件
 
 
 
-# 数据结构和算法
+# MyBatis
 
-## 树形结构
+TODO
+
+## 基本概念
+
+## 运行原理
+
+## 映射器
+
+## 高级查询
+
+## 动态SQL
+
+## 插件模块
+
+## 多级缓存
+
+
+
+# 数据结构
+
+## 线性结构
+
+TODO
+
+
+
+## 树结构
 
 ### 基本概念
 
@@ -15915,7 +16000,15 @@ B+树在数据库中的应用：在操作数据库时，为了提高查询效率
 
 
 
-## 排序算法
+## 图结构
+
+TODO
+
+
+
+# 算法
+
+## 基本概念
 
 ### 时间复杂度
 
@@ -16203,6 +16296,12 @@ public static int[] reverse02(int[] arr) {
 ```
 
 由于Java存在垃圾回收机制，且JVM对程序的内存占用也有一定的优化，所以无法精确的评估一个Java程序的内存占用情况，只能进行估算。另外，现代计算机的内存一般都比较大，所以空间占用一般不是算法分析的主要方面（即不是算法的性能瓶颈），一般情况下所说的算法复杂度，默认就是时间复杂度。
+
+
+
+## 排序算法
+
+
 
 
 
@@ -16869,9 +16968,9 @@ public class BucketSort {
 
 
 
-# 大数据相关
+# Hadoop
 
-## Hadoop-HDFS存储模型
+## HDFS存储模型
 
 * 文件线性切割成block块，偏移量offset的单位是byte；
 * block块分散存储在集群的各个节点中；
@@ -16895,7 +16994,7 @@ public class BucketSort {
 
 
 
-## Hadoop-HDFS架构模型
+## HDFS架构模型
 
 **HDFS Client**：
 
@@ -16925,7 +17024,7 @@ public class BucketSort {
 
 
 
-## Hadoop-HDFS读/写流程
+## HDFS读/写流程
 
 **写流程**：
 
@@ -16950,7 +17049,7 @@ public class BucketSort {
 
 
 
-## Hadoop-HA高可用集群
+## HA高可用集群
 
 **HDFS 2.x**
 
@@ -16971,7 +17070,7 @@ public class BucketSort {
 
 
 
-## Hadoop-MapReduce原理
+## MapReduce原理
 
 **MapTask**：
 
@@ -16990,7 +17089,7 @@ public class BucketSort {
 
 
 
-## Hadoop-Yarn资源调度集群
+## Yarn资源调度集群
 
 **Yarn集群架构**：
 
@@ -17004,6 +17103,124 @@ public class BucketSort {
 * 如果其他的计算框架提交job，RM会在其他节点启动属于该框架的app master，框架之间的资源调度互相隔离。
 
 
+
+# Hive
+
+## 架构
+
+* 用户接口：命令行模式（CLI），客户端模式（JDBC），WebUI模式；
+  * 在cli启动的同时会启动hive的副本；
+  * 启动client模式需要指出hive server所在的节点，并在该节点启动hive server。
+* hive的元数据存储在关系型数据库中，如mysql，derby；
+  * hive的元数据包括表的名字，表的列，分区和属性，表的数据所在目录。
+* 解释器、编译器、优化器完成HQL查询语句从词法分析、语法分析、编译、优化以及查询计划的生成；
+  * 生成的查询计划存储在HDFS中，并在随后有MapReduce调用执行。
+* Hive的数据存储在HDFS中，大部分的查询、计算由MapReduce完成（包含\*的查询，比如 ```select * from tbl``` 不会生成MapRedcue任务）；
+* 编译器将一个Hive SQL转换操作符，操作符是Hive的最小的处理单元，每个操作符代表HDFS的一个操作或者一道MapReduce作业。
+
+
+
+## WordCount案例
+
+**分析目标**：统计所有单词出现的次数
+
+**数据格式展示**：
+
+* **wc文件**
+
+```
+"License" shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections 1 through 9 of this document.
+"Licensor" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.
+"Legal Entity" shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity. For the purposes of this definition, "control" means (i) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or more of the outstanding shares, or (iii) beneficial ownership of such entity.
+```
+
+* **hive分析阶段**
+
+```bash
+hive> use sxt;
+hive> create table wc(line string);
+hive> create table wc_result(word string, ct int);
+hive> from (select explode(split(line, ' ')) as word from wc) as tmp
+    > insert overwrite table wc_result
+    > select tmp.word, count(tmp.word) as ct
+    > group by word
+    > sort by ct desc limit 10;
+```
+
+* **看分析结果**
+
+```bash
+hive> select * from wc_result;
+the	1162
+to	496
+of	458
+```
+
+
+
+## 基站掉话率案例
+
+**分析目标：** 找出掉线率最高的前10基站
+
+**数据格式展示：**
+
+* **cdr_summ_imei_cell_info.csv文件**
+
+| record_time（通话时间） | imei（基站编号） | cell（手机编号） | ph_num      | call_num | drop_num（掉话时间/秒） | duration（通话持续时间/秒） | drop_rate | net_type | erl  |
+| ----------------------- | ---------------- | ---------------- | ----------- | -------- | ----------------------- | --------------------------- | --------- | -------- | ---- |
+| 2011-07-13              | 00:00:00+08      | 356966           | 29448-37062 | 0        | 0                       | 0                           | 0         | 0        | 0    |
+| 2011-07-13              | 00:00:00+08      | 352024           | 29448-51331 | 0        | 0                       | 0                           | 0         | 0        | 0    |
+| 2011-07-13              | 00:00:00+08      | 353736           | 29448-51331 | 0        | 0                       | 0                           | 0         | 0        | 0    |
+
+* **hive分析阶段**
+
+```bash
+hive> use sxt;
+hive> create table cell_monitor( # 创建数据表
+        record_time string,
+        imei string,
+        cell string,
+        ph_num int,
+        call_num int,
+        drop_num int,
+        duration int,
+        drop_rate DOUBLE,
+        net_type string,
+        erl string
+      )
+      row format delimited
+      fields terminated by ','
+      lines terminated by '\n'
+      stored as textfile;
+hive> create table cell_drop_monitor( # 创建结果表
+        imei string,
+        total_drop_num int,
+        total_call_num int,
+        d_rate DOUBLE
+      )
+      row format delimited
+      fields terminated by '\t'
+      stored as textfile;
+hive> load data local inpath '/roor/cdr_summ_imei_cell_info.csv' into table cell_monitor; # 本地数据导入
+hive> from cell_monitor cm # 指定数据表进行分析
+      insert overwrite table cell_drop_monitor # 分析结果写入结果表
+      select cm.imei, sum(cm.drop_num), sum(cm.duration), sum(cm.drop_num)/sum(cm.duration) d_rate # 基站掉话率=掉话时间/总通话时间
+      group by cm.imei # 对基站id进行分组
+      sort by d_rate desc limit 10; # 对计算结果进行降序排序，取前10条记录
+```
+
+* **查看分析结果**
+
+```bash
+hive> select * from cell_drop_monitor;
+639876	1	734	0.0013623978201634877
+356436	1	1028	9.727626459143969E-4
+351760	1	1232	8.116883116883117E-4
+```
+
+
+
+# HBase
 
 ## HBase-数据模型
 
@@ -17107,6 +17324,8 @@ public class BucketSort {
 
 
 
+# Spark
+
 ## Spark-组成部分
 
 * **Spark Core**：包含 Spark 的基本功能；尤其是定义 RDD 的 API、操作以及这两者上的动作。其他 Spark 的库都是构建在 RDD 和 Spark Core 之上的。
@@ -17176,9 +17395,9 @@ RDD 可以看做是对各种数据计算模型的统一抽象， Spark 的计算
 
 
 
-# 微服务认证授权
+# 认证授权
 
-## Spring security Oauth2认证流程
+## Spring Security Oauth2认证流程
 
 * 用户请求认证服务完成认证；
 * 认证服务下发用户身份令牌，拥有身份令牌表示身份合法；
@@ -17305,9 +17524,11 @@ JWT令牌由三部分组成，每部分中间使用点（.）分隔，比如：x
 
 
 
-# RPC框架
+# Dubbo
 
 ## RPC基本概念
+
+
 
 ## Dubbo-基本概念
 
@@ -17498,6 +17719,44 @@ Zookeeper保证了如下分布式一致性特性：
 
 有序性是ZK的重要特性，所有的更新都是全局有序的，每个更新都有一个唯一的时间戳，这个时间戳被称为zxid（Zookeeper Transaction Id）。而读请求只会相对于更新有序，也就是读请求的返回结果中会带有这个ZK最新的zxid。
 
+* 集群的特点：
+  - 原子性：准确的反馈成功或失败，没有中间状态。
+  - 最终一致性：
+    - 每个server都有统一的数据视图，client的写请求总会由leade处理（如果通过follower提交的请求会转发到leader），leader会先在集群中通信确认接下来的操作是否可以执行，等到半数以上的server都响应后再进行对所有server的数据同步；
+    - 如果发生网络延迟丢包的问题没有响应leader导致节点数据没有更新，这时client如果向没更新的server请求数据的话，该server会向更新过的server同步数据，完毕后再响应client；
+    - 集群数据同步阶段，leader会在本地内存中为每个server准备消息队列，各个server同步出队的数据，在集群中过半的server完成同步后集群确认同步完成，出现网络延迟或其他问题未同步完成的server在接下来也能够继续一个个的同步出队的数据从而达到集群数据的最终一致性。
+  - 高可用性：leader如果发生故障，zk集群会通过选举机制重新选出leader。
+  - 防网络分区（脑裂）：在client提交请求时如果集群中存在节点宕机的情况，那么会采取过半原则，如果集群半数以上的节点都能响应client的请求，那么则表示集群响应了请求。
+
+* 集群状态：
+  * 选举模式：
+    * 无主模型选举leader的状态。
+  * 广播模式：
+    * leader向所有server同步数据的状态。
+* Server状态：
+  * leading：当前server为被选举出来的leader；
+  * looking：当前server不知道leader是谁，正处于搜寻状态；
+  * following：leader已经选举出来，当前server与之同步。
+* 主从分工：
+  * 领导者（leader）：负责处理clinet提交的增删改的请求，负责进行投票的发起和决议；
+  * 学习者（learner）：
+    * 跟随者（follower）用于接受客户端查询的请求并响应结果，如果是写请求则会转发请求到leader，也在选举主节点过程中参与投票；
+    * 观察者（observer）接受客户端连接，将写请求转发给leader，但observer不参加投票过程，只同步leader的状态，observer的目的是为了扩展系统，提高读取速度。
+  * 客户端（client）：请求发起方。
+* Session会话：
+  * clinet与集群server建立TCP连接后，leader会在client操作的节点上创建session，同时该session会被放到leader的消息队列中，让所有server都同步；
+  * 如果clinet连接的Server出现问题，session会经过一段时间自动销毁，如果没有超过timeout，client可以连接其他server，其他server也会根据session获知client的状态。
+* Znode数据模型：
+  * 目录结构：层次的，目录型结构，便于管理逻辑关系。
+  * Znode信息：包含最大1MB的数据信息，记录了Zxid等元数据信息。
+  * 短暂模式（ephemeral）：短暂znode的客户端会话结束时，zookeeper会将该短暂znode删除，短暂znode不可以有子节点。
+  * 持久模式（persistent）：持久znode不依赖于客户端会话，只有当客户端明确要删除该持久znode时才会被删除。
+  * 序列化处理：如果存在同名的znode同时要求创建，序列化处理后保证都能创建成功并保持唯一性。
+* Watcher事件监听机制：
+  * Watcher是ZooKeeper的核心功能，Watcher可以监控目录节点以及子目录的数据变化，一旦这些状态发生变化，服务器就会通知所有设置在这个目录节点上的Watcher，从而每个客户端都能很快知道它所关注的目录节点状态是否发生变化，从而做出相应的反应。
+  * 可以设置观察的操作：exists，getChildren，getData；
+  * 可以触发观察的操作：create，delete，setData。
+
 
 
 ## 文件系统
@@ -17558,25 +17817,265 @@ Zookeeper允许客户端向服务端的某个ZNode注册一个Watcher监听，�
 
 ### 服务端处理Watcher流程
 
-* **服务端接收Watcher并存储**：接收到客户端请求后，处理请求判断是否需要注册Watcher，需要的话将数据节点的节点路径和ServerCnxn（代表一个客户端和服务端的连接，实现了Watcher的process接口，此时可以看成是一个Watcher对象）存储在WatcherManager的WatchTable和watch2Paths中去。
-* **Watcher触发**：
-  * 封装WatchedEvent：
-  * 查询Watcher：
-  * 若找到了，
-  * 若没找到，
+* **服务端接收Watcher并存储**：接收到客户端请求后，处理请求判断是否需要注册Watcher，需要的话将数据节点的节点路径和ServerCnxn（代表一个客户端和服务端的连接，实现了Watcher的process接口，此时可以看成是一个Watcher对象）存储在WatcherManager的WatchTable和Watch2Paths中去。 
+* **Watcher触发**：以服务器接收到setData()请求触发NodeDataChanged事件为例。
+  * **封装WatchedEvent**：将通知状态（SyncConnected）、事件类型（NodeDataChanged）以及节点路径封装成一个WatchedEvent对象；
+  * **查询Watcher**：从WatchTable中根据节点路径查找Watcher；
+  * **若找到**：提取并从WatchTable和Watch2Paths中删除对应的Watcher；
+  * **若没找到**：说明没有客户端在该数据节点上注册过Watcher。
 * **调用process方法来触发Watcher**：这里的process就是通过ServerCnxn对应的TCP连接发送Watcher事件通知。
 
 
 
 ### 客户端回调Watcher流程
 
-* 
+* 客户端SendThread线程接收事件通知，交由EventThread线程回调Watcher；
+* 客户端Watcher机制同样是一次性的，一旦被触发后，该Watcher就会失效。
 
 
 
 ## ACL权限控制机制
 
+ACL（Access Control List）即访问控制列表：
+
+* **权限模式（Scheme）**：
+  * IP：从IP地址粒度进行权限控制；
+  * Digset：最常用，类似于username:password的权限标识来进行权限配置，便于区分不同应用来进行权限控制；
+  * World：最开放的权限控制方式，是一种特殊的digset模式，只有一个权限标识world:anyone；
+  * Super：超级用户。
+* **授权对象**：指的是权限赋予得用户或一个指定实体，如IP地址；
+* **权限（Permission）**：
+  * CREATE：数据节点创建权限，允许授权对象在该ZNode下创建子节点；
+  * DELETE：子节点删除权限，允许授权对象删除该数据节点的子节点；
+  * READ：数据节点的读取权限，允许授权对象访问该数据节点并读取其数据内容或子节点列表等；
+  * WRITE：数据节点更新权限，允许授权对象对数据节点进行更新操作；
+  * ADMIN：数据节点管理权限，允许授权对象对该数据节点进行ACL相关设置操作。
 
 
-# 消息中间件MQ
 
+## 服务端角色
+
+* **Leader**：
+  * 事务请求的唯一调度和处理者，保证集群事务处理的顺序性；
+  * 集群内部各服务的调度者。
+* **Follower**：
+  * 处理客户端的非事务请求，转发事务请求给Leader服务器；
+  * 参与事务请求提议的投票；
+  * 参与Leader选举的投票。
+* **Observer**：
+  * 3.0版本后引入的服务器角色，在不影响集群事务处理能力的基础上提升集群的非事务处理能力；
+  * 处理客户端的非事务请求，转发事务请求给Leader服务器；
+  * 不参与任何形式的投票。
+
+
+
+## Server工作状态
+
+* **LOOKING**：Leader寻找状态。当服务器处于该状态时，会认为当前集群中没有Leader，因此需要进入Leader选举状态；
+* **FOLLOWING**：跟随者状态。表明当前服务器角色是Follower；
+* **LEADING**：领导者状态。表明当前服务器角色是Leader；
+* **OBSERVING**：观察者状态。表明当前服务器角色是Observer。
+
+
+
+## 数据同步
+
+整个集群完成Leader选举后，Learner（Follower和Observer的统称）会向Leader服务器进行注册，注册完成后进入数据同步环节。
+
+TODO
+
+
+
+## 事务的顺序一致性
+
+ZK采用了全局递增的事务ID来标识，所有的Proposal提议都会在被提出时加上ZXID。是一个64位的数字，高32位是epoch用于标识Leader周期，如果有新Leader产生出来，epoch会自增。低32位用于递增计数，当新产生Proposal时，会基于数据库的两阶段提交XA，首先会向其他的Server发出事务执行请求，如果超过半数的机器都能执行且成功，那么就会真正的提交事务。
+
+
+
+## 节点宕机处理
+
+* Zookeeper集群推荐不少于3个服务器；
+* 如果一个Follower宕机，还会有2台服务器提供服务，由于数据存在副本，所以不会丢失；
+* 如果是一个Leader宕机，则Zookeeper会选举出新的Leader；
+* Zookeeper集群的机制是只要超过半数的节点正常，集群就能正常提供服务。只有在节点挂得过多，只剩下一半或一半不到的节点能工作时，集群才会失效；
+* 总结，3个节点的Cluster可以挂掉1个节点，即再次选举Leader可以得到2票。单2个节点的Cluster就不能挂掉任何一个节点，即Leader只能得到一票。
+
+
+
+## 应用场景
+
+### 数据发布/订阅
+
+数据发布订阅系统，即配置中心，就是一个发布者对应多个订阅者，由发布者提供数据，订阅者同时收到数据。
+
+主要用于动态数据（配置信息）获取，实现数据（配置信息）的集中式管理和数据的动态更新。
+
+数据（配置信息的特征）：数据量通常比较小，数据内容在运行时会发生动态更新，集群中各机器共享且一致。如机器列表信息、运行时开关配置、数据库配置信息等。
+
+基于Zookeeper实现：
+
+* 数据存储：将数据存储到Zookeeper的一个数据节点中；
+* 数据获取：应用在启动初始化节点从Zookeeper数据节点读取数据，并在该节点注册一个数据变更的Watcher；
+* 数据变更：当数据发生变更时，更新Zookeeper对应节点的数据，Zookeeper会将数据发生变更的通知发送到各个客户端，客户端接收到通知后重新读取变更后的数据即可。
+
+
+
+### 负载均衡
+
+
+
+### 命名服务
+
+命名服务是指通过指定的名字来获取资源或是服务的地址，使用ZK创建一个全局的路径，这个路径就可以作为一个名字，指向集群中的机器、提供的服务的地址、一个远程的对象等。
+
+
+
+### 分布式协调/通知
+
+对于系统调度来说：操作人员发送通知实际是通过控制台改变某个节点的状态，然后ZK将这些变化发送给在这个节点上注册了Watcher的所有客户端。
+
+对于执行情况汇总：每个工作进程都在某个目录下创建一个临时节点。并携带工作的进度数据，这样汇总的进程可以监控目录子节点的变化获得工作进度的实时的全局情况。
+
+
+
+### 集群管理
+
+所谓的集群管理分为两点，一个是节点的加入和退出，另一个则Master节点的选举。
+
+* **节点的加入和退出**：所有的机器可以在约定的父目录下创建临时节点，然后监听父节点。当子节点发生了变化，一旦有机器挂掉，该机器与ZK的连接断开，其所创建的临时节点被删除，通过Watcher通知其他节点。一旦有新的机器加入，就会创建一个临时ZNode，集群中的节点就会收到通知。
+
+* **Master选举**：让所有机器创建临时节点时添加顺序编号，每次选取编号最小的机器作为Master即可。
+
+
+
+### 分布式锁
+
+基于Zookeeper的一致性文件系统，锁的问题变得容易。锁服务可以分为两类，一个是保持独占，另一个是控制时序。
+
+对于第一类，我们将 zookeeper 上的一个 znode 看作是一把锁，通过 createznode的方式来实现。所有客户端都去创建 /distribute_lock 节点，最终成功创建的那个客户端也即拥有了这把锁。用完删除掉自己创建的 distribute_lock 节点就释放出锁。
+
+对于第二类， /distribute_lock 已经预先存在，所有客户端在它下面创建临时顺序编号目录节点，和选 master 一样，编号最小的获得锁，用完删除，依次方便。
+
+
+
+### 分布式队列
+
+两种类型的队列：
+
+（1）同步队列，当一个队列的成员都聚齐时，这个队列才可用，否则一直等待所有成员到达。
+
+（2）队列按照 FIFO 方式进行入队和出队操作。
+
+第一类，在约定目录下创建临时目录节点，监听节点数目是否是我们要求的数目。
+
+第二类，和分布式锁服务中的控制时序场景基本原理一致，入列有编号，出列按编号。在特定的目录下创建 PERSISTENT_SEQUENTIAL 节点，创建成功时Watcher 通知等待的队列，队列删除序列号最小的节点用以消费。此场景下Zookeeper 的 znode 用于消息存储，znode 存储的数据就是消息队列中的消息内容，SEQUENTIAL 序列号就是消息的编号，按序取出即可。由于创建的节点是持久化的，所以不必担心队列消息的丢失问题。
+
+
+
+## ZK和Dubbo的关系
+
+![img](assets/2020031610214426.png)
+
+Zookeeper的作用：
+
+zookeeper用来注册服务和进行负载均衡，哪一个服务由哪一个机器来提供必需让调用者知道，简单来说就是ip地址和服务名称的对应关系。当然也可以通过硬编码的方式把这种对应关系在调用方业务代码中实现，但是如果提供服务的机器挂掉调用者无法知晓，如果不更改代码会继续请求挂掉的机器提供服务。zookeeper通过心跳机制可以检测挂掉的机器并将挂掉机器的ip和服务对应关系从列表中删除。至于支持高并发，简单来说就是横向扩展，在不更改代码的情况通过添加机器来提高运算能力。通过添加新的机器向zookeeper注册服务，服务的提供者多了能服务的客户就多了。
+
+dubbo：
+
+是管理中间层的工具，在业务层到数据仓库间有非常多服务的接入和服务提供者需要调度，dubbo提供一个框架解决这个问题。
+注意这里的dubbo只是一个框架，至于你架子上放什么是完全取决于你的，就像一个汽车骨架，你需要配你的轮子引擎。这个框架中要完成调度必须要有一个分布式的注册中心，储存所有服务的元数据，你可以用zk，也可以用别的，只是大家都用zk。
+
+zookeeper和dubbo的关系：
+
+Dubbo 的将注册中心进行抽象，它可以外接不同的存储媒介给注册中心提供服务，有 ZooKeeper，Memcached，Redis 等。
+
+引入了 ZooKeeper 作为存储媒介，也就把 ZooKeeper 的特性引进来。首先是负载均衡，单注册中心的承载能力是有限的，在流量达到一定程度的时 候就需要分流，负载均衡就是为了分流而存在的，一个 ZooKeeper 群配合相应的 Web 应用就可以很容易达到负载均衡；资源同步，单单有负载均衡还不 够，节点之间的数据和资源需要同步，ZooKeeper 集群就天然具备有这样的功能；命名服务，将树状结构用于维护全局的服务地址列表，服务提供者在启动 的时候，向 ZooKeeper 上的指定节点 /dubbo/${serviceName}/providers 目录下写入自己的 URL 地址，这个操作就完成了服务的发布。 其他特性还有 Mast 选举，分布式锁等。
+
+
+
+# RabbitMQ
+
+## MQ的优点
+
+### 简述
+
+### 异步
+
+### 削峰
+
+### 解耦
+
+
+
+## MQ的缺点
+
+
+
+## 多种MQ的对比
+
+
+
+## MQ的常见问题及解决
+
+
+
+## RabbitMQ基本概念
+
+
+
+# ElasticSearch
+
+## 基本概念
+
+* Cluster：集群，有多个节点，其中有一个为主节点，这个主节点是可以通过选举产生的，主从节点是相对于集群内部来说。es的一个概念就是去中心化，字面上理解就是无中心节点，这是对于集群外部来说的，因为从外部来看es集群，在逻辑上是个整体，与任意节点的通信和与整个es集群通信是等价的。
+* Shards：索引分片，es可以把一个完整的索引分成多个分片，好处是可以把一个大的索引拆分成多个小的，然后分布到不同的节点上，构成分布式存储。分片的数量只能在索引创建前指定，并且索引创建后不能更改。当进行水平扩容时，需要重新设置分片数量，重新导入数据。
+* Replicas：索引副本，es可以设置多个索引的副本，副本的作用一是提高系统的容错性，当某个节点某个分片损坏或丢失时可以从副本中恢复；二是提高es的查询效率，es会自动对搜索请求进行负载均衡。 
+* Recovery：数据恢复或数据重分布，es集群在有节点加入或退出时会根据机器的负载对索引分片进行重新分配，挂掉的节点重新启动时也会进行数据恢复。 
+* River：es的数据源，也是其它存储方式（如：数据库）同步数据到es的一个方法。它是以插件方式存在的服务，通过读取river中的数据并把它在es中建立索引。
+* Gateway：es索引快照的存储方式，es默认是先把索引存放到内存中，当内存满了再持久化到本地硬盘。当es集群关闭再重新启动时就会从gateway中读取索引备份数据。es支持多种类型的gateway，有本地文件系统（默认），分布式文件系统，Hadoop的HDFS和Amazon的S3云存储服务。
+* Discovery.zen：代表es的自动发现节点机制，es是一个基于p2p的系统，它先通过广播寻找存在的节点，再通过广播协议来进行节点之间的通信，同时也支持点对点的交互。 
+* Transport：代表es内部节点或集群与客户端的交互方式，默认内部是使用tcp协议进行交互，同时它支持http协议（json格式），Thrift，Servlet，Memcached，ZeroMQ等的传输协议（通过插件方式集成）。
+
+
+
+## 倒排索引
+
+对存储的数据分词抽取出其中的各个词条，以词条为key，对应数据的出现位置为value。搜索时，对关键字分词，通过词条匹配倒排索引，获取词条在原始数据中出现的位置，以位置作为条件搜索。
+
+* 数据表：
+
+| 商品主键 |  商品名  |    商品描述    |
+| :------: | :------: | :------------: |
+|    1     |  荣耀10  |   更贵的手机   |
+|    2     |  荣耀8   | 相对便宜的手机 |
+|    3     | iphone11 | 要卖肾买的手机 |
+
+* 倒排索引表：
+
+| 词条（key） | 数据（value） |
+| :---------: | :-----------: |
+|    手机     |    1, 2, 3    |
+|    便宜     |       2       |
+|    卖肾     |       3       |
+|    相对     |       2       |
+|    荣耀     |     1, 2      |
+|   iphone    |       3       |
+
+
+
+## 存储概念
+
+* Index：索引，包含若干相似结构的document数据，如：客户索引，订单索引，商品索引等，一个index包含多个document，代表一类相似的或相同的document，如：订单索引中存放了所有的订单数据。
+* Type：类型，每个索引中都可以有一个Type，Type是Index中的一个逻辑分类，同一个Type中的Document都有相同的field。示例：订单索引，不同状态的订单包含不同的内容，如：未支付订单（自动取消时间）和已支付订单（支付时间）、已发货订单（发货时间、物流信息）等都有不同的内容。
+* Document：文档是ES中的最小数据单元，一个Document就是一条数据，一般使用json数据结构表示，每个Index下的Type中都可以存储多个Document，一个Document中有多个field，field就是数据字段。
+
+
+
+## ES和关系数据库对比
+
+|      ES       | 数据库系统  |
+| :-----------: | :---------: |
+|  Index 索引   | Database 库 |
+|   Type 类型   |  Table 表   |
+| Document 文档 |   Row 行    |
+|  Field 字段   |  Column 列  |
