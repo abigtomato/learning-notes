@@ -141,8 +141,8 @@ $> systemctl is-enabled firewalld.service
     * 读权限 `r`：文件而言，具有读取文件内容的权限。对目录来说，具有浏览目录的权限；
     * 写权限 `w`：对文件而言，具有新增，修改文件内容的权限。对目录来说，具有删除，移动目录内文件的权限；
     * 可执行权限（x）：对文件而言，具有执行文件的权限。 对目录来说该用户具有进入目录的权限。
-    ![584bec511dab163d5cd7d51f9204691f.jpeg](en-resource://database/892:1)
-    ![52143324694104d91c381c124bdff40e.jpeg](en-resource://database/890:1)
+      ![584bec511dab163d5cd7d51f9204691f.jpeg](en-resource://database/892:1)
+      ![52143324694104d91c381c124bdff40e.jpeg](en-resource://database/890:1)
     * 第1个字母代表文件的类型："d" 代表文件夹，"-" 代表普通文件，"c" 代表硬件字符设备，"b" 代表硬件块设备，"s" 表示管道文件，"l" 代表软链接文件；
     * 后9个字母分别代表三组权限：文件所有者，用户者，其他用户拥有的权限。"r" 代表读权限，"w" 代表写权限，"x" 代表执行权限。
     * 第一组权限控制访问自己的文件权限，即所有者权限；
@@ -153,6 +153,7 @@ $> systemctl is-enabled firewalld.service
 
 ## 3.1 命令格式和基本命令
 `command [-options] [parameter1] ...`
+
 * 说明：
     * **command:** 命令名，相应功能的英文单词或单词的缩写；
     * **[-options]:** 选项，可用来对命令进行控制，也可以省略，[]代表可选；
@@ -931,6 +932,7 @@ $ | 匹配的字符串结尾
 (?P=name) | 引用别名为name的分组匹配到的字符串
 
 ## 4.11 预搜索（零宽断言）
+
 格式 | 说明
 ---|---
 (?=exp) | 断言自身出现的位置的后面能匹配表达式exp
@@ -969,6 +971,7 @@ $ | 匹配的字符串结尾
 ## 4.3 基本命令
 
 ### 4.3.1 转换为编辑模式
+
 | 按键 | 功能 |
 | :-: | :-: |
 | a | 光标位置右边插入文字 |
@@ -1090,7 +1093,3 @@ $> scp RemoteHostIp:RemoteFile FileName
 $> scp -r RemoteUserName@RemoteHostIp:RemoteFolder FolerName
 $> scp -r RemoteHostIp:RemoteFolder FolerName
 ```
-
-# 7.Shell 脚本编程
-
-# 8.高并发
