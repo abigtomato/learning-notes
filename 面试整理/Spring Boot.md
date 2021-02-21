@@ -2,13 +2,15 @@
 
 ## 基本概念
 
-### 生态
+### Spring生态
 
-官网：https://spring.io/projects/spring-boot
-
-微服务、响应式、分布式、Web开发、云原生、事件驱动、批处理、数据访问、安全控制、消息服务、移动开发。
-
-![image.png](assets/1602641710418-5123a24a-60df-4e26-8c23-1d93b8d998d9.png)
+* 微服务（Microservices）
+* 响应式编程（Reactive）
+* 云（Cloud）
+* Web应用（Web apps）
+* 无服务模型（Serverless）
+* 事件驱动（Event Driven）
+* 批处理（Batch）
 
 
 
@@ -60,7 +62,7 @@
 
 ## 自动配置原理
 
-### 自动配置的特点
+### 自动配置特点
 
 * 自动配置好Web服务器Tomcat。
 
@@ -209,23 +211,23 @@ public class MyConfig {}
 
 ### 配置绑定功能
 
-如何使用Java读取到properties文件中的内容，并且把它封装到JavaBean中，以供随时使用。
+* 如何使用Java读取到properties文件中的内容，并且把它封装到JavaBean中，以供随时使用。
 
-```java
-public class getProperties {
-    public static void main(String[] args) throws FileNotFoundException, IOException {
-        Properties pps = new Properties();
-        pps.load(new FileInputStream("a.properties"));
-        Enumeration enum1 = pps.propertyNames();//得到配置文件的名字
-        while(enum1.hasMoreElements()) {
-            String strKey = (String) enum1.nextElement();
-            String strValue = pps.getProperty(strKey);
-            System.out.println(strKey + "=" + strValue);
-            //封装到JavaBean。
-        }
-    }
-}
-```
+  ```java
+  public class getProperties {
+      public static void main(String[] args) throws FileNotFoundException, IOException {
+          Properties pps = new Properties();
+          pps.load(new FileInputStream("a.properties"));
+          Enumeration enum1 = pps.propertyNames();//得到配置文件的名字
+          while(enum1.hasMoreElements()) {
+              String strKey = (String) enum1.nextElement();
+              String strValue = pps.getProperty(strKey);
+              System.out.println(strKey + "=" + strValue);
+              //封装到JavaBean。
+          }
+      }
+  }
+  ```
 
 * **@ConfigurationProperties**：
 
